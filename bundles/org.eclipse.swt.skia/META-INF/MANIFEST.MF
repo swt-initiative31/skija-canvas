@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-SymbolicName: org.eclipse.swt.skia
+Bundle-Version: 3.131.2.skia
+Automatic-Module-Name: org.eclipse.swt.skia
+Bundle-Name: %fragmentName
+Bundle-Vendor: %providerName
+Bundle-Localization: fragment
+Bundle-RequiredExecutionEnvironment: JavaSE-17
+Fragment-Host: org.eclipse.swt;bundle-version="[3.131.100.qualifier,4.0.0)"
+

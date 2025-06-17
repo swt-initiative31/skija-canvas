@@ -2565,6 +2565,36 @@ public class SWT {
 	public static final int WEBKIT = 1 << 16;
 
 	/**
+
+	 * Style constant specifying that a Browser should use Chromium Embedded Framework
+	 * for rendering its content (value is 1&lt;&lt;17).
+	 * <p><b>Note:</b> No longer supported and ignored.</p>
+	 * <p><b>Used By:</b></p>
+	 * <ul>
+	 * <li><code>Browser</code></li>
+	 * </ul>
+	 *
+	 * @since 3.115
+	 * @deprecated Support for Chromium was limited to ancient and full of CVEs version of Chromium.
+	 * See <a href="https://bugs.eclipse.org/bugs/show_bug.cgi?id=572010">bug report</a> for details
+	 */
+	@Deprecated(forRemoval = true, since = "2024-03")
+	public static final int CHROMIUM = 1 << 17;
+
+	 /**
+	 * Experimental This API is experimental and may change or be removed in future releases.
+	 * Style constant specifying that a Canvas should use Skia
+	 * for rendering its content (value is 1&lt;&lt;23).
+	 * <p><b>Used By:</b></p>
+	 * <ul>
+	 * <li><code>Canvas</code></li>
+	 * </ul>
+	 *
+	 * @since 3.134
+	 */
+	public static final int SKIA = 1 << 23;
+
+	/**
 	 * Style constant specifying that a Browser should use Edge (WebView2)
 	 * for rendering its content (value is 1&lt;&lt;18).
 	 * <p><b>Used By:</b></p>
@@ -5000,3 +5030,4 @@ static {
 	}
 }
 }
+

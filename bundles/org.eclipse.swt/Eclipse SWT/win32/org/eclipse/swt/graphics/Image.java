@@ -26,6 +26,7 @@ import java.util.stream.*;
 import org.eclipse.swt.*;
 import org.eclipse.swt.internal.*;
 import org.eclipse.swt.internal.DPIUtil.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.internal.gdip.*;
 import org.eclipse.swt.internal.image.*;
 import org.eclipse.swt.internal.win32.*;
@@ -260,6 +261,8 @@ public final class Image extends Resource implements Drawable {
 	}
 
 	private final HandleAtSize lastRequestedHandle = new HandleAtSize();
+
+	private int version;
 
 private Image (Device device, int type, long handle, int nativeZoom) {
 	super(device);
@@ -3321,4 +3324,20 @@ private class DestroyableImageHandle implements InternalImageHandle {
 	}
 }
 
+
+	void increaseVersion() {
+		if(this.version == Integer.MAX_VALUE) {
+			this.version = 0;
+		} else {
+			this.version++;
+		}
+	}
+
+	/**
+	 * @noreference This field is not intended to be referenced by clients.
+	 * @return The current version of the image, which is incremented each time the image data changes.
+	 */
+	public ImageVersion getImageVersion() {
+		return new ImageVersion(this.version);
+	}
 }

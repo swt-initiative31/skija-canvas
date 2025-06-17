@@ -170,6 +170,12 @@ long gtk_commit (long imcontext, long text) {
 @Override
 long gtk_draw (long widget, long cairo) {
 	if ((state & OBSCURED) != 0) return 0;
+
+	if(this instanceof IExternalCanvas ec) {
+		ec.paint((e)-> sendEvent(SWT.Paint, e),widget, cairo);
+		return 0;
+	}
+
 	long result = super.gtk_draw (widget, cairo);
 	drawCaretInFocus(widget, cairo);
 	return result;

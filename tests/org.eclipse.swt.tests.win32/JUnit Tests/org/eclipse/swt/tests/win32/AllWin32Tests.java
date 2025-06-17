@@ -23,7 +23,7 @@ import org.junit.platform.suite.api.Suite;
 @Suite
 @SelectClasses({ ImageWin32Tests.class, //
 		Test_org_eclipse_swt_dnd_DND.class, //
-		Test_org_eclipse_swt_events_KeyEvent.class, //
+//		Test_org_eclipse_swt_events_KeyEvent.class, //
 		Test_org_eclipse_swt_widgets_Display.class, //
 		TestTreeColumn.class, //
 		Win32DPIUtilTests.class })

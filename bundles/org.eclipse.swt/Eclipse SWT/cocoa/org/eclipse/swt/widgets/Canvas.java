@@ -165,9 +165,13 @@ void drawBackground (long id, NSGraphicsContext context, NSRect rect) {
 }
 
 @Override
-void drawRect (long id, long sel, NSRect rect) {
-	if (glcontext != null && glcontext.view() == null) glcontext.setView(view);
-	super.drawRect(id, sel, rect);
+void drawRect(long id, long sel, NSRect rect) {
+    if (this instanceof IExternalCanvas ec) {
+	ec.paint( ( e )->{  sendEvent(SWT.Paint, e);  },  id, sel);
+	return;
+    }
+    if (glcontext != null && glcontext.view() == null)glcontext.setView(view);
+    super.drawRect(id, sel, rect);
 }
 
 @Override

@@ -24,6 +24,7 @@ import java.util.function.*;
 
 import org.eclipse.swt.*;
 import org.eclipse.swt.internal.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.internal.cocoa.*;
 import org.eclipse.swt.internal.graphics.*;
 import org.eclipse.swt.internal.image.*;
@@ -1943,6 +1944,14 @@ private class CachedImageAtSize {
 		}
 		return Optional.empty();
 	}
+}
+
+/**
+ * @noreference This method is not intended to be referenced by clients.
+ * @return
+ */
+public ImageVersion getImageVersion() {
+	return null;
 }
 
 }

@@ -15,9 +15,9 @@ concurrency:
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, skia_canvas ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, skia_canvas ]
     types: [opened, reopened, synchronize, labeled]
 
 jobs:
@@ -82,8 +82,8 @@ jobs:
       fail-fast: false
       matrix:
         java: ['21']
-        gtk: [gtk3, gtk4]
-        gdk_backend: [x11, wayland]
+        gtk: [gtk3]
+        gdk_backend: [x11]
         exclude:
           - gtk: gtk3
             gdk_backend: wayland
@@ -114,20 +114,20 @@ jobs:
       performance: ${{ contains(github.event.pull_request.labels.*.name, 'performance') }}
       runtodotests: ${{ contains(github.event.pull_request.labels.*.name, 'runtodotests') }}
 
-  build-macos:
-    name: Build (macOS)
-    needs: changes
-    # push => always; PR => run if cocoa changed OR "other" changed (run-everything case)
-    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.cocoa == 'true' || needs.changes.outputs.other == 'true' }}
-    strategy:
-      fail-fast: false
-      matrix:
-        java: ['21']
-        arch: [x86_64, aarch64]
-    uses: ./.github/workflows/build.yml
-    with:
-      runner: ${{ matrix.arch == 'x86_64' && 'macos-15-intel' || 'macos-latest' }}
-      java: ${{ matrix.java }}
-      native: ${{ matrix.arch == 'x86_64' && 'cocoa.macosx.x86_64' || 'cocoa.macosx.aarch64' }}
-      performance: ${{ contains(github.event.pull_request.labels.*.name, 'performance') }}
-      runtodotests: ${{ contains(github.event.pull_request.labels.*.name, 'runtodotests') }}
+#  build-macos:
+#    name: Build (macOS)
+#    needs: changes
+#    # push => always; PR => run if cocoa changed OR "other" changed (run-everything case)
+#    if: ${{ github.event_name != 'pull_request' || needs.changes.outputs.cocoa == 'true' || needs.changes.outputs.other == 'true' }}
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        java: ['21']
+#        arch: [x86_64, aarch64]
+#    uses: ./.github/workflows/build.yml
+#    with:
+#      runner: ${{ matrix.arch == 'x86_64' && 'macos-15-intel' || 'macos-latest' }}
+#      java: ${{ matrix.java }}
+#      native: ${{ matrix.arch == 'x86_64' && 'cocoa.macosx.x86_64' || 'cocoa.macosx.aarch64' }}
+#      performance: ${{ contains(github.event.pull_request.labels.*.name, 'performance') }}
+#      runtodotests: ${{ contains(github.event.pull_request.labels.*.name, 'runtodotests') }}

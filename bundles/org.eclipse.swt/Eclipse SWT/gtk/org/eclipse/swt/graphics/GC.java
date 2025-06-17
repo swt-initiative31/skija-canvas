@@ -60,7 +60,7 @@ import org.eclipse.swt.internal.gtk.*;
  * @see <a href="http://www.eclipse.org/swt/examples.php">SWT Examples: GraphicsExample, PaintExample</a>
  * @see <a href="http://www.eclipse.org/swt/">Sample code and further information</a>
  */
-public final class GC extends Resource {
+public class GC extends Resource {
 	/**
 	 * the handle to the OS device context
 	 * (Warning: This field is platform dependent)
@@ -76,7 +76,7 @@ public final class GC extends Resource {
 	public long handle;
 
 	Drawable drawable;
-	GCData data;
+	public GCData data;
 
 	/**
 	 * The current Cairo matrix, which positions widgets in the shell.
@@ -117,7 +117,7 @@ public final class GC extends Resource {
 	static final float[] LINE_DASHDOT_ZERO = new float[]{9, 6, 3, 6};
 	static final float[] LINE_DASHDOTDOT_ZERO = new float[]{9, 3, 3, 3, 3, 3};
 
-GC() {
+public GC() {
 }
 
 /**

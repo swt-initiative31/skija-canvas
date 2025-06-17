@@ -65,7 +65,8 @@ public abstract class Widget {
 	 * @noreference This field is not intended to be referenced by clients.
 	 */
 	public long handle;
-	int style, state;
+	int style;
+	protected int state;
 	Display display;
 	EventTable eventTable;
 	Object data;
@@ -116,7 +117,7 @@ public abstract class Widget {
 	/* More global state flags */
 	static final int RELEASED = 1<<20;
 	static final int DISPOSE_SENT = 1<<21;
-	static final int FOREIGN_HANDLE = 1<<22;
+	protected static final int FOREIGN_HANDLE = 1<<22;
 	static final int DRAG_DETECT = 1<<23;
 
 	/* Notify of the opportunity to skin this widget */
@@ -1661,7 +1662,7 @@ void sendEvent (int eventType) {
 	sendEvent (eventType, null, true);
 }
 
-void sendEvent (int eventType, Event event) {
+protected void sendEvent (int eventType, Event event) {
 	sendEvent (eventType, event, true);
 }
 

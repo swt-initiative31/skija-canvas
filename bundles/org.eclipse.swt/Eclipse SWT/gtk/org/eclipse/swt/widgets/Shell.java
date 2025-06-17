@@ -1560,7 +1560,7 @@ long gtk_enter_notify_event (long widget, long event) {
 }
 
 @Override
-long gtk_draw (long widget, long cairo) {
+public long gtk_draw (long widget, long cairo) {
 	if (widget == shellHandle) {
 		if (isCustomResize ()) {
 			int [] width = new int [1];

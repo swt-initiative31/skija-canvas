@@ -81,6 +81,19 @@ public Canvas (Composite parent, int style) {
 	super (parent, style);
 }
 
+@Override
+LRESULT WM_PAINT (long wParam, long lParam) {
+	if(this instanceof IExternalCanvas ec)
+	{
+		ec.paint(e -> sendEvent(SWT.Paint,e),wParam, lParam);
+		var r = OS.DefWindowProc(handle, (int) OS.WM_PAINT, wParam, lParam);
+		return new LRESULT(r);
+	}
+
+	return super.WM_PAINT(wParam, lParam);
+
+}
+
 /**
  * Fills the interior of the rectangle specified by the arguments,
  * with the receiver's background.

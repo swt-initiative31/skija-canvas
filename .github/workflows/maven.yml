@@ -15,9 +15,9 @@ concurrency:
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, skia_canvas ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, skia_canvas ]
     types: [opened, reopened, synchronize, labeled]
 
 jobs:
@@ -131,3 +131,4 @@ jobs:
       native: ${{ matrix.arch == 'x86_64' && 'cocoa.macosx.x86_64' || 'cocoa.macosx.aarch64' }}
       performance: ${{ contains(github.event.pull_request.labels.*.name, 'performance') }}
       runtodotests: ${{ contains(github.event.pull_request.labels.*.name, 'runtodotests') }}
+  

@@ -83,7 +83,7 @@ public abstract class Resource {
 	/**
 	 * the device where this resource was created
 	 */
-	Device device;
+	public Device device;
 
 	/**
 	 * Used to report not disposed SWT resources, null by default

@@ -63,7 +63,7 @@ import org.eclipse.swt.widgets.*;
  * @see <a href="http://www.eclipse.org/swt/examples.php">SWT Examples: GraphicsExample, PaintExample</a>
  * @see <a href="http://www.eclipse.org/swt/">Sample code and further information</a>
  */
-public sealed class GC extends Resource permits SkijaGC {
+public sealed class GC extends Resource permits SkiaGC {
 
 	/**
 	 * the handle to the OS device context
@@ -5134,7 +5134,7 @@ public static GC win32_new(Drawable drawable, GCData data) {
 
 public static GC skiagc_new(Drawable drawable,GCData data) {
 
-	SkijaGC gc = new SkijaGC();
+	SkiaGC gc = new SkiaGC();
 	long hDC = drawable.internal_new_GC(data);
 	gc.device = data.device;
 	gc.init(drawable, data, hDC);

@@ -33,7 +33,7 @@ public class SnippetSkijaCanvas {
 
 		shell.setLayout(new FillLayout());
 
-		Canvas c = new Canvas(shell, SWT.FILL | SWT.DOUBLE_BUFFERED);
+		Canvas c = new SkiaCanvas(shell, SWT.FILL | SWT.DOUBLE_BUFFERED);
 
 
 

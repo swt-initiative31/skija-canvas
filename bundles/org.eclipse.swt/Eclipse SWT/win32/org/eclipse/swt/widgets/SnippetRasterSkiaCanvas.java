@@ -1,14 +1,16 @@
-package org.eclipse.swt.graphics;
+package org.eclipse.swt.widgets;
 
 import org.eclipse.swt.*;
+import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.layout.*;
-import org.eclipse.swt.widgets.*;
 
-public class SnippetSkijaCanvas {
+public class SnippetRasterSkiaCanvas {
 
 	final static int RECTANGLES_PER_LINE = 50;
 
 	static class RecDraw{
+
+
 
 		public RecDraw(int xPos, int yPos, Color c) {
 			super();
@@ -18,6 +20,7 @@ public class SnippetSkijaCanvas {
 		}
 		int xPos ,yPos;
 		Color c;
+
 	}
 
 	static RecDraw[][] recDraws = new RecDraw[RECTANGLES_PER_LINE][RECTANGLES_PER_LINE];
@@ -126,7 +129,7 @@ public class SnippetSkijaCanvas {
 
 		}
 
-		s.redraw();
+		s.redraw();;
 
 	}
 

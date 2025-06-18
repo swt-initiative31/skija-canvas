@@ -29,7 +29,7 @@ import io.github.humbleui.types.*;
 
 public final class SkiaGC extends GC {
 
-	SkiaGC() {
+	public SkiaGC() {
 		this.surface = null;
 		originalDrawingSize = null;
 	}
@@ -71,7 +71,10 @@ public final class SkiaGC extends GC {
 		device = gc.device;
 		originalDrawingSize = extractSize(drawable);
 
-		this.surface = ((SkiaCanvas) drawable).surface;
+		if (drawable instanceof SkiaCanvas sc)
+			this.surface = sc.surface;
+		if (drawable instanceof SkiaRasterCanvas sc)
+			this.surface = sc.surface;
 
 //			if (onlyForMeasuring) {
 //				surface = createMeasureSurface();
@@ -143,7 +146,9 @@ public final class SkiaGC extends GC {
 
 	@Override
 	public void dispose() {
-		glFinishDrawing();
+
+		if (drawable instanceof SkiaCanvas)
+			glFinishDrawing();
 		innerGC = null;
 		skiaFont = null;
 		swtFont = null;
@@ -827,10 +832,9 @@ public final class SkiaGC extends GC {
 		this.swtFont = font;
 		super.setFont(font);
 
-		if(FONT_CACHE.containsKey(this.swtFont)) {
+		if (FONT_CACHE.containsKey(this.swtFont)) {
 			this.skiaFont = FONT_CACHE.get(this.swtFont);
-		}
-		else {
+		} else {
 			this.skiaFont = convertToSkijaFont(font);
 		}
 		this.baseSymbolHeight = this.skiaFont.measureText("T").getHeight();
@@ -1358,13 +1362,18 @@ public final class SkiaGC extends GC {
 	}
 
 	@Override
+	public
 	void init(Drawable drawable, GCData data, long hDC) {
 		super.init(drawable, data, hDC);
 
 		this.innerGC = this;
 		initFont();
-		surface = ((SkiaCanvas) drawable).surface;
-		glPrepareSurface();
+		if (drawable instanceof SkiaCanvas sc) {
+			surface = sc.surface;
+			glPrepareSurface();
+		} else if(drawable instanceof SkiaRasterCanvas sc) {
+			surface = sc.surface;
+		}
 
 	}
 

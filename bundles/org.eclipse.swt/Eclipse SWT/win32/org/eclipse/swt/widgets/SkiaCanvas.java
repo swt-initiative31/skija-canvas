@@ -24,56 +24,6 @@ public class SkiaCanvas extends GLCanvas {
 		return data;
 	}
 
-//	@Override
-//	protected LRESULT WM_PAINT(long wParam, long lParam) {
-//		/* Process WM_PAINT */
-//
-//		LRESULT re = null;
-//
-////		glPrepareSurface();
-//		re = super.WM_PAINT(wParam, lParam);
-////		glFinishDrawing();
-//
-//			return re;
-//	}
-//
-//		// This is a complete override of the paint logic
-//
-//		if (isDisposed())
-//			return null;
-//
-//		if (!redrawTriggered) {
-//			redraw();
-//			return new LRESULT(OS.DefWindowProc(handle, (int) OS.WM_PAINT, wParam, lParam));
-//		}
-//
-//		doPaint();
-//
-//
-//		var r = OS.DefWindowProc(handle, (int) OS.WM_PAINT, wParam, lParam);
-//
-//		LRESULT l = new LRESULT(r);
-//		return l;
-//	}
-
-//	@Override
-//	public void redraw() {
-//		redrawTriggered = true;
-//		super.redraw();
-//	}
-
-
-//	private void doPaint() {
-//
-//		var e = EventTool.createEvent(this, surface, SWT.Paint);
-//
-//		onPaint(e);
-//
-//		redraw();
-//
-//
-//	}
-
 
 	public SkiaCanvas(Composite parent, int style, GLData data) {
 		super(parent, style, data);
@@ -85,7 +35,6 @@ public class SkiaCanvas extends GLCanvas {
 
 
 		addListener(SWT.Resize, e -> onResize(e));
-//		addListener(SWT.Paint, e -> onPaint(e));
 
 	}
 

@@ -27,9 +27,9 @@ import io.github.humbleui.skija.Canvas;
 import io.github.humbleui.skija.Font;
 import io.github.humbleui.types.*;
 
-public final class SkijaGC extends GC {
+public final class SkiaGC extends GC {
 
-	SkijaGC() {
+	SkiaGC() {
 		this.surface = null;
 		originalDrawingSize = null;
 	}
@@ -37,16 +37,16 @@ public final class SkijaGC extends GC {
 	private static final Map<FontData, Font> FONT_CACHE = new ConcurrentHashMap<>();
 	private static final Map<Color, Paint> PAINT_CACHE = new ConcurrentHashMap<>();
 
-	public static SkijaGC createDefaultInstance(GC gc) {
-		return new SkijaGC(gc, gc.drawable, false);
+	public static SkiaGC createDefaultInstance(GC gc) {
+		return new SkiaGC(gc, gc.drawable, false);
 	}
 
-	public static SkijaGC createDefaultInstance(GC gc, Control control) {
-		return new SkijaGC(gc, control, false);
+	public static SkiaGC createDefaultInstance(GC gc, Control control) {
+		return new SkiaGC(gc, control, false);
 	}
 
-	public static SkijaGC createMeasureInstance(GC gc, Control control) {
-		return new SkijaGC(gc, control, true);
+	public static SkiaGC createMeasureInstance(GC gc, Control control) {
+		return new SkiaGC(gc, control, true);
 	}
 
 	private Surface surface;
@@ -66,7 +66,7 @@ public final class SkijaGC extends GC {
 
 	private static Map<ColorType, int[]> colorTypeMap = null;
 
-	private SkijaGC(GC gc, Drawable drawable, boolean onlyForMeasuring) {
+	private SkiaGC(GC gc, Drawable drawable, boolean onlyForMeasuring) {
 		innerGC = gc;
 		device = gc.device;
 		originalDrawingSize = extractSize(drawable);
@@ -842,7 +842,7 @@ public final class SkijaGC extends GC {
 		if (cachedFont != null && cachedFont.isClosed()) {
 			FONT_CACHE.remove(fontData);
 		}
-		return FONT_CACHE.computeIfAbsent(fontData, SkijaGC::createSkijaFont);
+		return FONT_CACHE.computeIfAbsent(fontData, SkiaGC::createSkijaFont);
 	}
 
 	static Font createSkijaFont(FontData fontData) {

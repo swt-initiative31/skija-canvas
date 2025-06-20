@@ -1,9 +1,8 @@
 package org.eclipse.swt.widgets;
 
-import java.awt.color.*;
-
 import org.eclipse.swt.*;
 import org.eclipse.swt.graphics.*;
+import org.eclipse.swt.graphics.Drawable;
 import org.eclipse.swt.opengl.*;
 
 import io.github.humbleui.skija.*;
@@ -94,9 +93,12 @@ public class SkiaCanvas extends GLCanvas {
 		}
 
 
-	@Override
-	GC new_GC (GCData data) {
-		return GC.skiagc_new( this, data) ;
+	public static GC gtk_new(Drawable drawable, GCData data) {
+		GC gc = new SkiaGC();
+		long gdkGC = drawable.internal_new_GC(data);
+		gc.device = data.device;
+		gc.init(drawable, data, gdkGC);
+		return gc;
 	}
 
 }

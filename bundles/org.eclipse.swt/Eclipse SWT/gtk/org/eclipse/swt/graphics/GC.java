@@ -76,7 +76,7 @@ public class GC extends Resource {
 	public long handle;
 
 	Drawable drawable;
-	GCData data;
+	public GCData data;
 
 	/**
 	 * The current Cairo matrix, which positions widgets in the shell.
@@ -117,7 +117,7 @@ public class GC extends Resource {
 	static final float[] LINE_DASHDOT_ZERO = new float[]{9, 6, 3, 6};
 	static final float[] LINE_DASHDOTDOT_ZERO = new float[]{9, 3, 3, 3, 3, 3};
 
-GC() {
+public GC() {
 }
 
 /**

@@ -339,7 +339,7 @@ JNIEXPORT jlong JNICALL Cairo_NATIVE(cairo_1image_1surface_1create_1for_1data)
 {
 	jlong rc = 0;
 	Cairo_NATIVE_ENTER(env, that, cairo_1image_1surface_1create_1for_1data_FUNC);
-	unsigned char *data = (unsigned char *) (intptr_t) arg0;
+	unsigned char *data = (unsigned char*)arg0;
 	rc = (jlong) cairo_image_surface_create_for_data(data, arg1, arg2, arg3, arg4);	
 	Cairo_NATIVE_EXIT(env, that, cairo_1image_1surface_1create_1for_1data_FUNC);
 	return rc;

@@ -94,11 +94,13 @@ public class SkiaCanvas extends GLCanvas {
 
 
 	public static GC gtk_new(Drawable drawable, GCData data) {
-		GC gc = new SkiaGC();
-		long gdkGC = drawable.internal_new_GC(data);
-		gc.device = data.device;
-		gc.init(drawable, data, gdkGC);
-		return gc;
+		// TODO: here a gc could be created... I don't know whether this is the right way because of other method calls inside the GC and in Control
+//		GC gc = new SkiaGC(((SkiaCanvas)drawable).surface);
+//		long gdkGC = drawable.internal_new_GC(data);
+//		gc.device = data.device;
+//		gc.handle = gdkGC;
+////		gc.init(drawable, data, gdkGC);
+		return new SkiaGC();
 	}
 
 }

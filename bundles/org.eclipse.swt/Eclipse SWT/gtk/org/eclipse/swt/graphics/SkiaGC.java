@@ -29,9 +29,14 @@ import io.github.humbleui.types.*;
 
 public final class SkiaGC extends GC {
 
-	public SkiaGC() {
-		this.surface = null;
-		originalDrawingSize = null;
+
+	@Override
+	public Color getBackground() {
+
+		if(this.background != null && !this.background.isDisposed())
+			return background;
+
+		return device.getSystemColor(SWT.COLOR_WHITE);
 	}
 
 	private static final Map<FontData, Font> FONT_CACHE = new ConcurrentHashMap<>();
@@ -49,7 +54,7 @@ public final class SkiaGC extends GC {
 		return new SkiaGC(gc, control, true);
 	}
 
-	private Surface surface;
+	public Surface surface;
 
 	private GC innerGC;
 
@@ -71,10 +76,12 @@ public final class SkiaGC extends GC {
 		device = gc.device;
 		originalDrawingSize = extractSize(drawable);
 
-		if (drawable instanceof SkiaCanvas sc)
+		if (drawable instanceof SkiaCanvas sc) {
 			this.surface = sc.surface;
-		if (drawable instanceof SkiaRasterCanvas sc)
-			this.surface = sc.surface;
+			this.device = sc.getDisplay();
+		}
+		this.skiaFont = convertToSkijaFont(this.device.getSystemFont());
+
 
 //			if (onlyForMeasuring) {
 //				surface = createMeasureSurface();
@@ -82,6 +89,19 @@ public final class SkiaGC extends GC {
 //				surface = createDrawingSurface();
 //				initializeWithParentBackground();
 //			}
+	}
+
+	public SkiaGC(SkiaRasterCanvas src, Surface surface) {
+
+		this.surface = surface;
+		this.drawable = src;
+		device = src.getDisplay();
+		originalDrawingSize = extractSize(drawable);
+		initFont();
+
+	}
+
+	public SkiaGC() {
 	}
 
 	private static Point extractSize(Drawable drawable) {
@@ -100,12 +120,6 @@ public final class SkiaGC extends GC {
 		return size;
 	}
 
-	@Override
-	void initNonDisposeTracking() {
-		// do not yet use resource handling for SkijaGC
-		// TODO use the resource handling and prevent the error messages for not closed
-		// resources.
-	}
 
 	private static boolean isEmpty(Point area) {
 		return area.x <= 0 || area.y <= 0;
@@ -137,7 +151,7 @@ public final class SkiaGC extends GC {
 	}
 
 	private void initFont() {
-		org.eclipse.swt.graphics.Font originalFont = innerGC.getFont();
+		org.eclipse.swt.graphics.Font originalFont = this.device.getSystemFont();
 		if (originalFont == null || originalFont.isDisposed()) {
 			originalFont = innerGC.getDevice().getSystemFont();
 		}
@@ -149,6 +163,19 @@ public final class SkiaGC extends GC {
 
 		if (drawable instanceof SkiaCanvas)
 			glFinishDrawing();
+//		if(drawable instanceof SkiaRasterCanvas src ) {
+//
+//			var cairoSurface = src.cairoSurface;
+//
+//			var cairo = getGCData().cairo;
+//			Cairo.cairo_set_source_surface(cairo, cairoSurface, 0, 0);
+//			Cairo.cairo_paint(cairo);
+//			Cairo.cairo_surface_flush(cairoSurface);
+//			Cairo.cairo_surface_flush(cairo);
+//
+//		}
+
+		drawable = null;
 		innerGC = null;
 		skiaFont = null;
 		swtFont = null;
@@ -250,9 +277,11 @@ public final class SkiaGC extends GC {
 
 	@Override
 	public void setForeground(Color color) {
-		if (color == null)
-			SWT.error(SWT.ERROR_NULL_ARGUMENT);
-		this.foreground = color;
+
+		if(color != null && !color.isDisposed()) {
+			this.foreground = color;
+		}
+
 	}
 
 	@Override
@@ -545,7 +574,11 @@ public final class SkiaGC extends GC {
 
 	@Override
 	public Color getForeground() {
-		return foreground;
+
+		if(this.foreground != null && !this.foreground.isDisposed())
+			return this.foreground;
+
+		return innerGC.getForeground();
 	}
 
 	@Override
@@ -826,7 +859,6 @@ public final class SkiaGC extends GC {
 			font = innerGC.getFont();
 		}
 		this.swtFont = font;
-		super.setFont(font);
 
 		if (FONT_CACHE.containsKey(this.swtFont)) {
 			this.skiaFont = FONT_CACHE.get(this.swtFont);
@@ -1357,19 +1389,31 @@ public final class SkiaGC extends GC {
 		drawRectangleInPixels(rect.x, rect.y, rect.width, rect.height);
 	}
 
+	private int getZoom() {
+
+		if(drawable instanceof SkiaCanvas sc) {
+			return sc.getDisplay().getDeviceZoom();
+		}
+
+		if(drawable instanceof SkiaRasterCanvas src)
+			return src.getDisplay().getDeviceZoom();
+
+		return 100;
+	}
+
 	@Override
 	public
 	void init(Drawable drawable, GCData data, long hDC) {
-		super.init(drawable, data, hDC);
 
 		this.innerGC = this;
-		initFont();
 		if (drawable instanceof SkiaCanvas sc) {
 			surface = sc.surface;
+			this.device = sc.getDisplay();
 			glPrepareSurface();
 		} else if(drawable instanceof SkiaRasterCanvas sc) {
-			surface = sc.surface;
+			// TODO handle init somehow...
 		}
+		initFont();
 
 	}
 

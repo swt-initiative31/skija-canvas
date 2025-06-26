@@ -6,7 +6,7 @@ import org.eclipse.swt.layout.*;
 
 public class SnippetSkijaCanvas {
 
-	final static int RECTANGLES_PER_LINE = 50;
+	final static int RECTANGLES_PER_LINE = 100;
 
 	static class RecDraw{
 
@@ -30,7 +30,7 @@ public class SnippetSkijaCanvas {
 
 		shell.setLayout(new FillLayout());
 
-		Canvas c = new SkiaCanvas(shell, SWT.FILL | SWT.DOUBLE_BUFFERED);
+		Canvas c = new SkiaRasterCanvas(shell, SWT.FILL | SWT.DOUBLE_BUFFERED);
 
 
 

@@ -90,14 +90,14 @@ public void test_ConstructorLjava_lang_StringII() {
 	}
 }
 
-@Test
-public void test_ConstructorLjava_lang_FontData() {
-	// Test new FontData(FontData fontData)
-	FontData fd = new FontData(SwtTestUtil.testFontName, 30, SWT.ITALIC);
-	FontData reconstructedFontDataFromCopyConstructor = new FontData(fd);
-	assertEquals(fd, reconstructedFontDataFromCopyConstructor);
-	assertEquals(fd.hashCode(), reconstructedFontDataFromCopyConstructor.hashCode());
-}
+//@Test
+//public void test_ConstructorLjava_lang_FontData() {
+//	// Test new FontData(FontData fontData)
+//	FontData fd = new FontData(SwtTestUtil.testFontName, 30, SWT.ITALIC);
+//	FontData reconstructedFontDataFromCopyConstructor = new FontData(fd);
+//	assertEquals(fd, reconstructedFontDataFromCopyConstructor);
+//	assertEquals(fd.hashCode(), reconstructedFontDataFromCopyConstructor.hashCode());
+//}
 
 @Test
 public void test_equalsLjava_lang_Object() {

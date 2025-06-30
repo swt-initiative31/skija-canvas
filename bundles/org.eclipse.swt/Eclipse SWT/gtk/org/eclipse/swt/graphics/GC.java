@@ -19,6 +19,7 @@ import org.eclipse.swt.*;
 import org.eclipse.swt.internal.*;
 import org.eclipse.swt.internal.cairo.*;
 import org.eclipse.swt.internal.gtk.*;
+import org.eclipse.swt.widgets.*;
 
 /**
  * Class <code>GC</code> is where all of the drawing capabilities that are
@@ -60,7 +61,7 @@ import org.eclipse.swt.internal.gtk.*;
  * @see <a href="http://www.eclipse.org/swt/examples.php">SWT Examples: GraphicsExample, PaintExample</a>
  * @see <a href="http://www.eclipse.org/swt/">Sample code and further information</a>
  */
-public final class GC extends Resource {
+public class GC extends Resource {
 	/**
 	 * the handle to the OS device context
 	 * (Warning: This field is platform dependent)
@@ -76,7 +77,7 @@ public final class GC extends Resource {
 	public long handle;
 
 	Drawable drawable;
-	GCData data;
+	public GCData data;
 
 	/**
 	 * The current Cairo matrix, which positions widgets in the shell.
@@ -117,7 +118,7 @@ public final class GC extends Resource {
 	static final float[] LINE_DASHDOT_ZERO = new float[]{9, 6, 3, 6};
 	static final float[] LINE_DASHDOTDOT_ZERO = new float[]{9, 3, 3, 3, 3, 3};
 
-GC() {
+public GC() {
 }
 
 /**
@@ -278,6 +279,12 @@ public static GC gtk_new(long handle, GCData data) {
  */
 public static GC gtk_new(Drawable drawable, GCData data) {
 	GC gc = new GC();
+	if(drawable instanceof SkiaRasterCanvas skiaRasterCanvas ){
+		gc = skiaRasterCanvas.createGC(gc);
+	}
+	if(drawable instanceof SkiaCanvas skiaCanvas) {
+		gc = skiaCanvas.createGC(gc);
+	}
 	long gdkGC = drawable.internal_new_GC(data);
 	gc.device = data.device;
 	gc.init(drawable, data, gdkGC);

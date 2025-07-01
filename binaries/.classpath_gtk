@@ -37,8 +37,6 @@
 	<classpathentry kind="src" path="Eclipse SWT WebKit/gtk"/>
 	<classpathentry kind="lib" path="lib/skija-linux-x64-0.116.3.jar"/>
 	<classpathentry kind="lib" path="lib/skija-shared-0.116.3.jar"/>
-	<classpathentry kind="lib" path="lib/skija-shared-0.116.3-sources.jar"/>
 	<classpathentry kind="lib" path="lib/types-0.1.1.jar"/>
-	<classpathentry kind="lib" path="lib/types-0.1.1-sources.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

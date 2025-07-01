@@ -332,6 +332,18 @@ JNIEXPORT jlong JNICALL Cairo_NATIVE(cairo_1image_1surface_1create)
 }
 #endif
 
+#ifndef NO_cairo_1image_1surface_1get_1data
+JNIEXPORT jlong JNICALL Cairo_NATIVE(cairo_1image_1surface_1get_1data)
+	(JNIEnv *env, jclass that, jlong arg0)
+{
+	jlong rc = 0;
+	Cairo_NATIVE_ENTER(env, that, cairo_1image_1surface_1get_1data_FUNC);
+	rc = (jlong)cairo_image_surface_get_data((cairo_surface_t *)arg0);
+	Cairo_NATIVE_EXIT(env, that, cairo_1image_1surface_1get_1data_FUNC);
+	return rc;
+}
+#endif
+
 #ifndef NO_cairo_1image_1surface_1create_1for_1data
 JNIEXPORT jlong JNICALL Cairo_NATIVE(cairo_1image_1surface_1create_1for_1data)
 	(JNIEnv *env, jclass that, jlong arg0, jint arg1, jint arg2, jint arg3, jint arg4)
@@ -345,17 +357,6 @@ JNIEXPORT jlong JNICALL Cairo_NATIVE(cairo_1image_1surface_1create_1for_1data)
 }
 #endif
 
-#ifndef NO_cairo_1image_1surface_1get_1data
-JNIEXPORT jlong JNICALL Cairo_NATIVE(cairo_1image_1surface_1get_1data)
-	(JNIEnv *env, jclass that, jlong arg0)
-{
-	jlong rc = 0;
-	Cairo_NATIVE_ENTER(env, that, cairo_1image_1surface_1get_1data_FUNC);
-	rc = (jlong)cairo_image_surface_get_data((cairo_surface_t *)arg0);
-	Cairo_NATIVE_EXIT(env, that, cairo_1image_1surface_1get_1data_FUNC);
-	return rc;
-}
-#endif
 
 #ifndef NO_cairo_1image_1surface_1get_1format
 JNIEXPORT jint JNICALL Cairo_NATIVE(cairo_1image_1surface_1get_1format)
@@ -1282,18 +1283,6 @@ fail:
 	if (arg2 && lparg2) (*env)->ReleaseDoubleArrayElements(env, arg2, lparg2, 0);
 	if (arg1 && lparg1) (*env)->ReleaseDoubleArrayElements(env, arg1, lparg1, 0);
 	Cairo_NATIVE_EXIT(env, that, cairo_1surface_1get_1device_1scale_FUNC);
-}
-#endif
-
-#ifndef NO_cairo_1surface_1get_1reference_1count
-JNIEXPORT jint JNICALL Cairo_NATIVE(cairo_1surface_1get_1reference_1count)
-	(JNIEnv *env, jclass that, jlong arg0)
-{
-	jint rc = 0;
-	Cairo_NATIVE_ENTER(env, that, cairo_1surface_1get_1reference_1count_FUNC);
-	rc = (jint)cairo_surface_get_reference_count(arg0);
-	Cairo_NATIVE_EXIT(env, that, cairo_1surface_1get_1reference_1count_FUNC);
-	return rc;
 }
 #endif
 

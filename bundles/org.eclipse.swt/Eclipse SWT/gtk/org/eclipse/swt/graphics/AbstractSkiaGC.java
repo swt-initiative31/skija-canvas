@@ -780,16 +780,16 @@ public abstract class AbstractSkiaGC extends GC {
 		this.baseSymbolHeight = this.skiaFont.measureText("T").getHeight();
 	}
 
-	static Font convertToSkijaFont(org.eclipse.swt.graphics.Font font) {
+	Font convertToSkijaFont(org.eclipse.swt.graphics.Font font) {
 		FontData fontData = font.getFontData()[0];
 		var cachedFont = FONT_CACHE.get(fontData);
 		if (cachedFont != null && cachedFont.isClosed()) {
 			FONT_CACHE.remove(fontData);
 		}
-		return FONT_CACHE.computeIfAbsent(fontData, AbstractSkiaGC::createSkijaFont);
+		return FONT_CACHE.computeIfAbsent(fontData, fd -> createSkijaFont(fd));
 	}
 
-	static Font createSkijaFont(FontData fontData) {
+	Font createSkijaFont(FontData fontData) {
 		FontStyle style = FontStyle.NORMAL;
 		boolean isBold = (fontData.getStyle() & SWT.BOLD) != 0;
 		boolean isItalic = (fontData.getStyle() & SWT.ITALIC) != 0;
@@ -802,8 +802,12 @@ public abstract class AbstractSkiaGC extends GC {
 		}
 		Font skijaFont = new Font(Typeface.makeFromName(fontData.getName(), style));
 		int fontSize = DPIUtil.scaleUp(fontData.getHeight(), DPIUtil.getNativeDeviceZoom());
+
 		if (SWT.getPlatform().equals("win32")) {
 			fontSize *= skijaFont.getSize() / Display.getDefault().getSystemFont().getFontData()[0].getHeight();
+		}
+		if(SWT.getPlatform().equals("gtk")) {
+			fontSize = (fontSize *getDevice().getDPI().y) / 72;
 		}
 		skijaFont.setSize(fontSize);
 		skijaFont.setEdging(FontEdging.SUBPIXEL_ANTI_ALIAS);

@@ -33,8 +33,7 @@ public class SnippetRasterSkiaCanvas {
 
 		shell.setLayout(new FillLayout());
 
-		Canvas c = new SkiaRasterCanvas(shell, SWT.FILL | SWT.DOUBLE_BUFFERED);
-
+		Canvas c = new Canvas(shell,  SWT.DOUBLE_BUFFERED);
 
 
 		for( int x = 0 ; x < RECTANGLES_PER_LINE ; x++ ) {

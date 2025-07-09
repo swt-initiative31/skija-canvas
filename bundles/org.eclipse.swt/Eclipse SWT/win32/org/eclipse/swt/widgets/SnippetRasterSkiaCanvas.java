@@ -2,7 +2,6 @@ package org.eclipse.swt.widgets;
 
 import org.eclipse.swt.*;
 import org.eclipse.swt.graphics.*;
-import org.eclipse.swt.layout.*;
 
 public class SnippetRasterSkiaCanvas {
 
@@ -29,11 +28,9 @@ public class SnippetRasterSkiaCanvas {
 	public static void main(String[] args) {
 		Display display = new Display();
 		Shell shell = new Shell(display);
-		shell.setText("Snippet 1");
-
-		shell.setLayout(new FillLayout());
-
-		Canvas c = new Canvas(shell,  SWT.DOUBLE_BUFFERED);
+		shell.setText("Snippet Canvas");
+// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
+		Canvas c = new SkiaCanvas(shell,  SWT.DOUBLE_BUFFERED);
 
 
 		for( int x = 0 ; x < RECTANGLES_PER_LINE ; x++ ) {

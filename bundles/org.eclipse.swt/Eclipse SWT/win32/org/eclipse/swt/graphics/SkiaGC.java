@@ -156,9 +156,16 @@ public final class SkiaGC extends GC {
 	}
 
 	private void performDraw(Consumer<Paint> operations) {
-		if (PAINT_CACHE.containsKey(getForeground())) {
-			operations.accept(PAINT_CACHE.get(getForeground()));
+		if (!PAINT_CACHE.containsKey(getForeground())) {
+			Paint paint = new Paint();
+			paint.setColor(convertSWTColorToSkijaColor(getForeground()));
+			paint.setMode(PaintMode.STROKE);
+			paint.setStrokeWidth(lineWidth > 0 ? DPIUtil.autoScaleUp(lineWidth) : DPIUtil.autoScaleUp(1));
+			paint.setAntiAlias(true);
+			PAINT_CACHE.put(getForeground(), paint);
 		}
+
+		operations.accept(PAINT_CACHE.get(getForeground()));
 
 	}
 
@@ -545,6 +552,15 @@ public final class SkiaGC extends GC {
 
 	@Override
 	public Color getForeground() {
+
+
+		if(foreground == null) {
+			if(drawable instanceof org.eclipse.swt.widgets.Canvas c) {
+				return c.getForeground();
+			}
+		}
+
+
 		return foreground;
 	}
 
@@ -670,12 +686,53 @@ public final class SkiaGC extends GC {
 
 	@Override
 	public void drawPolygon(int[] pointArray) {
-		performDrawLine(paint -> surface.getCanvas().drawPolygon(convertToFloat(pointArray), paint));
+
+		int size = pointArray.length;
+		int [] firstPointAddedAtEnd = new int[ size + 2 ];
+		System.arraycopy(pointArray, 0, firstPointAddedAtEnd, 0, pointArray.length);
+
+		firstPointAddedAtEnd[ pointArray.length ] = pointArray[ 0  ];
+		firstPointAddedAtEnd[ pointArray.length +1 ] = pointArray[  1  ];
+
+
+		performDrawLine(paint -> surface.getCanvas().drawPolygon(convertToFloat(firstPointAddedAtEnd), paint));
 	}
 
 	@Override
 	public void drawPolyline(int[] pointArray) {
-		performDrawLine(paint -> surface.getCanvas().drawLines(convertToFloat(pointArray), paint));
+		performDrawLine(paint -> surface.getCanvas().drawPolygon(convertToFloat(pointArray), paint));
+	}
+
+	private int[] createLinesArray(int[] array) {
+
+		List<Point> pts1 = new LinkedList<>();
+		List<Point> pts2 = new LinkedList<>();
+
+
+		for (int i = 0; i < (array.length - 1); i = i+2) {
+
+			pts1.add(new Point( array[i] , array[i+1] ));
+
+		}
+
+		pts2.add(pts1.get(0));
+		for( int i = 1 ; i < pts1.size()-1; i++ ) {
+
+			pts2.add(pts1.get(i));
+			pts2.add(pts1.get(i));
+
+		}
+		pts2.add(pts1.get(pts1.size() - 1));
+
+		int [] res = new int[pts2.size()*2];
+
+		for( int i = 0 ; i < pts2.size() ; i++) {
+			res[2*i] = pts2.get(i).x;
+			res[2*i + 1] = pts2.get(i).y;
+		}
+
+
+		return res;
 	}
 
 	private static float[] convertToFloat(int[] array) {
@@ -692,10 +749,10 @@ public final class SkiaGC extends GC {
 				.drawRect(offsetRectangle(createScaledRectangle(x, y, width, height)), paint));
 	}
 
-//		@Override
-//		public void drawRectangle(Rectangle rect) {
-//			drawRectangle(rect.x, rect.y, rect.width, rect.height);
-//		}
+		@Override
+		public void drawRectangle(Rectangle rect) {
+			drawRectangle(rect.x, rect.y, rect.width, rect.height);
+		}
 
 	@Override
 	public void drawRoundRectangle(int x, int y, int width, int height, int arcWidth, int arcHeight) {
@@ -1354,14 +1411,6 @@ public final class SkiaGC extends GC {
 	}
 
 	@Override
-	public void drawRectangle(Rectangle rect) {
-		if (rect == null)
-			SWT.error(SWT.ERROR_NULL_ARGUMENT);
-		rect = DPIUtil.scaleUp(drawable, rect, getZoom());
-		drawRectangleInPixels(rect.x, rect.y, rect.width, rect.height);
-	}
-
-	@Override
 	public
 	void init(Drawable drawable, GCData data, long hDC) {
 		super.init(drawable, data, hDC);
@@ -1392,13 +1441,12 @@ public final class SkiaGC extends GC {
 	@Override
 	void drawRectangleInPixels(int x, int y, int width, int height) {
 
-		SkiaCanvas c = (SkiaCanvas) drawable;
 
 		Paint p = new Paint();
 
-		p.setColor(0xFF0000FF);
+		p.setColor(convertSWTColorToSkijaColor(getForeground()));
 
-		c.surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p);
+		surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p);
 
 		p.close();
 

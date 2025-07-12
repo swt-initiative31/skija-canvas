@@ -54,6 +54,8 @@ public abstract class AbstractSkiaGC extends GC {
 	private int lineWidth;
 	private int lineStyle;
 	private int antialias;
+	private Paint backgroundPaint = new Paint();
+	private Paint foregroundPaint = new Paint();
 
 	private Point originalDrawingSize;
 
@@ -64,6 +66,13 @@ public abstract class AbstractSkiaGC extends GC {
 		this.surface = surface;
 		this.drawable = src;
 		originalDrawingSize = extractSize(drawable);
+
+		backgroundPaint.setAntiAlias(true);
+		backgroundPaint.setMode(PaintMode.FILL);
+
+		foregroundPaint.setAntiAlias(true);
+		foregroundPaint.setMode(PaintMode.STROKE);
+
 	}
 
 	private static Point extractSize(Drawable drawable) {
@@ -129,50 +138,36 @@ public abstract class AbstractSkiaGC extends GC {
 		swtFont = null;
 	}
 
-	private void performDraw(Consumer<Paint> operations) {
-		if (PAINT_CACHE.containsKey(getForeground())) {
-			operations.accept(PAINT_CACHE.get(getForeground()));
-		}
-
+	private static Paint getPaint(Color color) {
+		return PAINT_CACHE.computeIfAbsent(color , col -> {
+			Paint paint = new Paint();
+			paint.setColor(convertSWTColorToSkijaColor(col));
+			paint.setAntiAlias(true);
+			return paint;
+		});
 	}
 
 	private void performDrawLine(Consumer<Paint> operations) {
-		if (!PAINT_CACHE.containsKey(getForeground())) {
-			Paint paint = new Paint();
-			paint.setColor(convertSWTColorToSkijaColor(getForeground()));
-			paint.setMode(PaintMode.STROKE);
-			paint.setStrokeWidth(lineWidth > 0 ? DPIUtil.autoScaleUp(lineWidth) : 1);
-			paint.setAntiAlias(true);
-			PAINT_CACHE.put(getForeground(), paint);
-		}
-
-		operations.accept(PAINT_CACHE.get(getForeground()));
-
+		Paint paint = getPaint(getForeground());
+		paint.setMode(PaintMode.STROKE);
+		paint.setStrokeWidth(lineWidth > 0 ? DPIUtil.autoScaleUp(lineWidth) : 1);
+		operations.accept(paint);
 	}
 
 	private void performDrawText(Consumer<Paint> operations) {
-		performDraw(paint -> {
-			paint.setColor(convertSWTColorToSkijaColor(getForeground()));
-			operations.accept(paint);
-		});
-	}
-
-	private void performDrawFilled(Consumer<Paint> operations) {
-		performDraw(paint -> {
-			paint.setColor(convertSWTColorToSkijaColor(getBackground()));
-			paint.setMode(PaintMode.FILL);
-			paint.setAntiAlias(true);
-			operations.accept(paint);
-		});
+		Paint paint = new Paint();
+		paint.setColor(convertSWTColorToSkijaColor(getForeground()));
+		paint.setAntiAlias(true);
+		operations.accept(paint);
 	}
 
 	private void performDrawPoint(Consumer<Paint> operations) {
-		performDraw(paint -> {
-			paint.setColor(convertSWTColorToSkijaColor(getForeground()));
-			paint.setMode(PaintMode.FILL);
-			paint.setAntiAlias(false);
-			operations.accept(paint);
-		});
+		Paint paint = getPaint(getForeground());
+		paint.setColor(convertSWTColorToSkijaColor(getForeground()));
+		paint.setMode(PaintMode.FILL);
+		operations.accept(paint);
+
+		//paint.setAntiAlias(false);
 	}
 
 	private String[] splitString(String text) {
@@ -194,22 +189,6 @@ public abstract class AbstractSkiaGC extends GC {
 		return lines;
 	}
 
-//		@Override
-//		public void commit() {
-//			if (isEmpty(originalDrawingSize)) {
-//				return;
-//			}
-//			io.github.humbleui.skija.Image im = surface.makeImageSnapshot();
-//			byte[] imageBytes = EncoderPNG.encode(im).getBytes();
-//
-//			Image transferImage = new Image(innerGC.getDevice(), new ByteArrayInputStream(imageBytes));
-//
-//			Point drawingSizeInPixels = DPIUtil.autoScaleUp(originalDrawingSize);
-//			innerGC.drawImage(transferImage, 0, 0, drawingSizeInPixels.x, drawingSizeInPixels.y, //
-//					0, 0, originalDrawingSize.x, originalDrawingSize.y);
-//			transferImage.dispose();
-//		}
-
 	@Override
 	public Point textExtent(String string) {
 		return textExtent(string, SWT.NONE);
@@ -220,15 +199,15 @@ public abstract class AbstractSkiaGC extends GC {
 		if (color == null)
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		this.background = color;
+		backgroundPaint.setColor(convertSWTColorToSkijaColor(color));
 	}
 
 	@Override
 	public void setForeground(Color color) {
-
 		if(color != null && !color.isDisposed()) {
 			this.foreground = color;
+			foregroundPaint.setColor(convertSWTColorToSkijaColor(color));
 		}
-
 	}
 
 	@Override
@@ -504,28 +483,22 @@ public abstract class AbstractSkiaGC extends GC {
 		int green = swtColor.getGreen();
 		int blue = swtColor.getBlue();
 		int alpha = swtColor.getAlpha();
-
-		// create ARGB 32-Bit-color
-		int skijaColor = (alpha << 24) | (red << 16) | (green << 8) | blue;
-
-		return skijaColor;
+		return io.github.humbleui.skija.Color.makeARGB(alpha, red, green, blue);
 	}
 
 	@Override
 	public void drawLine(int x1, int y1, int x2, int y2) {
 		float scaledOffsetValue = getScaledOffsetValue();
-		performDrawLine(paint -> surface.getCanvas().drawLine(DPIUtil.autoScaleUp(x1) + scaledOffsetValue,
+		surface.getCanvas().drawLine(DPIUtil.autoScaleUp(x1) + scaledOffsetValue,
 				DPIUtil.autoScaleUp(y1) + scaledOffsetValue, DPIUtil.autoScaleUp(x2) + scaledOffsetValue,
-				DPIUtil.autoScaleUp(y2) + scaledOffsetValue, paint));
+				DPIUtil.autoScaleUp(y2) + scaledOffsetValue, foregroundPaint);
 	}
 
 	@Override
 	public Color getForeground() {
-
 		if(this.foreground != null && !this.foreground.isDisposed())
 			return this.foreground;
-
-		return innerGC.getForeground();
+		return device.getSystemColor(SWT.COLOR_BLACK);
 	}
 
 	@Override
@@ -550,9 +523,8 @@ public abstract class AbstractSkiaGC extends GC {
 		if ((flags & (SWT.TRANSPARENT | SWT.DRAW_TRANSPARENT)) == 0) {
 			int textWidth = Math.round(textBlob.getBounds().getWidth());
 			int fontHeight = Math.round(skiaFont.getMetrics().getHeight());
-			performDrawFilled(
-					paint -> surface.getCanvas().drawRect(new Rect(DPIUtil.autoScaleUp(x), DPIUtil.autoScaleUp(y),
-							DPIUtil.autoScaleUp(x) + textWidth, DPIUtil.autoScaleUp(y) + fontHeight), paint));
+			surface.getCanvas().drawRect(new Rect(DPIUtil.autoScaleUp(x), DPIUtil.autoScaleUp(y),
+							DPIUtil.autoScaleUp(x) + textWidth, DPIUtil.autoScaleUp(y) + fontHeight), backgroundPaint);
 		}
 		Point point = calculateSymbolCenterPoint(x, y);
 		performDrawText(paint -> surface.getCanvas().drawTextBlob(textBlob, point.x, point.y, paint));
@@ -567,9 +539,8 @@ public abstract class AbstractSkiaGC extends GC {
 		int topLeftTextBoxYPosition = DPIUtil.autoScaleUp(y);
 		float heightOfTextBoxConsideredByClients = skiaFont.getMetrics().getHeight();
 		float heightOfSymbolToCenter = baseSymbolHeight;
-		Point point = new Point((int) DPIUtil.autoScaleUp(x),
+		return new Point((int) DPIUtil.autoScaleUp(x),
 				(int) (topLeftTextBoxYPosition + heightOfTextBoxConsideredByClients / 2 + heightOfSymbolToCenter / 2));
-		return point;
 	}
 
 	private TextBlob buildTextBlob(String text) {
@@ -598,16 +569,16 @@ public abstract class AbstractSkiaGC extends GC {
 
 	@Override
 	public void drawArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
-		performDrawLine(paint -> surface.getCanvas().drawArc((float) DPIUtil.autoScaleUp(x),
-				(float) DPIUtil.autoScaleUp(y), (float) DPIUtil.autoScaleUp(x + width),
-				(float) DPIUtil.autoScaleUp(y + height), -startAngle, (float) -arcAngle, false, paint));
+		surface.getCanvas().drawArc(DPIUtil.autoScaleUp(x),
+				DPIUtil.autoScaleUp(y), DPIUtil.autoScaleUp(x + width),
+				DPIUtil.autoScaleUp(y + height), -startAngle, -arcAngle, false, foregroundPaint);
 	}
 
 	@Override
 	public void drawFocus(int x, int y, int width, int height) {
 		performDrawLine(paint -> {
 			paint.setPathEffect(PathEffect.makeDash(new float[] { 1.5f, 1.5f }, 0.0f));
-			surface.getCanvas().drawRect(offsetRectangle(createScaledRectangle(x, y, width, height)), paint);
+			surface.getCanvas().drawRect(offsetRectangle(createScaledRectangle(x, y, width, height)), foregroundPaint);
 		});
 	}
 
@@ -630,8 +601,8 @@ public abstract class AbstractSkiaGC extends GC {
 
 	@Override
 	public void drawOval(int x, int y, int width, int height) {
-		performDrawLine(paint -> surface.getCanvas()
-				.drawOval(offsetRectangle(createScaledRectangle(x, y, width, height)), paint));
+		surface.getCanvas()
+				.drawOval(offsetRectangle(createScaledRectangle(x, y, width, height)), foregroundPaint);
 	}
 
 	@Override
@@ -646,12 +617,12 @@ public abstract class AbstractSkiaGC extends GC {
 
 	@Override
 	public void drawPolygon(int[] pointArray) {
-		performDrawLine(paint -> surface.getCanvas().drawPolygon(convertToFloat(pointArray), paint));
+		surface.getCanvas().drawPolygon(convertToFloat(pointArray), foregroundPaint);
 	}
 
 	@Override
 	public void drawPolyline(int[] pointArray) {
-		performDrawLine(paint -> surface.getCanvas().drawLines(convertToFloat(pointArray), paint));
+		surface.getCanvas().drawLines(convertToFloat(pointArray), foregroundPaint);
 	}
 
 	private static float[] convertToFloat(int[] array) {
@@ -664,20 +635,20 @@ public abstract class AbstractSkiaGC extends GC {
 
 	@Override
 	public void drawRectangle(int x, int y, int width, int height) {
-		performDrawLine(paint -> surface.getCanvas()
-				.drawRect(offsetRectangle(createScaledRectangle(x, y, width, height)), paint));
+		surface.getCanvas()
+				.drawRect(offsetRectangle(createScaledRectangle(x, y, width, height)), foregroundPaint);
 	}
 
-//		@Override
-//		public void drawRectangle(Rectangle rect) {
-//			drawRectangle(rect.x, rect.y, rect.width, rect.height);
-//		}
+	@Override
+	public void drawRectangle(Rectangle rect) {
+		drawRectangle(rect.x, rect.y, rect.width, rect.height);
+	}
 
 	@Override
 	public void drawRoundRectangle(int x, int y, int width, int height, int arcWidth, int arcHeight) {
-		performDrawLine(paint -> surface.getCanvas().drawRRect(
+		surface.getCanvas().drawRRect(
 				offsetRectangle(createScaledRoundRectangle(x, y, width, height, arcWidth / 2.0f, arcHeight / 2.0f)),
-				paint));
+				foregroundPaint);
 	}
 
 	@Override
@@ -703,9 +674,9 @@ public abstract class AbstractSkiaGC extends GC {
 
 	@Override
 	public void fillArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
-		performDrawFilled(paint -> surface.getCanvas().drawArc((float) DPIUtil.autoScaleUp(x),
-				(float) DPIUtil.autoScaleUp(y), (float) DPIUtil.autoScaleUp(x + width),
-				(float) DPIUtil.autoScaleUp(y + height), (float) -startAngle, (float) -arcAngle, false, paint));
+		surface.getCanvas().drawArc(DPIUtil.autoScaleUp(x),
+				DPIUtil.autoScaleUp(y), DPIUtil.autoScaleUp(x + width),
+				DPIUtil.autoScaleUp(y + height), -startAngle, -arcAngle, false, backgroundPaint);
 	}
 
 	@Override
@@ -730,7 +701,7 @@ public abstract class AbstractSkiaGC extends GC {
 		int fromColor = convertSWTColorToSkijaColor(getForeground());
 		int toColor = convertSWTColorToSkijaColor(getBackground());
 		if (fromColor == toColor) {
-			performDrawFilled(paint -> surface.getCanvas().drawRect(rect, paint));
+			surface.getCanvas().drawRect(rect, backgroundPaint);
 			return;
 		}
 		if (swapColors) {
@@ -743,20 +714,19 @@ public abstract class AbstractSkiaGC extends GC {
 
 	private void performDrawGradientFilled(Consumer<Paint> operations, int x, int y, int x2, int y2, int fromColor,
 			int toColor) {
-		performDraw(paint -> {
-			try (Shader gradient = Shader.makeLinearGradient(DPIUtil.autoScaleUp(x), DPIUtil.autoScaleUp(y),
-					DPIUtil.autoScaleUp(x2), DPIUtil.autoScaleUp(y2), new int[] { fromColor, toColor }, null,
-					GradientStyle.DEFAULT)) {
-				paint.setShader(gradient);
-				paint.setAntiAlias(true);
-				operations.accept(paint);
-			}
-		});
+		Paint paint = new Paint();
+		try (Shader gradient = Shader.makeLinearGradient(DPIUtil.autoScaleUp(x), DPIUtil.autoScaleUp(y),
+				DPIUtil.autoScaleUp(x2), DPIUtil.autoScaleUp(y2), new int[] { fromColor, toColor }, null,
+				GradientStyle.DEFAULT)) {
+			paint.setShader(gradient);
+			paint.setAntiAlias(true);
+			operations.accept(paint);
+		}
 	}
 
 	@Override
 	public void fillOval(int x, int y, int width, int height) {
-		performDrawFilled(paint -> surface.getCanvas().drawOval(createScaledRectangle(x, y, width, height), paint));
+		surface.getCanvas().drawOval(createScaledRectangle(x, y, width, height), backgroundPaint);
 	}
 
 	@Override
@@ -774,19 +744,19 @@ public abstract class AbstractSkiaGC extends GC {
 			ps.add(new io.github.humbleui.types.Point(x, y));
 		}
 
-		performDrawFilled(paint -> surface.getCanvas().drawTriangles(ps.toArray(new io.github.humbleui.types.Point[0]),
-				null, paint));
+		surface.getCanvas().drawTriangles(ps.toArray(new io.github.humbleui.types.Point[0]),
+				null, backgroundPaint);
 	}
 
 	@Override
 	public void fillRectangle(int x, int y, int width, int height) {
-		performDrawFilled(paint -> surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), paint));
+		surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), backgroundPaint);
 	}
 
 	@Override
 	public void fillRoundRectangle(int x, int y, int width, int height, int arcWidth, int arcHeight) {
-		performDrawFilled(paint -> surface.getCanvas()
-				.drawRRect(createScaledRoundRectangle(x, y, width, height, arcWidth / 2.0f, arcHeight / 2.0f), paint));
+		surface.getCanvas()
+				.drawRRect(createScaledRoundRectangle(x, y, width, height, arcWidth / 2.0f, arcHeight / 2.0f), backgroundPaint);
 	}
 
 	@Override
@@ -806,25 +776,20 @@ public abstract class AbstractSkiaGC extends GC {
 			font = innerGC.getFont();
 		}
 		this.swtFont = font;
-
-		if (FONT_CACHE.containsKey(this.swtFont)) {
-			this.skiaFont = FONT_CACHE.get(this.swtFont);
-		} else {
-			this.skiaFont = convertToSkijaFont(font);
-		}
+		this.skiaFont = convertToSkijaFont(font);
 		this.baseSymbolHeight = this.skiaFont.measureText("T").getHeight();
 	}
 
-	static Font convertToSkijaFont(org.eclipse.swt.graphics.Font font) {
+	Font convertToSkijaFont(org.eclipse.swt.graphics.Font font) {
 		FontData fontData = font.getFontData()[0];
 		var cachedFont = FONT_CACHE.get(fontData);
 		if (cachedFont != null && cachedFont.isClosed()) {
 			FONT_CACHE.remove(fontData);
 		}
-		return FONT_CACHE.computeIfAbsent(fontData, AbstractSkiaGC::createSkijaFont);
+		return FONT_CACHE.computeIfAbsent(fontData, fd -> createSkijaFont(fd));
 	}
 
-	static Font createSkijaFont(FontData fontData) {
+	Font createSkijaFont(FontData fontData) {
 		FontStyle style = FontStyle.NORMAL;
 		boolean isBold = (fontData.getStyle() & SWT.BOLD) != 0;
 		boolean isItalic = (fontData.getStyle() & SWT.ITALIC) != 0;
@@ -837,8 +802,12 @@ public abstract class AbstractSkiaGC extends GC {
 		}
 		Font skijaFont = new Font(Typeface.makeFromName(fontData.getName(), style));
 		int fontSize = DPIUtil.scaleUp(fontData.getHeight(), DPIUtil.getNativeDeviceZoom());
+
 		if (SWT.getPlatform().equals("win32")) {
 			fontSize *= skijaFont.getSize() / Display.getDefault().getSystemFont().getFontData()[0].getHeight();
+		}
+		if(SWT.getPlatform().equals("gtk")) {
+			fontSize = (fontSize *getDevice().getDPI().y) / 72;
 		}
 		skijaFont.setSize(fontSize);
 		skijaFont.setEdging(FontEdging.SUBPIXEL_ANTI_ALIAS);
@@ -870,6 +839,7 @@ public abstract class AbstractSkiaGC extends GC {
 	@Override
 	public void setLineWidth(int i) {
 		this.lineWidth = i;
+		foregroundPaint.setStrokeWidth(lineWidth > 0 ? DPIUtil.autoScaleUp(lineWidth) : 1);
 	}
 
 //		@Override
@@ -1136,8 +1106,7 @@ public abstract class AbstractSkiaGC extends GC {
 
 	@Override
 	public boolean getXORMode() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return false;
+		return super.getXORMode();
 	}
 
 	@Override
@@ -1328,26 +1297,6 @@ public abstract class AbstractSkiaGC extends GC {
 	}
 
 	@Override
-	public void drawRectangle(Rectangle rect) {
-		if (rect == null)
-			SWT.error(SWT.ERROR_NULL_ARGUMENT);
-		rect = DPIUtil.scaleUp(drawable, rect, getZoom());
-		drawRectangleInPixels(rect.x, rect.y, rect.width, rect.height);
-	}
-
-	private int getZoom() {
-
-		if(drawable instanceof SkiaCanvas sc) {
-			return sc.getDisplay().getDeviceZoom();
-		}
-
-		if(drawable instanceof SkiaRasterCanvas src)
-			return src.getDisplay().getDeviceZoom();
-
-		return 100;
-	}
-
-	@Override
 	public
 	void init(Drawable drawable, GCData data, long hDC) {
 		this.data = data;
@@ -1355,6 +1304,9 @@ public abstract class AbstractSkiaGC extends GC {
 		handle = hDC;
 		innerGC.init(drawable, data, hDC);
 		initFont();
+		setBackground(getBackground());
+		setForeground(getForeground());
+		setLineWidth(getLineWidth());
 	}
 
 	protected void glFinishDrawing() {
@@ -1367,21 +1319,6 @@ public abstract class AbstractSkiaGC extends GC {
 		var s = (SkiaCanvas) drawable;
 		io.github.humbleui.skija.Canvas canvas = s.surface.getCanvas();
 		canvas.clear(0xFFFFFFFF);
-	}
-
-	@Override
-	void drawRectangleInPixels(int x, int y, int width, int height) {
-
-		SkiaCanvas c = (SkiaCanvas) drawable;
-
-		Paint p = new Paint();
-
-		p.setColor(0xFF0000FF);
-
-		c.surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p);
-
-		p.close();
-
 	}
 
 }

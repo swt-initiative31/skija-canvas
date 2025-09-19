@@ -11,20 +11,43 @@
 
 package org.eclipse.swt.graphics;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.*;
-import java.util.function.*;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
-import org.eclipse.swt.*;
-import org.eclipse.swt.internal.*;
-import org.eclipse.swt.widgets.*;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.ISkiaCanvas;
 
-import io.github.humbleui.skija.*;
+import io.github.humbleui.skija.Bitmap;
 import io.github.humbleui.skija.Canvas;
+import io.github.humbleui.skija.ColorAlphaType;
+import io.github.humbleui.skija.ColorType;
+import io.github.humbleui.skija.EncoderPNG;
 import io.github.humbleui.skija.Font;
-import io.github.humbleui.types.*;
+import io.github.humbleui.skija.FontEdging;
+import io.github.humbleui.skija.FontStyle;
+import io.github.humbleui.skija.GradientStyle;
+import io.github.humbleui.skija.ImageInfo;
+import io.github.humbleui.skija.Paint;
+import io.github.humbleui.skija.PaintMode;
+import io.github.humbleui.skija.PathEffect;
+import io.github.humbleui.skija.PixelGeometry;
+import io.github.humbleui.skija.Shader;
+import io.github.humbleui.skija.Surface;
+import io.github.humbleui.skija.SurfaceProps;
+import io.github.humbleui.skija.TextBlob;
+import io.github.humbleui.skija.TextBlobBuilder;
+import io.github.humbleui.skija.Typeface;
+import io.github.humbleui.types.RRect;
+import io.github.humbleui.types.Rect;
 
 public class SkiaGC implements IExternalGC {
 
@@ -32,7 +55,7 @@ public class SkiaGC implements IExternalGC {
 		this.surface = null;
 		originalDrawingSize = null;
 	}
-	
+
 	private static final Map<FontData, Font> FONT_CACHE = new ConcurrentHashMap<>();
 	private static final Map<Color, Paint> PAINT_CACHE = new ConcurrentHashMap<>();
 
@@ -70,20 +93,21 @@ public class SkiaGC implements IExternalGC {
 	public SkiaGC(Drawable drawable, int style) {
 		innerGC = this;
 		this.drawable = drawable;
-		org.eclipse.swt.widgets.Canvas c = (org.eclipse.swt.widgets.Canvas)drawable;
+		final org.eclipse.swt.widgets.Canvas c = (org.eclipse.swt.widgets.Canvas)drawable;
 		device = c.getDisplay();
 		originalDrawingSize = extractSize(drawable);
-		if (drawable instanceof ISkiaCanvas sc)
+		if (drawable instanceof final ISkiaCanvas sc) {
 			this.surface = sc.getSurface();
+		}
 		initFont();
-	
+
 	}
-	
+
 	private SkiaGC(GC gc, Drawable drawable, boolean onlyForMeasuring) {
 		innerGC = this;
 		originalDrawingSize = extractSize(drawable);
 
-		if (drawable instanceof ISkiaCanvas sc) {
+		if (drawable instanceof final ISkiaCanvas sc) {
 			this.surface = sc.getSurface();
 			surface.getCanvas().clear(0xFFFFFFFF);
 		}
@@ -92,21 +116,21 @@ public class SkiaGC implements IExternalGC {
 	public SkiaGC(ISkiaCanvas skiaCanvas) {
 
 		this.drawable = (Drawable) skiaCanvas;
-		
+
 		initFont();
-	
+
 	}
 
 	private static Point extractSize(Drawable drawable) {
 		Point size = new Point(0, 0);
-		if (drawable instanceof Image image) {
-			var imageBounds = image.getBounds();
+		if (drawable instanceof final Image image) {
+			final var imageBounds = image.getBounds();
 			size.x = imageBounds.width;
 			size.y = imageBounds.height;
-		} else if (drawable instanceof Control control) {
+		} else if (drawable instanceof final Control control) {
 			size = control.getSize();
-		} else if (drawable instanceof Device device) {
-			var deviceBounds = device.getBounds();
+		} else if (drawable instanceof final Device device) {
+			final var deviceBounds = device.getBounds();
 			size.x = deviceBounds.width;
 			size.y = deviceBounds.height;
 		}
@@ -135,7 +159,7 @@ public class SkiaGC implements IExternalGC {
 
 	private void initializeWithParentBackground() {
 		if (originalDrawingSize.x > 0 && originalDrawingSize.y > 0) {
-			Image image = new Image(innerGC.getDevice(), originalDrawingSize.x, originalDrawingSize.y);
+			final Image image = new Image(innerGC.getDevice(), originalDrawingSize.x, originalDrawingSize.y);
 			innerGC.copyArea(image, 0, 0);
 			drawImage(image, 0, 0);
 			image.dispose();
@@ -143,9 +167,9 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private void initFont() {
-	    
-	    	org.eclipse.swt.graphics.Font originalFont = ((Control)this.drawable).getFont();
-	    
+
+		org.eclipse.swt.graphics.Font originalFont = ((Control)this.drawable).getFont();
+
 		if (originalFont == null || originalFont.isDisposed()) {
 			originalFont = innerGC.getDevice().getSystemFont();
 		}
@@ -159,10 +183,10 @@ public class SkiaGC implements IExternalGC {
 		swtFont = null;
 	}
 
-	
+
 	private void performDraw(Consumer<Paint> operations) {
 		if (!PAINT_CACHE.containsKey(getForeground())) {
-			Paint paint = new Paint();
+			final Paint paint = new Paint();
 			paint.setColor(convertSWTColorToSkijaColor(getForeground()));
 			paint.setMode(PaintMode.STROKE);
 			paint.setStrokeWidth(lineWidth > 0 ? DPIScaler.autoScaleUp(lineWidth) : DPIScaler.autoScaleUp(1));
@@ -176,7 +200,7 @@ public class SkiaGC implements IExternalGC {
 
 	private void performDrawLine(Consumer<Paint> operations) {
 		if (!PAINT_CACHE.containsKey(getForeground())) {
-			Paint paint = new Paint();
+			final Paint paint = new Paint();
 			paint.setColor(convertSWTColorToSkijaColor(getForeground()));
 			paint.setMode(PaintMode.STROKE);
 			paint.setStrokeWidth(lineWidth > 0 ? DPIScaler.autoScaleUp(lineWidth) : 1);
@@ -221,10 +245,10 @@ public class SkiaGC implements IExternalGC {
 			if (pos == -1) {
 				lines[lines.length - 1] = text.substring(start);
 			} else {
-				boolean crlf = (pos > 0) && (text.charAt(pos - 1) == '\r');
+				final boolean crlf = (pos > 0) && (text.charAt(pos - 1) == '\r');
 				lines[lines.length - 1] = text.substring(start, pos - (crlf ? 1 : 0));
 				start = pos + 1;
-				String[] newLines = new String[lines.length + 1];
+				final String[] newLines = new String[lines.length + 1];
 				System.arraycopy(lines, 0, newLines, 0, lines.length);
 				lines = newLines;
 			}
@@ -232,21 +256,21 @@ public class SkiaGC implements IExternalGC {
 		return lines;
 	}
 
-//		@Override
-//		public void commit() {
-//			if (isEmpty(originalDrawingSize)) {
-//				return;
-//			}
-//			io.github.humbleui.skija.Image im = surface.makeImageSnapshot();
-//			byte[] imageBytes = EncoderPNG.encode(im).getBytes();
-//
-//			Image transferImage = new Image(innerGC.getDevice(), new ByteArrayInputStream(imageBytes));
-//
-//			Point drawingSizeInPixels = DPIScaler.autoScaleUp(originalDrawingSize);
-//			innerGC.drawImage(transferImage, 0, 0, drawingSizeInPixels.x, drawingSizeInPixels.y, //
-//					0, 0, originalDrawingSize.x, originalDrawingSize.y);
-//			transferImage.dispose();
-//		}
+	//		@Override
+	//		public void commit() {
+	//			if (isEmpty(originalDrawingSize)) {
+	//				return;
+	//			}
+	//			io.github.humbleui.skija.Image im = surface.makeImageSnapshot();
+	//			byte[] imageBytes = EncoderPNG.encode(im).getBytes();
+	//
+	//			Image transferImage = new Image(innerGC.getDevice(), new ByteArrayInputStream(imageBytes));
+	//
+	//			Point drawingSizeInPixels = DPIScaler.autoScaleUp(originalDrawingSize);
+	//			innerGC.drawImage(transferImage, 0, 0, drawingSizeInPixels.x, drawingSizeInPixels.y, //
+	//					0, 0, originalDrawingSize.x, originalDrawingSize.y);
+	//			transferImage.dispose();
+	//		}
 
 	@Override
 	public Point textExtent(String string) {
@@ -255,15 +279,17 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setBackground(Color color) {
-		if (color == null)
+		if (color == null) {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
+		}
 		this.background = color;
 	}
 
 	@Override
 	public void setForeground(Color color) {
-		if (color == null)
+		if (color == null) {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
+		}
 		this.foreground = color;
 	}
 
@@ -274,7 +300,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawImage(Image image, int x, int y) {
-		Canvas canvas = surface.getCanvas();
+		final Canvas canvas = surface.getCanvas();
 		canvas.drawImage(convertSWTImageToSkijaImage(image), DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y));
 	}
 
@@ -285,22 +311,22 @@ public class SkiaGC implements IExternalGC {
 			System.out.println("SkijaGC.drawImage(..): Error draw image that is null!!");
 			return;
 		}
-		Canvas canvas = surface.getCanvas();
+		final Canvas canvas = surface.getCanvas();
 		canvas.drawImageRect(convertSWTImageToSkijaImage(image), createScaledRectangle(srcX, srcY, srcWidth, srcHeight),
 				createScaledRectangle(destX, destY, destWidth, destHeight));
 	}
 
 	private static ColorType getColorType(ImageData imageData) {
-		PaletteData palette = imageData.palette;
+		final PaletteData palette = imageData.palette;
 
 		if (imageData.getTransparencyType() == SWT.TRANSPARENCY_MASK) {
 			return ColorType.UNKNOWN;
 		}
 
 		if (palette.isDirect) {
-			int redMask = palette.redMask;
-			int greenMask = palette.greenMask;
-			int blueMask = palette.blueMask;
+			final int redMask = palette.redMask;
+			final int greenMask = palette.greenMask;
+			final int blueMask = palette.blueMask;
 
 			if (redMask == 0xFF0000 && greenMask == 0x00FF00 && blueMask == 0x0000FF) {
 				return ColorType.UNKNOWN;
@@ -338,37 +364,36 @@ public class SkiaGC implements IExternalGC {
 				return ColorType.ALPHA_8;
 			}
 
-			if (imageData.depth == 16) {
+			switch (imageData.depth) {
+			case 16:
 				// 16-bit indexed images are not directly mappable to common
 				// ColorTypes
 				return ColorType.ARGB_4444; // Assume for indexed color images
-			}
-
-			if (imageData.depth == 24) {
+			case 24:
 				// Assuming RGB with no alpha channel
 				return ColorType.RGB_888X;
-			}
-
-			if (imageData.depth == 32) {
+			case 32:
 				// Assuming 32-bit color with alpha channel
 				return ColorType.RGBA_8888;
+			default:
+				break;
 			}
 		}
 
 		return ColorType.UNKNOWN;
 
-//			throw new UnsupportedOperationException("Unsupported SWT ColorType: " + Integer.toBinaryString(palette.redMask)
-//					+ "__" + Integer.toBinaryString(palette.greenMask) + "__" + Integer.toBinaryString(palette.blueMask));
+		//			throw new UnsupportedOperationException("Unsupported SWT ColorType: " + Integer.toBinaryString(palette.redMask)
+		//					+ "__" + Integer.toBinaryString(palette.greenMask) + "__" + Integer.toBinaryString(palette.blueMask));
 	}
 
 	private static io.github.humbleui.skija.Image convertSWTImageToSkijaImage(Image swtImage) {
-		ImageData imageData = swtImage.getImageData(DPIScaler.getDeviceZoom());
+		final ImageData imageData = swtImage.getImageData(DPIScaler.getDeviceZoom());
 		return convertSWTImageToSkijaImage(imageData);
 	}
 
 	static io.github.humbleui.skija.Image convertSWTImageToSkijaImage(ImageData imageData) {
-		int width = imageData.width;
-		int height = imageData.height;
+		final int width = imageData.width;
+		final int height = imageData.height;
 		ColorType colType = getColorType(imageData);
 
 		// always prefer the alphaData. If these are set, the bytes data are empty!!
@@ -376,38 +401,37 @@ public class SkiaGC implements IExternalGC {
 			byte[] bytes = null;
 			bytes = convertToRGBA(imageData);
 			colType = ColorType.RGBA_8888;
-			ImageInfo imageInfo = new ImageInfo(width, height, colType, ColorAlphaType.UNPREMUL);
+			final ImageInfo imageInfo = new ImageInfo(width, height, colType, ColorAlphaType.UNPREMUL);
 			return io.github.humbleui.skija.Image.makeRasterFromBytes(imageInfo, bytes, imageData.width * 4);
-		} else {
-			ImageInfo imageInfo = new ImageInfo(width, height, colType, ColorAlphaType.UNPREMUL);
-
-			return io.github.humbleui.skija.Image.makeRasterFromBytes(imageInfo, imageData.data, imageData.width * 4);
 		}
+		final ImageInfo imageInfo = new ImageInfo(width, height, colType, ColorAlphaType.UNPREMUL);
+
+		return io.github.humbleui.skija.Image.makeRasterFromBytes(imageInfo, imageData.data, imageData.width * 4);
 	}
 
 	public static byte[] convertToRGBA(ImageData imageData) {
-		ImageData transparencyData = imageData.getTransparencyMask();
-		byte[] convertedData = new byte[imageData.width * imageData.height * 4];
+		final ImageData transparencyData = imageData.getTransparencyMask();
+		final byte[] convertedData = new byte[imageData.width * imageData.height * 4];
 		byte defaultAlpha = (byte) 255;
 
-		var source = imageData.data;
-		int bytesPerPixel = source.length / (imageData.width * imageData.height);
+		final var source = imageData.data;
+		final int bytesPerPixel = source.length / (imageData.width * imageData.height);
 
-		var alphaData = imageData.alphaData;
+		final var alphaData = imageData.alphaData;
 		if (imageData.alpha != -1) {
 			defaultAlpha = (byte) imageData.alpha;
 		}
 
-		boolean byteSourceContainsAlpha = bytesPerPixel > 3;
+		final boolean byteSourceContainsAlpha = bytesPerPixel > 3;
 
 		for (int y = 0; y < imageData.height; y++) {
 			for (int x = 0; x < imageData.width; x++) {
-				int pixel = imageData.getPixel(x, y);
-				int arrayPos = (y * imageData.width + x);
+				final int pixel = imageData.getPixel(x, y);
+				final int arrayPos = (y * imageData.width + x);
 
-				byte r = (byte) ((pixel & imageData.palette.redMask) >>> -imageData.palette.redShift);
-				byte g = (byte) ((pixel & imageData.palette.greenMask) >>> -imageData.palette.greenShift);
-				byte b = (byte) ((pixel & imageData.palette.blueMask) >>> -imageData.palette.blueShift);
+				final byte r = (byte) ((pixel & imageData.palette.redMask) >>> -imageData.palette.redShift);
+				final byte g = (byte) ((pixel & imageData.palette.greenMask) >>> -imageData.palette.greenShift);
+				final byte b = (byte) ((pixel & imageData.palette.blueMask) >>> -imageData.palette.blueShift);
 
 				byte a = (byte) 255;
 				if (transparencyData != null) {
@@ -416,12 +440,12 @@ public class SkiaGC implements IExternalGC {
 					}
 				}
 
-				var index = arrayPos * 4;
+				final var index = arrayPos * 4;
 
-				convertedData[index + 0] = (byte) r;
-				convertedData[index + 1] = (byte) g;
-				convertedData[index + 2] = (byte) b;
-				convertedData[index + 3] = (byte) a;
+				convertedData[index + 0] = r;
+				convertedData[index + 1] = g;
+				convertedData[index + 2] = b;
+				convertedData[index + 3] = a;
 
 				if (alphaData != null && alphaData.length > arrayPos) {
 					convertedData[index + 3] = alphaData[arrayPos];
@@ -437,39 +461,39 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	static ImageData convertToSkijaImageData(io.github.humbleui.skija.Image image) {
-		Bitmap bm = Bitmap.makeFromImage(image);
-		var colType = bm.getColorType();
-		byte[] alphas = new byte[bm.getHeight() * bm.getWidth()];
-		var source = bm.readPixels();
-		byte[] convertedData = new byte[bm.getHeight() * bm.getWidth() * 3];
+		final Bitmap bm = Bitmap.makeFromImage(image);
+		final var colType = bm.getColorType();
+		final byte[] alphas = new byte[bm.getHeight() * bm.getWidth()];
+		final var source = bm.readPixels();
+		final byte[] convertedData = new byte[bm.getHeight() * bm.getWidth() * 3];
 
-		var colorOrder = getPixelOrder(colType);
+		final var colorOrder = getPixelOrder(colType);
 
 		// no alphaType handling support. UNPREMUL and OPAQUE should always work.
-//			ColorAlphaType alphaType = bm.getAlphaType();
+		//			ColorAlphaType alphaType = bm.getAlphaType();
 
 		for (int y = 0; y < bm.getHeight(); y++) {
 			for (int x = 0; x < bm.getWidth(); x++) {
 				byte alpha = convertAlphaTo255Range(bm.getAlphaf(x, y));
 
-				int index = (x + y * bm.getWidth()) * 4;
+				final int index = (x + y * bm.getWidth()) * 4;
 
-				byte red = (byte) source[index + colorOrder[0]];
-				byte green = (byte) source[index + colorOrder[1]];
-				byte blue = (byte) source[index + colorOrder[2]];
-				alpha = (byte) source[index + colorOrder[3]];
+				final byte red = source[index + colorOrder[0]];
+				final byte green = source[index + colorOrder[1]];
+				final byte blue = source[index + colorOrder[2]];
+				alpha = source[index + colorOrder[3]];
 
 				alphas[x + y * bm.getWidth()] = alpha;
 
-				int target = (x + y * bm.getWidth()) * 3;
+				final int target = (x + y * bm.getWidth()) * 3;
 
-				convertedData[target + 0] = (byte) (red);
-				convertedData[target + 1] = (byte) (green);
-				convertedData[target + 2] = (byte) (blue);
+				convertedData[target + 0] = (red);
+				convertedData[target + 1] = (green);
+				convertedData[target + 2] = (blue);
 			}
 		}
 
-		ImageData d = new ImageData(bm.getWidth(), bm.getHeight(), 24, new PaletteData(0xFF0000, 0x00FF00, 0x0000FF));
+		final ImageData d = new ImageData(bm.getWidth(), bm.getHeight(), 24, new PaletteData(0xFF0000, 0x00FF00, 0x0000FF));
 		d.data = convertedData;
 		d.alphaData = alphas;
 		d.bytesPerLine = d.width * 3;
@@ -478,18 +502,18 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	public static void writeFile(String str, io.github.humbleui.skija.Image image) {
-		byte[] imageBytes = EncoderPNG.encode(image).getBytes();
+		final byte[] imageBytes = EncoderPNG.encode(image).getBytes();
 
-		File f = new File(str);
+		final File f = new File(str);
 		if (f.exists()) {
 			f.delete();
 		}
 
 		try {
-			FileOutputStream fis = new FileOutputStream(f);
+			final FileOutputStream fis = new FileOutputStream(f);
 			fis.write(imageBytes);
 			fis.close();
-		} catch (Exception e) {
+		} catch (final Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -511,10 +535,10 @@ public class SkiaGC implements IExternalGC {
 			throw new IllegalArgumentException("Input array must have a length of 4.");
 		}
 
-		int rPremul = premulColor[0] & 0xFF;
-		int gPremul = premulColor[1] & 0xFF;
-		int bPremul = premulColor[2] & 0xFF;
-		int a = premulColor[3] & 0xFF;
+		final int rPremul = premulColor[0] & 0xFF;
+		final int gPremul = premulColor[1] & 0xFF;
+		final int bPremul = premulColor[2] & 0xFF;
+		final int a = premulColor[3] & 0xFF;
 
 		if (a == 0) {
 			// no conversion necessary if alpha is 0
@@ -536,20 +560,20 @@ public class SkiaGC implements IExternalGC {
 
 	public static int convertSWTColorToSkijaColor(Color swtColor) {
 		// extract RGB-components
-		int red = swtColor.getRed();
-		int green = swtColor.getGreen();
-		int blue = swtColor.getBlue();
-		int alpha = swtColor.getAlpha();
+		final int red = swtColor.getRed();
+		final int green = swtColor.getGreen();
+		final int blue = swtColor.getBlue();
+		final int alpha = swtColor.getAlpha();
 
 		// create ARGB 32-Bit-color
-		int skijaColor = (alpha << 24) | (red << 16) | (green << 8) | blue;
+		final int skijaColor = (alpha << 24) | (red << 16) | (green << 8) | blue;
 
 		return skijaColor;
 	}
 
 	@Override
 	public void drawLine(int x1, int y1, int x2, int y2) {
-		float scaledOffsetValue = getScaledOffsetValue();
+		final float scaledOffsetValue = getScaledOffsetValue();
 		performDrawLine(paint -> surface.getCanvas().drawLine(DPIScaler.autoScaleUp(x1) + scaledOffsetValue,
 				DPIScaler.autoScaleUp(y1) + scaledOffsetValue, DPIScaler.autoScaleUp(x2) + scaledOffsetValue,
 				DPIScaler.autoScaleUp(y2) + scaledOffsetValue, paint));
@@ -560,7 +584,7 @@ public class SkiaGC implements IExternalGC {
 
 
 		if(foreground == null) {
-			if(drawable instanceof org.eclipse.swt.widgets.Canvas c) {
+			if(drawable instanceof final org.eclipse.swt.widgets.Canvas c) {
 				return c.getForeground();
 			}
 		}
@@ -584,18 +608,18 @@ public class SkiaGC implements IExternalGC {
 		if (text == null) {
 			return;
 		}
-		TextBlob textBlob = buildTextBlob(text);
+		final TextBlob textBlob = buildTextBlob(text);
 		if (textBlob == null) {
 			return;
 		}
 		if ((flags & (SWT.TRANSPARENT | SWT.DRAW_TRANSPARENT)) == 0) {
-			int textWidth = Math.round(textBlob.getBounds().getWidth());
-			int fontHeight = Math.round(skiaFont.getMetrics().getHeight());
+			final int textWidth = Math.round(textBlob.getBounds().getWidth());
+			final int fontHeight = Math.round(skiaFont.getMetrics().getHeight());
 			performDrawFilled(
 					paint -> surface.getCanvas().drawRect(new Rect(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y),
 							DPIScaler.autoScaleUp(x) + textWidth, DPIScaler.autoScaleUp(y) + fontHeight), paint));
 		}
-		Point point = calculateSymbolCenterPoint(x, y);
+		final Point point = calculateSymbolCenterPoint(x, y);
 		performDrawText(paint -> surface.getCanvas().drawTextBlob(textBlob, point.x, point.y, paint));
 	}
 
@@ -605,31 +629,31 @@ public class SkiaGC implements IExternalGC {
 	// parameter y being the top left text box position and the text box height
 	// according to font metrics)
 	private Point calculateSymbolCenterPoint(int x, int y) {
-		int topLeftTextBoxYPosition = DPIScaler.autoScaleUp(y);
-		float heightOfTextBoxConsideredByClients = skiaFont.getMetrics().getHeight();
-		float heightOfSymbolToCenter = baseSymbolHeight;
-		Point point = new Point((int) DPIScaler.autoScaleUp(x),
+		final int topLeftTextBoxYPosition = DPIScaler.autoScaleUp(y);
+		final float heightOfTextBoxConsideredByClients = skiaFont.getMetrics().getHeight();
+		final float heightOfSymbolToCenter = baseSymbolHeight;
+		final Point point = new Point(DPIScaler.autoScaleUp(x),
 				(int) (topLeftTextBoxYPosition + heightOfTextBoxConsideredByClients / 2 + heightOfSymbolToCenter / 2));
 		return point;
 	}
 
 	private TextBlob buildTextBlob(String text) {
 		text = replaceMnemonics(text);
-		String[] lines = splitString(text);
-		TextBlobBuilder blobBuilder = new TextBlobBuilder();
-		float lineHeight = skiaFont.getMetrics().getHeight();
+		final String[] lines = splitString(text);
+		final TextBlobBuilder blobBuilder = new TextBlobBuilder();
+		final float lineHeight = skiaFont.getMetrics().getHeight();
 		int yOffset = 0;
-		for (String line : lines) {
+		for (final String line : lines) {
 			blobBuilder.appendRun(skiaFont, line, 0, yOffset);
 			yOffset += lineHeight;
 		}
-		TextBlob textBlob = blobBuilder.build();
+		final TextBlob textBlob = blobBuilder.build();
 		blobBuilder.close();
 		return textBlob;
 	}
 
 	private String replaceMnemonics(String text) {
-		int mnemonicIndex = text.lastIndexOf('&');
+		final int mnemonicIndex = text.lastIndexOf('&');
 		if (mnemonicIndex != -1) {
 			text = text.replaceAll("&", "");
 			// TODO Underline the mnemonic key
@@ -639,9 +663,9 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
-		performDrawLine(paint -> surface.getCanvas().drawArc((float) DPIScaler.autoScaleUp(x),
-				(float) DPIScaler.autoScaleUp(y), (float) DPIScaler.autoScaleUp(x + width),
-				(float) DPIScaler.autoScaleUp(y + height), -startAngle, (float) -arcAngle, false, paint));
+		performDrawLine(paint -> surface.getCanvas().drawArc(DPIScaler.autoScaleUp(x),
+				DPIScaler.autoScaleUp(y), DPIScaler.autoScaleUp(x + width),
+				DPIScaler.autoScaleUp(y + height), -startAngle, -arcAngle, false, paint));
 	}
 
 	@Override
@@ -691,8 +715,8 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void drawPolygon(int[] pointArray) {
 
-		int size = pointArray.length;
-		int [] firstPointAddedAtEnd = new int[ size + 2 ];
+		final int size = pointArray.length;
+		final int [] firstPointAddedAtEnd = new int[ size + 2 ];
 		System.arraycopy(pointArray, 0, firstPointAddedAtEnd, 0, pointArray.length);
 
 		firstPointAddedAtEnd[ pointArray.length ] = pointArray[ 0  ];
@@ -709,8 +733,8 @@ public class SkiaGC implements IExternalGC {
 
 	private int[] createLinesArray(int[] array) {
 
-		List<Point> pts1 = new LinkedList<>();
-		List<Point> pts2 = new LinkedList<>();
+		final List<Point> pts1 = new LinkedList<>();
+		final List<Point> pts2 = new LinkedList<>();
 
 
 		for (int i = 0; i < (array.length - 1); i = i+2) {
@@ -728,7 +752,7 @@ public class SkiaGC implements IExternalGC {
 		}
 		pts2.add(pts1.get(pts1.size() - 1));
 
-		int [] res = new int[pts2.size()*2];
+		final int [] res = new int[pts2.size()*2];
 
 		for( int i = 0 ; i < pts2.size() ; i++) {
 			res[2*i] = pts2.get(i).x;
@@ -740,7 +764,7 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private static float[] convertToFloat(int[] array) {
-		float[] arrayAsFloat = new float[array.length];
+		final float[] arrayAsFloat = new float[array.length];
 		for (int i = 0; i < array.length; i++) {
 			arrayAsFloat[i] = DPIScaler.autoScaleUp(array[i]);
 		}
@@ -753,10 +777,10 @@ public class SkiaGC implements IExternalGC {
 				.drawRect(offsetRectangle(createScaledRectangle(x, y, width, height)), paint));
 	}
 
-		@Override
-		public void drawRectangle(Rectangle rect) {
-			drawRectangle(rect.x, rect.y, rect.width, rect.height);
-		}
+	@Override
+	public void drawRectangle(Rectangle rect) {
+		drawRectangle(rect.x, rect.y, rect.width, rect.height);
+	}
 
 	@Override
 	public void drawRoundRectangle(int x, int y, int width, int height, int arcWidth, int arcHeight) {
@@ -776,11 +800,11 @@ public class SkiaGC implements IExternalGC {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
 		if (!isTransparent) {
-			int width = (int) DPIScaler.autoScaleDown(skiaFont.measureTextWidth(string));
-			int height = (int) DPIScaler.autoScaleDown(skiaFont.getMetrics().getHeight());
+			final int width = (int) DPIScaler.autoScaleDown(skiaFont.measureTextWidth(string));
+			final int height = (int) DPIScaler.autoScaleDown(skiaFont.getMetrics().getHeight());
 			fillRectangle(x, y, width, height);
 		}
-		Point point = calculateSymbolCenterPoint(x, y);
+		final Point point = calculateSymbolCenterPoint(x, y);
 		performDrawText(paint -> {
 			surface.getCanvas().drawString(string, point.x, point.y, skiaFont, paint);
 		});
@@ -788,9 +812,9 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void fillArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
-		performDrawFilled(paint -> surface.getCanvas().drawArc((float) DPIScaler.autoScaleUp(x),
-				(float) DPIScaler.autoScaleUp(y), (float) DPIScaler.autoScaleUp(x + width),
-				(float) DPIScaler.autoScaleUp(y + height), (float) -startAngle, (float) -arcAngle, false, paint));
+		performDrawFilled(paint -> surface.getCanvas().drawArc(DPIScaler.autoScaleUp(x),
+				DPIScaler.autoScaleUp(y), DPIScaler.autoScaleUp(x + width),
+				DPIScaler.autoScaleUp(y + height), -startAngle, -arcAngle, false, paint));
 	}
 
 	@Override
@@ -799,19 +823,21 @@ public class SkiaGC implements IExternalGC {
 		if (width < 0) {
 			x = Math.max(0, x + width);
 			width = -width;
-			if (!vertical)
+			if (!vertical) {
 				swapColors = true;
+			}
 		}
 		if (height < 0) {
 			y = Math.max(0, y + height);
 			height = -height;
-			if (vertical)
+			if (vertical) {
 				swapColors = true;
+			}
 		}
-		int x2 = vertical ? x : x + width;
-		int y2 = vertical ? y + height : y;
+		final int x2 = vertical ? x : x + width;
+		final int y2 = vertical ? y + height : y;
 
-		Rect rect = createScaledRectangle(x, y, width, height);
+		final Rect rect = createScaledRectangle(x, y, width, height);
 		int fromColor = convertSWTColorToSkijaColor(getForeground());
 		int toColor = convertSWTColorToSkijaColor(getBackground());
 		if (fromColor == toColor) {
@@ -819,7 +845,7 @@ public class SkiaGC implements IExternalGC {
 			return;
 		}
 		if (swapColors) {
-			int tempColor = convertSWTColorToSkijaColor(getForeground());
+			final int tempColor = convertSWTColorToSkijaColor(getForeground());
 			fromColor = convertSWTColorToSkijaColor(getBackground());
 			toColor = tempColor;
 		}
@@ -851,11 +877,11 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void fillPolygon(int[] pointArray) {
-		List<io.github.humbleui.types.Point> ps = new ArrayList<>();
+		final List<io.github.humbleui.types.Point> ps = new ArrayList<>();
 
 		for (int i = 0; i < pointArray.length; i += 2) {
-			int x = DPIScaler.autoScaleUp(pointArray[i]);
-			int y = DPIScaler.autoScaleUp(pointArray[i + 1]);
+			final int x = DPIScaler.autoScaleUp(pointArray[i]);
+			final int y = DPIScaler.autoScaleUp(pointArray[i + 1]);
 			ps.add(new io.github.humbleui.types.Point(x, y));
 		}
 
@@ -876,8 +902,8 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public Point textExtent(String string, int flags) {
-		float height = skiaFont.getMetrics().getHeight();
-		float width = skiaFont.measureTextWidth(replaceMnemonics(string));
+		final float height = skiaFont.getMetrics().getHeight();
+		final float width = skiaFont.measureTextWidth(replaceMnemonics(string));
 		return new Point(DPIScaler.autoScaleDown((int) width), DPIScaler.autoScaleDown((int) height));
 	}
 
@@ -901,8 +927,8 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	static Font convertToSkijaFont(org.eclipse.swt.graphics.Font font) {
-		FontData fontData = font.getFontData()[0];
-		var cachedFont = FONT_CACHE.get(fontData);
+		final FontData fontData = font.getFontData()[0];
+		final var cachedFont = FONT_CACHE.get(fontData);
 		if (cachedFont != null && cachedFont.isClosed()) {
 			FONT_CACHE.remove(fontData);
 		}
@@ -911,8 +937,8 @@ public class SkiaGC implements IExternalGC {
 
 	static Font createSkijaFont(FontData fontData) {
 		FontStyle style = FontStyle.NORMAL;
-		boolean isBold = (fontData.getStyle() & SWT.BOLD) != 0;
-		boolean isItalic = (fontData.getStyle() & SWT.ITALIC) != 0;
+		final boolean isBold = (fontData.getStyle() & SWT.BOLD) != 0;
+		final boolean isItalic = (fontData.getStyle() & SWT.ITALIC) != 0;
 		if (isBold && isItalic) {
 			style = FontStyle.BOLD_ITALIC;
 		} else if (isBold) {
@@ -920,7 +946,7 @@ public class SkiaGC implements IExternalGC {
 		} else if (isItalic) {
 			style = FontStyle.ITALIC;
 		}
-		Font skijaFont = new Font(Typeface.makeFromName(fontData.getName(), style));
+		final Font skijaFont = new Font(Typeface.makeFromName(fontData.getName(), style));
 		int fontSize = DPIScaler.scaleUp(fontData.getHeight(), DPIScaler.getNativeDeviceZoom());
 		if (SWT.getPlatform().equals("win32")) {
 			fontSize *= skijaFont.getSize() / Display.getDefault().getSystemFont().getFontData()[0].getHeight();
@@ -957,15 +983,15 @@ public class SkiaGC implements IExternalGC {
 		this.lineWidth = i;
 	}
 
-//		@Override
-//		public FontMetrics getFontMetrics() {
-//			FontMetricsHandle fmh = new SkijaFontMetrics(skiaFont.getMetrics());
-//
-//			FontMetrics fm = new FontMetrics();
-//			fm.innerFontMetrics = fmh;
-//
-//			return fm;
-//		}
+	//		@Override
+	//		public FontMetrics getFontMetrics() {
+	//			FontMetricsHandle fmh = new SkijaFontMetrics(skiaFont.getMetrics());
+	//
+	//			FontMetrics fm = new FontMetrics();
+	//			fm.innerFontMetrics = fmh;
+	//
+	//			return fm;
+	//		}
 
 	@Override
 	public int getAntialias() {
@@ -985,27 +1011,25 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private Rect offsetRectangle(Rect rect) {
-		float scaledOffsetValue = getScaledOffsetValue();
-		float widthHightAutoScaleOffset = DPIScaler.autoScaleUp(1) - 1.0f;
+		final float scaledOffsetValue = getScaledOffsetValue();
+		final float widthHightAutoScaleOffset = DPIScaler.autoScaleUp(1) - 1.0f;
 		if (scaledOffsetValue != 0f) {
 			return new Rect(rect.getLeft() + scaledOffsetValue, rect.getTop() + scaledOffsetValue,
 					rect.getRight() + scaledOffsetValue + widthHightAutoScaleOffset,
 					rect.getBottom() + scaledOffsetValue + widthHightAutoScaleOffset);
-		} else {
-			return rect;
 		}
+		return rect;
 	}
 
 	private RRect offsetRectangle(RRect rect) {
-		float scaledOffsetValue = getScaledOffsetValue();
-		float widthHightAutoScaleOffset = DPIScaler.autoScaleUp(1) - 1.0f;
+		final float scaledOffsetValue = getScaledOffsetValue();
+		final float widthHightAutoScaleOffset = DPIScaler.autoScaleUp(1) - 1.0f;
 		if (scaledOffsetValue != 0f) {
 			return new RRect(rect.getLeft() + scaledOffsetValue, rect.getTop() + scaledOffsetValue,
 					rect.getRight() + scaledOffsetValue + widthHightAutoScaleOffset,
 					rect.getBottom() + scaledOffsetValue + widthHightAutoScaleOffset, rect._radii);
-		} else {
-			return rect;
 		}
+		return rect;
 	}
 
 	private Rect createScaledRectangle(Rectangle r) {
@@ -1018,11 +1042,11 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private float getScaledOffsetValue() {
-		boolean isDefaultLineWidth = lineWidth == 0;
+		final boolean isDefaultLineWidth = lineWidth == 0;
 		if (isDefaultLineWidth) {
 			return 0.5f;
 		}
-		int effectiveLineWidth = DPIScaler.autoScaleUp(lineWidth);
+		final int effectiveLineWidth = DPIScaler.autoScaleUp(lineWidth);
 		if (effectiveLineWidth % 2 == 1) {
 			return DPIScaler.autoScaleUp(0.5f);
 		}
@@ -1056,7 +1080,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public LineAttributes getLineAttributes() {
-		LineAttributes attributes = getLineAttributesInPixels();
+		final LineAttributes attributes = getLineAttributesInPixels();
 		attributes.width = DPIScaler.autoScaleDown(attributes.width);
 		if (attributes.dash != null) {
 			attributes.dash = DPIScaler.autoScaleDown(attributes.dash);
@@ -1087,12 +1111,12 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void copyArea(Image image, int x, int y) {
 		io.github.humbleui.skija.Image skijaImage = convertSWTImageToSkijaImage(image);
-		io.github.humbleui.skija.Image copiedArea = surface.makeImageSnapshot(
+		final io.github.humbleui.skija.Image copiedArea = surface.makeImageSnapshot(
 				createScaledRectangle(x, y, skijaImage.getWidth(), skijaImage.getHeight()).toIRect());
 
 		if (copiedArea != null) {
-			Surface imageSurface = surface.makeSurface(skijaImage.getWidth(), skijaImage.getHeight());
-			Canvas imageCanvas = imageSurface.getCanvas();
+			final Surface imageSurface = surface.makeSurface(skijaImage.getWidth(), skijaImage.getHeight());
+			final Canvas imageCanvas = imageSurface.getCanvas();
 			imageCanvas.drawImage(copiedArea, 0, 0);
 			skijaImage = imageSurface.makeImageSnapshot();
 
@@ -1108,7 +1132,7 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void copyArea(int srcX, int srcY, int width, int height, int destX, int destY) {
 
-		io.github.humbleui.skija.Image copiedArea = surface
+		final io.github.humbleui.skija.Image copiedArea = surface
 				.makeImageSnapshot(createScaledRectangle(srcX, srcY, width, height).toIRect());
 		surface.getCanvas().drawImage(copiedArea, DPIScaler.autoScaleUp(destX), DPIScaler.autoScaleUp(destY));
 	}
@@ -1118,10 +1142,10 @@ public class SkiaGC implements IExternalGC {
 		copyArea(srcX, srcY, width, height, destX, destY);
 		if (paint) {
 			// cut-paste behaviour
-//				surface.getCanvas().save();
-//				surface.getCanvas().clipRect(createScaledRectangle(srcX, srcY, width, height));
-//				surface.getCanvas().clear(0x00000000);
-//				surface.getCanvas().restore();
+			//				surface.getCanvas().save();
+			//				surface.getCanvas().clipRect(createScaledRectangle(srcX, srcY, width, height));
+			//				surface.getCanvas().clear(0x00000000);
+			//				surface.getCanvas().restore();
 			/** TODO - Implement correct behavior when paint is true **/
 		}
 	}
@@ -1305,54 +1329,37 @@ public class SkiaGC implements IExternalGC {
 		// Note: RGB values here should be representative of a palette.
 
 		// TODO test all mappings here
-		switch (colorType) {
-		case ALPHA_8:
-			return new PaletteData(new RGB[] { new RGB(255, 255, 255), new RGB(0, 0, 0) });
-		case RGB_565:
-			return new PaletteData(0xF800, 0x07E0, 0x001F); // Mask for RGB565
-		case ARGB_4444:
-			return new PaletteData(0x0F00, 0x00F0, 0x000F); // Mask for ARGB4444
-		case RGBA_8888:
-			var p = new PaletteData(0xFF000000, 0x00FF0000, 0x0000FF00); // Standard RGBA masks
-			return p;
-		case BGRA_8888:
-			return new PaletteData(0x0000FF00, 0x00FF0000, 0xFF000000);
-		case RGBA_F16:
-			return new PaletteData(new RGB[] { new RGB(255, 0, 0), // Example red
-					new RGB(0, 255, 0), // Example green
-					new RGB(0, 0, 255) }); // Example blue
-		case RGBA_F32:
-			return new PaletteData(new RGB[] { new RGB(255, 165, 0), // Example orange
-					new RGB(0, 255, 255), // Example cyan
-					new RGB(128, 0, 128) }); // Example purple
-		default:
-			throw new IllegalArgumentException("Unknown Skija ColorType: " + colorType);
+		return switch (colorType) {
+		case ALPHA_8 -> new PaletteData(new RGB[] { new RGB(255, 255, 255), new RGB(0, 0, 0) });
+		case RGB_565 -> new PaletteData(0xF800, 0x07E0, 0x001F); // Mask for RGB565
+		case ARGB_4444 -> new PaletteData(0x0F00, 0x00F0, 0x000F); // Mask for ARGB4444
+		case RGBA_8888 -> {
+			final var p = new PaletteData(0xFF000000, 0x00FF0000, 0x0000FF00); // Standard RGBA masks
+			yield p;
 		}
+		case BGRA_8888 -> new PaletteData(0x0000FF00, 0x00FF0000, 0xFF000000);
+		case RGBA_F16 -> new PaletteData(new RGB[] { new RGB(255, 0, 0), // Example red
+							new RGB(0, 255, 0), // Example green
+							new RGB(0, 0, 255) }); // Example red // Example green // Example blue
+		case RGBA_F32 -> new PaletteData(new RGB[] { new RGB(255, 165, 0), // Example orange
+							new RGB(0, 255, 255), // Example cyan
+							new RGB(128, 0, 128) }); // Example orange // Example cyan // Example purple
+		default -> throw new IllegalArgumentException("Unknown Skija ColorType: " + colorType);
+		};
 	}
 
 	static int getImageDepth(ColorType colorType) {
 		// TODO test all mappings
-		switch (colorType) {
-		case ALPHA_8:
-			return 8;
-		case RGB_565:
-			return 16;
-		case ARGB_4444:
-			return 16;
-		case RGBA_8888:
-			return 32;
-		case BGRA_8888:
-			return 32;
-		case RGBA_F16:
-			// Typically could represent more colors, but SWT doesn't support floating-point
-			// depths.
-			return 64; // This is theoretical; SWT will usually not handle more than 32
-		case RGBA_F32:
-			// Same as RGBA_F16 with regards to SWT support
-			return 128; // Theoretical; actual handling requires custom treatment
-		default:
-			throw new IllegalArgumentException("Unknown Skija ColorType: " + colorType);
-		}
+		return switch (colorType) {
+		case ALPHA_8 -> 8;
+		case RGB_565 -> 16;
+		case ARGB_4444 -> 16;
+		case RGBA_8888 -> 32;
+		case BGRA_8888 -> 32;
+		case RGBA_F16 -> /* Typically could represent more colors, but SWT doesn't support floating-point */ /* depths. */ 64; // This is theoretical; SWT will usually not handle more than 32
+		case RGBA_F32 -> /* Same as RGBA_F16 with regards to SWT support */ 128; // Theoretical; actual handling requires custom treatment
+		default -> throw new IllegalArgumentException("Unknown Skija ColorType: " + colorType);
+		};
 	}
 
 	static ColorAlphaType determineAlphaType(ImageData imageData) {
@@ -1404,7 +1411,7 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	public static int[] getPixelOrder(ColorType colorType) {
-		Map<ColorType, int[]> colorTypeMap = createColorTypeMap();
+		final Map<ColorType, int[]> colorTypeMap = createColorTypeMap();
 		return colorTypeMap.get(colorType);
 	}
 
@@ -1412,22 +1419,23 @@ public class SkiaGC implements IExternalGC {
 	void drawRectangleInPixels(int x, int y, int width, int height) {
 
 
-		Paint p = new Paint();
+		final Paint p = new Paint();
 		p.setColor(convertSWTColorToSkijaColor(getForeground()));
 		surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p);
 		p.close();
 
 	}
-	
+
 	public Color getBackground() {
-		if(background != null)
+		if(background != null) {
 			return background;
-		
-		var s = (org.eclipse.swt.widgets.Canvas) drawable;
+		}
+
+		final var s = (org.eclipse.swt.widgets.Canvas) drawable;
 		return s.getBackground();
-		
-		
-		
+
+
+
 	}
 
 	@Override

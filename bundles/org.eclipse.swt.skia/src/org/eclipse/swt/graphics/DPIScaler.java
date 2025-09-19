@@ -1,9 +1,9 @@
 package org.eclipse.swt.graphics;
 
 /**
- * 
+ *
  * original calls come from DPIUtil
- * 
+ *
  */
 public class DPIScaler {
 
@@ -18,7 +18,7 @@ public class DPIScaler {
 	public static float autoScaleDown(float o) {
 		return o;
 	}
-	
+
 	public static int autoScaleDown(int o) {
 		return o;
 	}

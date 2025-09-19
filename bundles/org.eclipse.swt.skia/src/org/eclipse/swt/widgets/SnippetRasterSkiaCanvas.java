@@ -1,7 +1,8 @@
 package org.eclipse.swt.widgets;
 
-import org.eclipse.swt.*;
-import org.eclipse.swt.graphics.*;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Point;
 
 public class SnippetRasterSkiaCanvas {
 
@@ -24,11 +25,11 @@ public class SnippetRasterSkiaCanvas {
 	int width = 2;
 
 	public static void main(String[] args) {
-		Display display = new Display();
-		Shell shell = new Shell(display);
+		final Display display = new Display();
+		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas");
-// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
-		Canvas c = new SkiaGlCanvas(shell,  SWT.DOUBLE_BUFFERED);
+		// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
+		final Canvas c = new SkiaGlCanvas(shell,  SWT.DOUBLE_BUFFERED);
 
 		for( int x = 0 ; x < RECTANGLES_PER_LINE ; x++ ) {
 			for(int y = 0 ; y < RECTANGLES_PER_LINE ; y++) {
@@ -41,16 +42,17 @@ public class SnippetRasterSkiaCanvas {
 		c.setSize(100, 100);
 
 		shell.addListener(SWT.Resize, e -> onResize(e, c));
-		c.addListener(SWT.Paint, e -> onPaint(e));
-		c.addListener(SWT.Paint, e -> onPaint2(e));
+		c.addListener(SWT.Paint, SnippetRasterSkiaCanvas::onPaint);
+		c.addListener(SWT.Paint, SnippetRasterSkiaCanvas::onPaint2);
 
 		shell.setSize(1000, RECTANGLES_PER_LINE*3+80);
 
 
 		shell.open();
 		while (!shell.isDisposed()) {
-			if (!display.readAndDispatch())
+			if (!display.readAndDispatch()) {
 				display.sleep();
+			}
 		}
 		display.dispose();
 	}
@@ -65,50 +67,50 @@ public class SnippetRasterSkiaCanvas {
 	private static void onPaint(Event e) {
 
 
-		var s = ((Canvas) e.widget);
+		final var s = ((Canvas) e.widget);
 
-//		surface.getCanvas().clear(0xFFFFFFFF);
+		//		surface.getCanvas().clear(0xFFFFFFFF);
 
-		Point size = s.getSize();
+		final Point size = s.getSize();
 
 		long currentPosTime = System.currentTimeMillis() - startTime;
 
 		currentPosTime = currentPosTime % 10000;
 
-		double position = (double) currentPosTime / (double) 10000;
+		final double position = (double) currentPosTime / (double) 10000;
 
-		int shift = (int) (position * size.x);
-		int shiftDown = 20;
+		final int shift = (int) (position * size.x);
+		final int shiftDown = 20;
 
 		for( int x = 0 ; x < RECTANGLES_PER_LINE ; x++ ) {
 			for(int y = 0 ; y < RECTANGLES_PER_LINE ; y++) {
 
-                var rec = recDraws[x][y];
-                e.gc.setForeground(rec.c);
+				final var rec = recDraws[x][y];
+				e.gc.setForeground(rec.c);
 				e.gc.drawRectangle(shift + rec.xPos ,shiftDown + rec.yPos,  2,2 );
 
 			}
 		}
 
 
-//		int colorAsRGB = 0xFF42FFF4;
-//		int colorRed = 0xFFFF0000;
-//		int colorGreen = 0xFF00FF00;
-//		int colorBlue = 0xFF0000FF;
-//
-//		e.gc.setForeground(s.getDisplay().getSystemColor(SWT.COLOR_RED));
+		//		int colorAsRGB = 0xFF42FFF4;
+		//		int colorRed = 0xFFFF0000;
+		//		int colorGreen = 0xFF00FF00;
+		//		int colorBlue = 0xFF0000FF;
+		//
+		//		e.gc.setForeground(s.getDisplay().getSystemColor(SWT.COLOR_RED));
 
 
 	}
 
 	private static void onPaint2(Event e) {
 
-		var s = ((Canvas) e.widget);
+		final var s = ((Canvas) e.widget);
 
 		if (printFrameRate) {
 
 			if (System.currentTimeMillis() - lastFrame > 1000) {
-//				System.out.println("Frames: " + frames);
+				//				System.out.println("Frames: " + frames);
 				framesToDraw = frames;
 
 
@@ -129,7 +131,7 @@ public class SnippetRasterSkiaCanvas {
 
 	private static void onResize(Event e, Canvas c) {
 
-		var ca = c.getShell().getClientArea();
+		final var ca = c.getShell().getClientArea();
 
 		c.setSize(ca.width, ca.height);
 

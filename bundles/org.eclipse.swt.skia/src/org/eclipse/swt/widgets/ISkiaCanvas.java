@@ -5,5 +5,5 @@ import io.github.humbleui.skija.Surface;
 public interface ISkiaCanvas {
 
 	Surface getSurface();
-	
+
 }

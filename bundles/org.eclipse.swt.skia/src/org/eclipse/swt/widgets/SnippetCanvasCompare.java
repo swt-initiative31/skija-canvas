@@ -1,48 +1,51 @@
 package org.eclipse.swt.widgets;
 
-import org.eclipse.swt.*;
-import org.eclipse.swt.graphics.*;
+import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.Path;
+import org.eclipse.swt.graphics.Rectangle;
 
 public class SnippetCanvasCompare {
 
 	public static void main(String[] args) {
-		Display display = new Display();
-		Shell shell = new Shell(display);
+		final Display display = new Display();
+		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas Compare");
 
 		{
-			Canvas c1 = new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED);
+			final Canvas c1 = new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED);
 			c1.setSize(100, 100);
 			shell.addListener(SWT.Resize, e -> onResize(e, c1, 1));
-			c1.addListener(SWT.Paint, e -> onPaint(e));
+			c1.addListener(SWT.Paint, SnippetCanvasCompare::onPaint);
 		}
 		{
-			Canvas c2 = new Canvas(shell, SWT.DOUBLE_BUFFERED);
+			final Canvas c2 = new Canvas(shell, SWT.DOUBLE_BUFFERED);
 			c2.setSize(100, 100);
 			shell.addListener(SWT.Resize, e -> onResize(e, c2, 2));
-			c2.addListener(SWT.Paint, e -> onPaint(e));
+			c2.addListener(SWT.Paint, SnippetCanvasCompare::onPaint);
 		}
-		
+
 
 		shell.setSize(1000, 1000);
 
 		shell.open();
 		while (!shell.isDisposed()) {
-			if (!display.readAndDispatch())
+			if (!display.readAndDispatch()) {
 				display.sleep();
+			}
 		}
 		display.dispose();
 	}
 
 	private static void onPaint(Event e) {
 
-		Display d = e.widget.getDisplay();
-		GC gc = e.gc;
+		final Display d = e.widget.getDisplay();
+		final GC gc = e.gc;
 
 		gc.setForeground(d.getSystemColor(SWT.COLOR_RED));
 		gc.drawRectangle(new Rectangle(0, 0, 100, 100));
-		
-//		((Canvas)e.widget).redraw();
+
+		//		((Canvas)e.widget).redraw();
 
 		gc.setForeground(d.getSystemColor(SWT.COLOR_BLUE));
 		gc.drawRectangle(new Rectangle(100, 0, 100, 100));
@@ -50,7 +53,7 @@ public class SnippetCanvasCompare {
 		gc.setForeground(d.getSystemColor(SWT.COLOR_GREEN));
 		gc.drawRectangle(new Rectangle(0, 100, 100, 100));
 
-		var img = d.getSystemImage(SWT.ICON_QUESTION);
+		final var img = d.getSystemImage(SWT.ICON_QUESTION);
 		gc.drawImage(img, 100, 100);
 
 		gc.setForeground(d.getSystemColor(SWT.COLOR_RED));
@@ -65,7 +68,7 @@ public class SnippetCanvasCompare {
 		gc.setForeground(d.getSystemColor(SWT.COLOR_DARK_CYAN));
 		gc.drawOval(0, 300, 100, 50);
 
-		Path p = new Path(d);
+		final Path p = new Path(d);
 		p.addRectangle(0, 400, 100, 100);
 		gc.setForeground(d.getSystemColor(SWT.COLOR_DARK_GREEN));
 		gc.drawPath(p);
@@ -76,7 +79,7 @@ public class SnippetCanvasCompare {
 		gc.setForeground(d.getSystemColor(SWT.COLOR_DARK_RED));
 		gc.drawPoint(5, 600);
 
-		var bo = img.getBounds();
+		final var bo = img.getBounds();
 		gc.drawImage(img, 0, 0, bo.width /2 , bo.height /2 ,    20 , 600, bo.width * 2, bo.height *2 );
 
 		gc.setForeground(d.getSystemColor(SWT.COLOR_DARK_MAGENTA));
@@ -111,7 +114,7 @@ public class SnippetCanvasCompare {
 		gc.fillOval(100, 500, 100, 50);
 
 
-		Path p2 = new Path(d);
+		final Path p2 = new Path(d);
 		p2.addRectangle(100, 600, 100, 100);
 		gc.fillPath(p2);
 
@@ -125,13 +128,13 @@ public class SnippetCanvasCompare {
 		gc.fillRectangle(new Rectangle(100, 800, 100, 100));
 
 		gc.fillRoundRectangle(200, 800, 100, 100, 20, 20);
-		
+
 	}
 
 	private static void onResize(Event e, Canvas c, int index) {
 
 
-		var ca = c.getShell().getClientArea();
+		final var ca = c.getShell().getClientArea();
 		if(index == 2) {
 			c.setBounds(new Rectangle(ca.width / 2, 0, ca.width / 2, ca.height));
 		}

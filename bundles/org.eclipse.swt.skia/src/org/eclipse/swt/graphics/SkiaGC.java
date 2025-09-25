@@ -917,16 +917,11 @@ public class SkiaGC implements IExternalGC {
 			font = innerGC.getFont();
 		}
 		this.swtFont = font;
-
-		if (FONT_CACHE.containsKey(this.swtFont)) {
-			this.skiaFont = FONT_CACHE.get(this.swtFont);
-		} else {
-			this.skiaFont = convertToSkijaFont(font);
-		}
-		this.baseSymbolHeight = this.skiaFont.measureText("T").getHeight();
+		this.skiaFont = getSkijaFont(font);
+		this.baseSymbolHeight = this.skiaFont.measureText("T").getHeight(); //$NON-NLS-1$
 	}
 
-	static Font convertToSkijaFont(org.eclipse.swt.graphics.Font font) {
+	private static Font getSkijaFont(org.eclipse.swt.graphics.Font font) {
 		final FontData fontData = font.getFontData()[0];
 		final var cachedFont = FONT_CACHE.get(fontData);
 		if (cachedFont != null && cachedFont.isClosed()) {
@@ -935,7 +930,7 @@ public class SkiaGC implements IExternalGC {
 		return FONT_CACHE.computeIfAbsent(fontData, SkiaGC::createSkijaFont);
 	}
 
-	static Font createSkijaFont(FontData fontData) {
+	private static Font createSkijaFont(FontData fontData) {
 		FontStyle style = FontStyle.NORMAL;
 		final boolean isBold = (fontData.getStyle() & SWT.BOLD) != 0;
 		final boolean isItalic = (fontData.getStyle() & SWT.ITALIC) != 0;
@@ -948,8 +943,12 @@ public class SkiaGC implements IExternalGC {
 		}
 		final Font skijaFont = new Font(Typeface.makeFromName(fontData.getName(), style));
 		int fontSize = DPIScaler.scaleUp(fontData.getHeight(), DPIScaler.getNativeDeviceZoom());
-		if (SWT.getPlatform().equals("win32")) {
+		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
 			fontSize *= skijaFont.getSize() / Display.getDefault().getSystemFont().getFontData()[0].getHeight();
+		}
+		if (SWT.getPlatform().equals("gtk")) { //$NON-NLS-1$
+			// SWT's font size is in points, 1pt = 1/72 inch, adjust skija font size to this
+			fontSize = (fontSize * Display.getDefault().getDPI().y) / 72;
 		}
 		skijaFont.setSize(fontSize);
 		skijaFont.setEdging(FontEdging.SUBPIXEL_ANTI_ALIAS);
@@ -1339,11 +1338,11 @@ public class SkiaGC implements IExternalGC {
 		}
 		case BGRA_8888 -> new PaletteData(0x0000FF00, 0x00FF0000, 0xFF000000);
 		case RGBA_F16 -> new PaletteData(new RGB[] { new RGB(255, 0, 0), // Example red
-							new RGB(0, 255, 0), // Example green
-							new RGB(0, 0, 255) }); // Example red // Example green // Example blue
+				new RGB(0, 255, 0), // Example green
+				new RGB(0, 0, 255) }); // Example red // Example green // Example blue
 		case RGBA_F32 -> new PaletteData(new RGB[] { new RGB(255, 165, 0), // Example orange
-							new RGB(0, 255, 255), // Example cyan
-							new RGB(128, 0, 128) }); // Example orange // Example cyan // Example purple
+				new RGB(0, 255, 255), // Example cyan
+				new RGB(128, 0, 128) }); // Example orange // Example cyan // Example purple
 		default -> throw new IllegalArgumentException("Unknown Skija ColorType: " + colorType);
 		};
 	}
@@ -1433,21 +1432,16 @@ public class SkiaGC implements IExternalGC {
 
 		final var s = (org.eclipse.swt.widgets.Canvas) drawable;
 		return s.getBackground();
-
-
-
 	}
 
 	@Override
 	public Device getDevice() {
-		// TODO Auto-generated method stub
-		return null;
+		return device;
 	}
 
 	@Override
 	public org.eclipse.swt.graphics.Font getFont() {
-		// TODO Auto-generated method stub
-		return null;
+		return swtFont;
 	}
 
 	@Override

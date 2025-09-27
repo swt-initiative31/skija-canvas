@@ -43,4 +43,8 @@ public class DPIScaler {
 		return p;
 	}
 
+	public static int autoScaleDownToInt(float value) {
+		return Math.round(autoScaleDown(value));
+	}
+
 }

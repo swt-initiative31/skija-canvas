@@ -7,13 +7,15 @@
  * https://www.eclipse.org/legal/epl-2.0/
  *
  * SPDX-License-Identifier: EPL-2.0
+ * Contributors:
+ *     SAP SE and others - initial API and implementation
+ * 	   Latha Patil (ETAS GmbH) - Implementation of SkijaGC APIs
  *******************************************************************************/
 
 package org.eclipse.swt.graphics;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -28,18 +30,27 @@ import org.eclipse.swt.widgets.ISkiaCanvas;
 
 import io.github.humbleui.skija.Bitmap;
 import io.github.humbleui.skija.Canvas;
+import io.github.humbleui.skija.ClipMode;
 import io.github.humbleui.skija.ColorAlphaType;
 import io.github.humbleui.skija.ColorType;
 import io.github.humbleui.skija.EncoderPNG;
+import io.github.humbleui.skija.FilterMipmap;
+import io.github.humbleui.skija.FilterMode;
 import io.github.humbleui.skija.Font;
 import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.FontStyle;
 import io.github.humbleui.skija.GradientStyle;
 import io.github.humbleui.skija.ImageInfo;
+import io.github.humbleui.skija.Matrix33;
+import io.github.humbleui.skija.MipmapMode;
 import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.PaintMode;
+import io.github.humbleui.skija.PaintStrokeCap;
+import io.github.humbleui.skija.PaintStrokeJoin;
 import io.github.humbleui.skija.PathEffect;
+import io.github.humbleui.skija.PathFillMode;
 import io.github.humbleui.skija.PixelGeometry;
+import io.github.humbleui.skija.SamplingMode;
 import io.github.humbleui.skija.Shader;
 import io.github.humbleui.skija.Surface;
 import io.github.humbleui.skija.SurfaceProps;
@@ -51,13 +62,17 @@ import io.github.humbleui.types.Rect;
 
 public class SkiaGC implements IExternalGC {
 
+	private static final Map<FontData, Font> FONT_CACHE = new ConcurrentHashMap<>();
+
+	static final float[] LINE_DOT_PATTERN = new float[] { 3, 3 };
+	static final float[] LINE_DASH_PATTERN = new float[] { 18, 6 };
+	static final float[] LINE_DASHDOT_PATTERN = new float[] { 9, 6, 3, 6 };
+	static final float[] LINE_DASHDOTDOT_PATTERN = new float[] { 9, 3, 3, 3, 3, 3 };
+
 	public SkiaGC() {
 		this.surface = null;
 		originalDrawingSize = null;
 	}
-
-	private static final Map<FontData, Font> FONT_CACHE = new ConcurrentHashMap<>();
-	private static final Map<Color, Paint> PAINT_CACHE = new ConcurrentHashMap<>();
 
 	public static SkiaGC createDefaultInstance(GC gc) {
 		return new SkiaGC(gc, gc.drawable, false);
@@ -82,18 +97,34 @@ public class SkiaGC implements IExternalGC {
 	private float baseSymbolHeight = 0; // Height of symbol with "usual" height, like "T", to be vertically centered
 	private int lineWidth;
 	private int lineStyle;
+	private int lineCap = SWT.CAP_FLAT;
+	private int lineJoin = SWT.JOIN_MITER;
+	private float[] lineDashes = null;
+	private float dashOffset = 0;
+	private float miterLimit = 10;
+	private int fillRule = SWT.FILL_EVEN_ODD;
 	private int antialias;
+	private int alpha = 255;
+	private boolean hasAlphaLayer = false;
+	private Pattern foregroundPattern;
+	private Pattern backgroundPattern;
 
 	private Point originalDrawingSize;
 	private Drawable drawable;
 	private Display device;
 
 	private static Map<ColorType, int[]> colorTypeMap = null;
+	private Matrix33 currentTransform = Matrix33.IDENTITY;
+
+	private SamplingMode interpolationMode = SamplingMode.DEFAULT;
+
+	private boolean isClipSet;
+	private Rectangle currentClipBounds;
 
 	public SkiaGC(Drawable drawable, int style) {
 		innerGC = this;
 		this.drawable = drawable;
-		final org.eclipse.swt.widgets.Canvas c = (org.eclipse.swt.widgets.Canvas)drawable;
+		final org.eclipse.swt.widgets.Canvas c = (org.eclipse.swt.widgets.Canvas) drawable;
 		device = c.getDisplay();
 		originalDrawingSize = extractSize(drawable);
 		if (drawable instanceof final ISkiaCanvas sc) {
@@ -168,7 +199,7 @@ public class SkiaGC implements IExternalGC {
 
 	private void initFont() {
 
-		org.eclipse.swt.graphics.Font originalFont = ((Control)this.drawable).getFont();
+		org.eclipse.swt.graphics.Font originalFont = ((Control) this.drawable).getFont();
 
 		if (originalFont == null || originalFont.isDisposed()) {
 			originalFont = innerGC.getDevice().getSystemFont();
@@ -178,54 +209,179 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void dispose() {
+		if (hasAlphaLayer) {
+			surface.getCanvas().restore();
+			hasAlphaLayer = false;
+		}
 		innerGC = null;
 		skiaFont = null;
 		swtFont = null;
 	}
 
-
 	private void performDraw(Consumer<Paint> operations) {
-		if (!PAINT_CACHE.containsKey(getForeground())) {
-			final Paint paint = new Paint();
-			paint.setColor(convertSWTColorToSkijaColor(getForeground()));
-			paint.setMode(PaintMode.STROKE);
-			paint.setStrokeWidth(lineWidth > 0 ? DPIScaler.autoScaleUp(lineWidth) : DPIScaler.autoScaleUp(1));
-			paint.setAntiAlias(true);
-			PAINT_CACHE.put(getForeground(), paint);
+		final Paint paint = new Paint();
+		if (!hasAlphaLayer) {
+			paint.setAlphaf(alpha / 255.0f);
 		}
-
-		operations.accept(PAINT_CACHE.get(getForeground()));
-
+		operations.accept(paint);
+		paint.close();
 	}
 
 	private void performDrawLine(Consumer<Paint> operations) {
-		if (!PAINT_CACHE.containsKey(getForeground())) {
-			final Paint paint = new Paint();
-			paint.setColor(convertSWTColorToSkijaColor(getForeground()));
+		performDraw(paint -> {
+			applyForegroundPattern(paint);
 			paint.setMode(PaintMode.STROKE);
 			paint.setStrokeWidth(lineWidth > 0 ? DPIScaler.autoScaleUp(lineWidth) : 1);
 			paint.setAntiAlias(true);
-			PAINT_CACHE.put(getForeground(), paint);
+
+			// Apply line cap setting
+			final PaintStrokeCap skijaLineCap = switch (lineCap) {
+			case SWT.CAP_ROUND -> PaintStrokeCap.ROUND;
+			case SWT.CAP_SQUARE -> PaintStrokeCap.SQUARE;
+			case SWT.CAP_FLAT -> PaintStrokeCap.BUTT;
+			default -> PaintStrokeCap.BUTT;
+			};
+			paint.setStrokeCap(skijaLineCap);
+
+			// Apply line join setting
+			final PaintStrokeJoin skijaLineJoin = switch (lineJoin) {
+			case SWT.JOIN_MITER -> PaintStrokeJoin.MITER;
+			case SWT.JOIN_ROUND -> PaintStrokeJoin.ROUND;
+			case SWT.JOIN_BEVEL -> PaintStrokeJoin.BEVEL;
+			default -> PaintStrokeJoin.BEVEL;
+			};
+			paint.setStrokeJoin(skijaLineJoin);
+			// Apply line dash pattern based on line style
+			final PathEffect pathEffect = createPathEffectForLineStyle();
+			if (pathEffect != null) {
+				paint.setPathEffect(pathEffect);
+			}
+			operations.accept(paint);
+		});
+	}
+
+	/**
+	 * Creates a PathEffect for the current line style and dash pattern.
+	 *
+	 * @return PathEffect for dashed lines, or null for solid lines
+	 */
+	private PathEffect createPathEffectForLineStyle() {
+		float[] dashPattern = null;
+		final float effectiveLineWidth = lineWidth > 0 ? DPIScaler.autoScaleUp(lineWidth) : 1;
+
+		switch (lineStyle) {
+		case SWT.LINE_SOLID:
+			return null; // No path effect needed for solid lines
+
+		case SWT.LINE_DOT:
+			if (effectiveLineWidth == 1) {
+				dashPattern = LINE_DOT_PATTERN.clone();
+			} else {
+				// Scale pattern based on line width
+				dashPattern = new float[] { effectiveLineWidth, effectiveLineWidth };
+			}
+			break;
+
+		case SWT.LINE_DASH:
+			if (effectiveLineWidth == 1) {
+				dashPattern = LINE_DASH_PATTERN.clone();
+			} else {
+				// Scale pattern based on line width
+				dashPattern = new float[] { 6 * effectiveLineWidth, 2 * effectiveLineWidth };
+			}
+			break;
+
+		case SWT.LINE_DASHDOT:
+			if (effectiveLineWidth == 1) {
+				dashPattern = LINE_DASHDOT_PATTERN.clone();
+			} else {
+				// Scale pattern based on line width
+				dashPattern = new float[] { 3 * effectiveLineWidth, 2 * effectiveLineWidth, effectiveLineWidth,
+						2 * effectiveLineWidth };
+			}
+			break;
+
+		case SWT.LINE_DASHDOTDOT:
+			if (effectiveLineWidth == 1) {
+				dashPattern = LINE_DASHDOTDOT_PATTERN.clone();
+			} else {
+				// Scale pattern based on line width
+				dashPattern = new float[] { 3 * effectiveLineWidth, effectiveLineWidth, effectiveLineWidth,
+						effectiveLineWidth, effectiveLineWidth, effectiveLineWidth };
+			}
+			break;
+
+		case SWT.LINE_CUSTOM:
+			if (lineDashes != null && lineDashes.length > 0) {
+				dashPattern = lineDashes.clone();
+			}
+			break;
+
+		default:
+			return null;
 		}
 
-		operations.accept(PAINT_CACHE.get(getForeground()));
+		if (dashPattern != null && dashPattern.length > 0) {
+			// Ensure even number of elements (on/off pairs)
+			if (dashPattern.length % 2 != 0) {
+				final float[] evenPattern = new float[dashPattern.length * 2];
+				System.arraycopy(dashPattern, 0, evenPattern, 0, dashPattern.length);
+				System.arraycopy(dashPattern, 0, evenPattern, dashPattern.length, dashPattern.length);
+				dashPattern = evenPattern;
+			}
 
+			// Apply dash offset (scaled for DPI)
+			final float scaledDashOffset = DPIScaler.autoScaleUp(dashOffset);
+			return PathEffect.makeDash(dashPattern, scaledDashOffset);
+		}
+
+		return null;
 	}
 
 	private void performDrawText(Consumer<Paint> operations) {
 		performDraw(paint -> {
-			paint.setColor(convertSWTColorToSkijaColor(getForeground()));
+			applyForegroundPattern(paint);
 			operations.accept(paint);
 		});
 	}
 
 	private void performDrawFilled(Consumer<Paint> operations) {
 		performDraw(paint -> {
-			paint.setColor(convertSWTColorToSkijaColor(getBackground()));
+			applyBackgroundPattern(paint);
 			paint.setMode(PaintMode.FILL);
 			paint.setAntiAlias(true);
 			operations.accept(paint);
 		});
+	}
+
+	private void applyBackgroundPattern(Paint paint) {
+		if (backgroundPattern != null && !backgroundPattern.isDisposed()) {
+			final Shader shader = convertSWTPatternToSkijaShader(backgroundPattern);
+			if (shader != null) {
+				paint.setShader(shader);
+				return;
+			}
+		}
+		// Fallback to backGround color if no pattern or pattern conversion failed
+		paint.setColor(convertSWTColorToSkijaColor(getBackground()));
+	}
+
+	/**
+	 * Applies the foreground pattern to the paint object if one is set.
+	 * If no pattern is set, uses the foreground color.
+	 *
+	 * @param paint the Paint object to apply the pattern to
+	 */
+	private void applyForegroundPattern(Paint paint) {
+		if (foregroundPattern != null && !foregroundPattern.isDisposed()) {
+			final Shader shader = convertSWTPatternToSkijaShader(foregroundPattern);
+			if (shader != null) {
+				paint.setShader(shader);
+				return;
+			}
+		}
+		// Fallback to foreground color if no pattern or pattern conversion failed
+		paint.setColor(convertSWTColorToSkijaColor(getForeground()));
 	}
 
 	private void performDrawPoint(Consumer<Paint> operations) {
@@ -256,21 +412,23 @@ public class SkiaGC implements IExternalGC {
 		return lines;
 	}
 
-	//		@Override
-	//		public void commit() {
-	//			if (isEmpty(originalDrawingSize)) {
-	//				return;
-	//			}
-	//			io.github.humbleui.skija.Image im = surface.makeImageSnapshot();
-	//			byte[] imageBytes = EncoderPNG.encode(im).getBytes();
+	// @Override
+	// public void commit() {
+	// if (isEmpty(originalDrawingSize)) {
+	// return;
+	// }
+	// io.github.humbleui.skija.Image im = surface.makeImageSnapshot();
+	// byte[] imageBytes = EncoderPNG.encode(im).getBytes();
 	//
-	//			Image transferImage = new Image(innerGC.getDevice(), new ByteArrayInputStream(imageBytes));
+	// Image transferImage = new Image(innerGC.getDevice(), new
+	// ByteArrayInputStream(imageBytes));
 	//
-	//			Point drawingSizeInPixels = DPIScaler.autoScaleUp(originalDrawingSize);
-	//			innerGC.drawImage(transferImage, 0, 0, drawingSizeInPixels.x, drawingSizeInPixels.y, //
-	//					0, 0, originalDrawingSize.x, originalDrawingSize.y);
-	//			transferImage.dispose();
-	//		}
+	// Point drawingSizeInPixels = DPIScaler.autoScaleUp(originalDrawingSize);
+	// innerGC.drawImage(transferImage, 0, 0, drawingSizeInPixels.x,
+	// drawingSizeInPixels.y, //
+	// 0, 0, originalDrawingSize.x, originalDrawingSize.y);
+	// transferImage.dispose();
+	// }
 
 	@Override
 	public Point textExtent(String string) {
@@ -313,7 +471,7 @@ public class SkiaGC implements IExternalGC {
 		}
 		final Canvas canvas = surface.getCanvas();
 		canvas.drawImageRect(convertSWTImageToSkijaImage(image), createScaledRectangle(srcX, srcY, srcWidth, srcHeight),
-				createScaledRectangle(destX, destY, destWidth, destHeight));
+				createScaledRectangle(destX, destY, destWidth, destHeight), interpolationMode, null, true);
 	}
 
 	private static ColorType getColorType(ImageData imageData) {
@@ -382,8 +540,10 @@ public class SkiaGC implements IExternalGC {
 
 		return ColorType.UNKNOWN;
 
-		//			throw new UnsupportedOperationException("Unsupported SWT ColorType: " + Integer.toBinaryString(palette.redMask)
-		//					+ "__" + Integer.toBinaryString(palette.greenMask) + "__" + Integer.toBinaryString(palette.blueMask));
+		// throw new UnsupportedOperationException("Unsupported SWT ColorType: " +
+		// Integer.toBinaryString(palette.redMask)
+		// + "__" + Integer.toBinaryString(palette.greenMask) + "__" +
+		// Integer.toBinaryString(palette.blueMask));
 	}
 
 	private static io.github.humbleui.skija.Image convertSWTImageToSkijaImage(Image swtImage) {
@@ -424,14 +584,24 @@ public class SkiaGC implements IExternalGC {
 
 		final boolean byteSourceContainsAlpha = bytesPerPixel > 3;
 
+		final RGB[] cols = imageData.palette.colors;
+
 		for (int y = 0; y < imageData.height; y++) {
 			for (int x = 0; x < imageData.width; x++) {
 				final int pixel = imageData.getPixel(x, y);
 				final int arrayPos = (y * imageData.width + x);
 
-				final byte r = (byte) ((pixel & imageData.palette.redMask) >>> -imageData.palette.redShift);
-				final byte g = (byte) ((pixel & imageData.palette.greenMask) >>> -imageData.palette.greenShift);
-				final byte b = (byte) ((pixel & imageData.palette.blueMask) >>> -imageData.palette.blueShift);
+				byte r = (byte) ((pixel & imageData.palette.redMask) >>> -imageData.palette.redShift);
+				byte g = (byte) ((pixel & imageData.palette.greenMask) >>> -imageData.palette.greenShift);
+				byte b = (byte) ((pixel & imageData.palette.blueMask) >>> -imageData.palette.blueShift);
+
+				if (cols != null) {
+					final RGB rgb = cols[pixel];
+
+					r = (byte) rgb.red;
+					b = (byte) rgb.blue;
+					g = (byte) rgb.green;
+				}
 
 				byte a = (byte) 255;
 				if (transparencyData != null) {
@@ -447,13 +617,13 @@ public class SkiaGC implements IExternalGC {
 				convertedData[index + 2] = b;
 				convertedData[index + 3] = a;
 
-				if (alphaData != null && alphaData.length > arrayPos) {
-					convertedData[index + 3] = alphaData[arrayPos];
-				} else if (imageData.alpha != -1) {
-					convertedData[index + 3] = defaultAlpha;
-				} else if (!byteSourceContainsAlpha) {
-					convertedData[index + 3] = defaultAlpha;
-				}
+				//				if (alphaData != null && alphaData.length > arrayPos) {
+				//					convertedData[index + 3] = alphaData[arrayPos];
+				//				} else if (imageData.alpha != -1) {
+				//					convertedData[index + 3] = defaultAlpha;
+				//				} else if(!byteSourceContainsAlpha) {
+				//					convertedData[index + 3] = defaultAlpha;
+				//				}
 			}
 		}
 
@@ -470,7 +640,7 @@ public class SkiaGC implements IExternalGC {
 		final var colorOrder = getPixelOrder(colType);
 
 		// no alphaType handling support. UNPREMUL and OPAQUE should always work.
-		//			ColorAlphaType alphaType = bm.getAlphaType();
+		// ColorAlphaType alphaType = bm.getAlphaType();
 
 		for (int y = 0; y < bm.getHeight(); y++) {
 			for (int x = 0; x < bm.getWidth(); x++) {
@@ -493,7 +663,8 @@ public class SkiaGC implements IExternalGC {
 			}
 		}
 
-		final ImageData d = new ImageData(bm.getWidth(), bm.getHeight(), 24, new PaletteData(0xFF0000, 0x00FF00, 0x0000FF));
+		final ImageData d = new ImageData(bm.getWidth(), bm.getHeight(), 24,
+				new PaletteData(0xFF0000, 0x00FF00, 0x0000FF));
 		d.data = convertedData;
 		d.alphaData = alphas;
 		d.bytesPerLine = d.width * 3;
@@ -582,13 +753,11 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public Color getForeground() {
 
-
-		if(foreground == null) {
-			if(drawable instanceof final org.eclipse.swt.widgets.Canvas c) {
+		if (foreground == null) {
+			if (drawable instanceof final org.eclipse.swt.widgets.Canvas c) {
 				return c.getForeground();
 			}
 		}
-
 
 		return foreground;
 	}
@@ -608,6 +777,9 @@ public class SkiaGC implements IExternalGC {
 		if (text == null) {
 			return;
 		}
+		if (text.contains("\t")) {
+			text = expandTabs(text, x);
+		}
 		final TextBlob textBlob = buildTextBlob(text);
 		if (textBlob == null) {
 			return;
@@ -616,11 +788,53 @@ public class SkiaGC implements IExternalGC {
 			final int textWidth = Math.round(textBlob.getBounds().getWidth());
 			final int fontHeight = Math.round(skiaFont.getMetrics().getHeight());
 			performDrawFilled(
-					paint -> surface.getCanvas().drawRect(new Rect(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y),
-							DPIScaler.autoScaleUp(x) + textWidth, DPIScaler.autoScaleUp(y) + fontHeight), paint));
+					paint -> surface.getCanvas()
+					.drawRect(new Rect(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y),
+							DPIScaler.autoScaleUp(x) + textWidth, DPIScaler.autoScaleUp(y) + fontHeight),
+							paint));
 		}
 		final Point point = calculateSymbolCenterPoint(x, y);
 		performDrawText(paint -> surface.getCanvas().drawTextBlob(textBlob, point.x, point.y, paint));
+	}
+
+	/**
+	 * Expands tab characters (\t) in the text to position-dependent spaces, so that
+	 * the next character aligns to the next tab stop (every 8 average character
+	 * widths by default). The expansion is based on the current x position and the
+	 * average character width of the font.
+	 *
+	 * @param text   The input text containing tab characters
+	 * @param startX The starting x position in pixels (used to calculate tab
+	 *               alignment)
+	 * @return The text with tabs expanded to spaces, aligned to the next tab stop
+	 */
+	private String expandTabs(String text, int startX) {
+		final StringBuilder result = new StringBuilder();
+		int currentX = 0;
+		final int spaceWidth = textExtent(" ").x;
+		final float _avgCharWidth = skiaFont.getMetrics()._avgCharWidth;
+		int avgCharWidth = (int) _avgCharWidth;
+		if (avgCharWidth <= 0) {
+			avgCharWidth = spaceWidth > 0 ? spaceWidth : 1;
+		}
+		final int tabSpacingPx = 8 * avgCharWidth;
+		for (int i = 0; i < text.length(); i++) {
+			final char ch = text.charAt(i);
+			if (ch == '\t') {
+				final int offsetInTab = tabSpacingPx > 0 ? (currentX - startX) % tabSpacingPx : 0;
+				final int nextTabX = currentX + (tabSpacingPx - offsetInTab);
+				while (currentX < nextTabX) {
+					result.append(' ');
+					currentX += textExtent(" ").x;
+				}
+			} else {
+				final String s = String.valueOf(ch);
+				final int charWidth = textExtent(s).x;
+				result.append(ch);
+				currentX += charWidth;
+			}
+		}
+		return result.toString();
 	}
 
 	// y position in drawTextBlob() is the text baseline, e.g., the bottom of "T"
@@ -663,9 +877,9 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
-		performDrawLine(paint -> surface.getCanvas().drawArc(DPIScaler.autoScaleUp(x),
-				DPIScaler.autoScaleUp(y), DPIScaler.autoScaleUp(x + width),
-				DPIScaler.autoScaleUp(y + height), -startAngle, -arcAngle, false, paint));
+		performDrawLine(paint -> surface.getCanvas().drawArc(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y),
+				DPIScaler.autoScaleUp(x + width), DPIScaler.autoScaleUp(y + height), -startAngle, -arcAngle, false,
+				paint));
 	}
 
 	@Override
@@ -704,7 +918,12 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawPath(Path path) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		final io.github.humbleui.skija.Path skijaPath = convertSWTPathToSkijaPath(path);
+		if (skijaPath == null) {
+			return;
+		}
+		performDrawLine(paint -> surface.getCanvas().drawPath(skijaPath, paint));
+		skijaPath.close();
 	}
 
 	@Override
@@ -714,16 +933,83 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawPolygon(int[] pointArray) {
+		if (pointArray == null) {
+			SWT.error(SWT.ERROR_NULL_ARGUMENT);
+		}
+		if (isDisposed()) {
+			SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
+		}
+		if (pointArray.length < 6 || pointArray.length % 2 != 0) {
+			return;
+		}
 
-		final int size = pointArray.length;
-		final int [] firstPointAddedAtEnd = new int[ size + 2 ];
-		System.arraycopy(pointArray, 0, firstPointAddedAtEnd, 0, pointArray.length);
+		// Handle SWT.MIRRORED style (adjust x-coordinates if needed)
+		final int style = getStyle();
+		final boolean mirrored = (style & SWT.MIRRORED) != 0;
+		final boolean adjustX = mirrored && lineWidth != 0 && lineWidth % 2 == 0;
+		if (adjustX) {
+			for (int i = 0; i < pointArray.length; i += 2) {
+				pointArray[i]--;
+			}
+		}
 
-		firstPointAddedAtEnd[ pointArray.length ] = pointArray[ 0  ];
-		firstPointAddedAtEnd[ pointArray.length +1 ] = pointArray[  1  ];
+		// Create Skija path for the polygon
+		final io.github.humbleui.skija.Path path = new io.github.humbleui.skija.Path();
+		// Move to first point
+		path.moveTo(DPIScaler.autoScaleUp(pointArray[0]), DPIScaler.autoScaleUp(pointArray[1]));
+		// Add lines to subsequent points
+		for (int i = 2; i < pointArray.length; i += 2) {
+			path.lineTo(DPIScaler.autoScaleUp(pointArray[i]), DPIScaler.autoScaleUp(pointArray[i + 1]));
+		}
+		path.closePath();
+		// Draw the polygon outline
+		performDrawLine(paint -> surface.getCanvas().drawPath(path, paint));
+		path.close();
+		// Restore x-coordinates if mirrored
+		if (adjustX) {
+			for (int i = 0; i < pointArray.length; i += 2) {
+				pointArray[i]++;
+			}
+		}
+	}
 
-
-		performDrawLine(paint -> surface.getCanvas().drawPolygon(convertToFloat(firstPointAddedAtEnd), paint));
+	private io.github.humbleui.skija.Path convertSWTPathToSkijaPath(Path swtPath) {
+		if (swtPath == null || swtPath.isDisposed()) {
+			return null;
+		}
+		final PathData data = swtPath.getPathData();
+		final io.github.humbleui.skija.Path skijaPath = new io.github.humbleui.skija.Path();
+		final float[] pts = data.points;
+		final byte[] types = data.types;
+		int pi = 0;
+		for (final byte type : types) {
+			switch (type) {
+			case SWT.PATH_MOVE_TO:
+				skijaPath.moveTo(DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]));
+				break;
+			case SWT.PATH_LINE_TO:
+				skijaPath.lineTo(DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]));
+				break;
+			case SWT.PATH_CUBIC_TO:
+				skijaPath.cubicTo(
+						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]),
+						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]),
+						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++])
+						);
+				break;
+			case SWT.PATH_QUAD_TO:
+				skijaPath.quadTo(
+						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]),
+						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++])
+						);
+				break;
+			case SWT.PATH_CLOSE:
+				skijaPath.closePath();
+				break;
+			default:
+			}
+		}
+		return skijaPath;
 	}
 
 	@Override
@@ -736,15 +1022,14 @@ public class SkiaGC implements IExternalGC {
 		final List<Point> pts1 = new LinkedList<>();
 		final List<Point> pts2 = new LinkedList<>();
 
+		for (int i = 0; i < (array.length - 1); i = i + 2) {
 
-		for (int i = 0; i < (array.length - 1); i = i+2) {
-
-			pts1.add(new Point( array[i] , array[i+1] ));
+			pts1.add(new Point(array[i], array[i + 1]));
 
 		}
 
 		pts2.add(pts1.get(0));
-		for( int i = 1 ; i < pts1.size()-1; i++ ) {
+		for (int i = 1; i < pts1.size() - 1; i++) {
 
 			pts2.add(pts1.get(i));
 			pts2.add(pts1.get(i));
@@ -752,13 +1037,12 @@ public class SkiaGC implements IExternalGC {
 		}
 		pts2.add(pts1.get(pts1.size() - 1));
 
-		final int [] res = new int[pts2.size()*2];
+		final int[] res = new int[pts2.size() * 2];
 
-		for( int i = 0 ; i < pts2.size() ; i++) {
-			res[2*i] = pts2.get(i).x;
-			res[2*i + 1] = pts2.get(i).y;
+		for (int i = 0; i < pts2.size(); i++) {
+			res[2 * i] = pts2.get(i).x;
+			res[2 * i + 1] = pts2.get(i).y;
 		}
-
 
 		return res;
 	}
@@ -812,9 +1096,9 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void fillArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
-		performDrawFilled(paint -> surface.getCanvas().drawArc(DPIScaler.autoScaleUp(x),
-				DPIScaler.autoScaleUp(y), DPIScaler.autoScaleUp(x + width),
-				DPIScaler.autoScaleUp(y + height), -startAngle, -arcAngle, false, paint));
+		performDrawFilled(paint -> surface.getCanvas().drawArc(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y),
+				DPIScaler.autoScaleUp(x + width), DPIScaler.autoScaleUp(y + height), -startAngle, -arcAngle, false,
+				paint));
 	}
 
 	@Override
@@ -872,21 +1156,41 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void fillPath(Path path) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		final io.github.humbleui.skija.Path skijaPath = convertSWTPathToSkijaPath(path);
+		if (skijaPath == null) {
+			return;
+		}
+		skijaPath.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
+		performDrawFilled(paint -> surface.getCanvas().drawPath(skijaPath, paint));
+		skijaPath.close();
 	}
 
 	@Override
 	public void fillPolygon(int[] pointArray) {
-		final List<io.github.humbleui.types.Point> ps = new ArrayList<>();
-
-		for (int i = 0; i < pointArray.length; i += 2) {
-			final int x = DPIScaler.autoScaleUp(pointArray[i]);
-			final int y = DPIScaler.autoScaleUp(pointArray[i + 1]);
-			ps.add(new io.github.humbleui.types.Point(x, y));
+		if (pointArray == null) {
+			SWT.error(SWT.ERROR_NULL_ARGUMENT);
+		}
+		if (isDisposed()) {
+			SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
+		}
+		if (pointArray.length < 6 || pointArray.length % 2 != 0) {
+			return;
 		}
 
-		performDrawFilled(paint -> surface.getCanvas().drawTriangles(ps.toArray(new io.github.humbleui.types.Point[0]),
-				null, paint));
+		// Create Skija path for the polygon
+		final io.github.humbleui.skija.Path path = new io.github.humbleui.skija.Path();
+		// Move to first point
+		path.moveTo(DPIScaler.autoScaleUp(pointArray[0]), DPIScaler.autoScaleUp(pointArray[1]));
+		// Add lines to subsequent points
+		for (int i = 2; i < pointArray.length; i += 2) {
+			path.lineTo(DPIScaler.autoScaleUp(pointArray[i]), DPIScaler.autoScaleUp(pointArray[i + 1]));
+		}
+		// Close the path to form a polygon
+		path.closePath();
+		path.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
+		// Fill the polygon
+		performDrawFilled(paint -> surface.getCanvas().drawPath(path, paint));
+		path.close();
 	}
 
 	@Override
@@ -963,34 +1267,62 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setTransform(Transform transform) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		if (transform == null) {
+			currentTransform = Matrix33.IDENTITY;
+			surface.getCanvas().setMatrix(currentTransform);
+		} else {
+			if (transform.isDisposed()) {
+				SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+			}
+			final float[] elements = new float[6];
+			transform.getElements(elements);
+			// SWT Transform: [m11, m12, m21, m22, dx, dy]
+			// Skija Matrix33: [scaleX, skewX, transX, skewY, scaleY, transY, persp0,
+			// persp1, persp2]
+			// Correct mapping: SWT [0,1,2,3,4,5] -> Skija [0,2,4,1,3,5,0,0,1]
+			final float[] skijaMat = new float[] { elements[0], // m11 -> scaleX
+					elements[2], // m21 -> skewX
+					elements[4], // dx -> transX
+					elements[1], // m12 -> skewY
+					elements[3], // m22 -> scaleY
+					elements[5], // dy -> transY
+					0, 0, 1 // perspective elements
+			};
+			currentTransform = new Matrix33(skijaMat);
+			surface.getCanvas().setMatrix(currentTransform);
+		}
 	}
 
 	@Override
 	public void setAlpha(int alpha) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		if (alpha < 0 || alpha > 255) {
+			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+		}
+		if (this.alpha != alpha) {
+			if (hasAlphaLayer) {
+				surface.getCanvas().restore();
+				hasAlphaLayer = false;
+			}
+			this.alpha = alpha;
+			if (alpha < 255) {
+				final Paint layerPaint = new Paint();
+				layerPaint.setAlphaf(alpha / 255.0f);
+				surface.getCanvas().saveLayer(null, layerPaint);
+				layerPaint.close();
+				hasAlphaLayer = true;
+			}
+		}
 	}
 
 	@Override
 	public int getAlpha() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return 0;
+		return this.alpha;
 	}
 
 	@Override
 	public void setLineWidth(int i) {
 		this.lineWidth = i;
 	}
-
-	//		@Override
-	//		public FontMetrics getFontMetrics() {
-	//			FontMetricsHandle fmh = new SkijaFontMetrics(skiaFont.getMetrics());
-	//
-	//			FontMetrics fm = new FontMetrics();
-	//			fm.innerFontMetrics = fmh;
-	//
-	//			return fm;
-	//		}
 
 	@Override
 	public int getAntialias() {
@@ -1093,7 +1425,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public Rectangle getClipping() {
-		return innerGC.getClipping();
+		return currentClipBounds;
 	}
 
 	@Override
@@ -1103,8 +1435,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public int getLineCap() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return 0;
+		return lineCap;
 	}
 
 	@Override
@@ -1118,10 +1449,13 @@ public class SkiaGC implements IExternalGC {
 			final Canvas imageCanvas = imageSurface.getCanvas();
 			imageCanvas.drawImage(copiedArea, 0, 0);
 			skijaImage = imageSurface.makeImageSnapshot();
+			final ImageData imgData = convertToSkijaImageData(skijaImage);
+			final Image i = new Image(device, imgData);
 
-			// This does not work...
-			assert (1 == 0);
-
+			final GC gc = new GC(image);
+			gc.drawImage(i, 0, 0);
+			gc.dispose();
+			i.dispose();
 		} else {
 			System.err.println(
 					"WARN: Area copied at given x,y co-ordinates is null: " + new Throwable().getStackTrace()[0]);
@@ -1141,14 +1475,14 @@ public class SkiaGC implements IExternalGC {
 		copyArea(srcX, srcY, width, height, destX, destY);
 		if (paint) {
 			// cut-paste behaviour
-			//				surface.getCanvas().save();
-			//				surface.getCanvas().clipRect(createScaledRectangle(srcX, srcY, width, height));
-			//				surface.getCanvas().clear(0x00000000);
-			//				surface.getCanvas().restore();
+			// surface.getCanvas().save();
+			// surface.getCanvas().clipRect(createScaledRectangle(srcX, srcY, width,
+			// height));
+			// surface.getCanvas().clear(0x00000000);
+			// surface.getCanvas().restore();
 			/** TODO - Implement correct behavior when paint is true **/
 		}
 	}
-
 
 	@Override
 	public boolean isClipped() {
@@ -1158,8 +1492,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public int getFillRule() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return 0;
+		return fillRule;
 	}
 
 	@Override
@@ -1181,8 +1514,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public Pattern getBackgroundPattern() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return null;
+		return backgroundPattern;
 	}
 
 	@Override
@@ -1193,8 +1525,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public Pattern getForegroundPattern() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return null;
+		return foregroundPattern;
 	}
 
 	@Override
@@ -1205,20 +1536,36 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public int getInterpolation() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return 0;
+		if (interpolationMode == SamplingMode.DEFAULT) {
+			return SWT.NONE;
+		}
+		if (interpolationMode == SamplingMode.LINEAR) {
+			return SWT.HIGH;
+		}
+		if (interpolationMode instanceof FilterMipmap) {
+			final FilterMipmap fm = (FilterMipmap) interpolationMode;
+			if (fm.getFilterMode() == FilterMode.LINEAR && fm.getMipmapMode() == MipmapMode.LINEAR) {
+				return SWT.LOW;
+			}
+		}
+		return SWT.DEFAULT;
 	}
 
 	@Override
 	public int[] getLineDash() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return null;
+		if (lineDashes == null) {
+			return null;
+		}
+		final int[] lineDashesInt = new int[lineDashes.length];
+		for (int i = 0; i < lineDashesInt.length; i++) {
+			lineDashesInt[i] = DPIScaler.autoScaleDownToInt(lineDashes[i]);
+		}
+		return lineDashesInt;
 	}
 
 	@Override
 	public int getLineJoin() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return 0;
+		return lineJoin;
 	}
 
 	@Override
@@ -1235,7 +1582,15 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void getTransform(Transform transform) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		if (transform == null) {
+			SWT.error(SWT.ERROR_NULL_ARGUMENT);
+		}
+		final float[] m = currentTransform.getMat();
+		// Skija Matrix33: [scaleX, skewX, transX, skewY, scaleY, transY, persp0,
+		// persp1, persp2]
+		// SWT Transform: [m11, m12, m21, m22, dx, dy]
+		// Correct inverse mapping: Skija [0,1,2,3,4,5] -> SWT [0,3,1,4,2,5]
+		transform.setElements(m[0], m[3], m[1], m[4], m[2], m[5]);
 	}
 
 	@Override
@@ -1246,13 +1601,33 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setBackgroundPattern(Pattern pattern) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		if (pattern != null && pattern.isDisposed()) {
+			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+		}
+		this.backgroundPattern = pattern;
 	}
 
 	@Override
 	public void setClipping(Path path) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-
+		final Canvas canvas = surface.getCanvas();
+		if (isClipSet) {
+			canvas.restore();
+			isClipSet = false;
+		}
+		if (path == null) {
+			return;
+		}
+		if (path.isDisposed()) {
+			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+		}
+		final io.github.humbleui.skija.Path skijaPath = convertSWTPathToSkijaPath(path);
+		if (skijaPath == null) {
+			return;
+		}
+		skijaPath.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
+		canvas.save();
+		isClipSet = true;
+		canvas.clipPath(skijaPath, ClipMode.INTERSECT, true);
 	}
 
 	@Override
@@ -1264,13 +1639,19 @@ public class SkiaGC implements IExternalGC {
 
 		// skija seems to work with state layer which will be set on top of each other.
 		// if more layers will be used a more complex handling is necessary
-		surface.getCanvas().restore();
+		final Canvas canvas = surface.getCanvas();
+		if (isClipSet) {
+			canvas.restore();
+			isClipSet = false;
+		}
 		if (rect == null) {
+			currentClipBounds = new Rectangle(0, 0, originalDrawingSize.x, originalDrawingSize.y);
 			return;
 		}
-
-		surface.getCanvas().save();
-		surface.getCanvas().clipRect(createScaledRectangle(rect));
+		currentClipBounds = new Rectangle(rect.x, rect.y, rect.width, rect.height);
+		canvas.save();
+		canvas.clipRect(createScaledRectangle(rect));
+		isClipSet = true;
 
 	}
 
@@ -1281,37 +1662,196 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setFillRule(int rule) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		if (rule != SWT.FILL_EVEN_ODD && rule != SWT.FILL_WINDING) {
+			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+		}
+		this.fillRule = rule;
 	}
 
 	@Override
 	public void setForegroundPattern(Pattern pattern) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		if (pattern != null && pattern.isDisposed()) {
+			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+		}
+		this.foregroundPattern = pattern;
 	}
 
 	@Override
 	public void setInterpolation(int interpolation) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		switch (interpolation) {
+		case SWT.NONE:
+			this.interpolationMode = SamplingMode.DEFAULT; // Nearest neighbor
+			break;
+		case SWT.LOW:
+			this.interpolationMode = new FilterMipmap(FilterMode.LINEAR, MipmapMode.LINEAR);
+			break;
+		case SWT.HIGH, SWT.DEFAULT:
+			this.interpolationMode = SamplingMode.LINEAR;
+		break;
+		default:
+			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+		}
 	}
 
 	@Override
 	public void setLineAttributes(LineAttributes attributes) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		if (attributes == null) {
+			SWT.error(SWT.ERROR_NULL_ARGUMENT);
+		}
+		final float scaledWidth = DPIScaler.autoScaleUp(attributes.width);
+		setLineAttributesInPixels(attributes, scaledWidth);
+	}
+
+	private void setLineAttributesInPixels(LineAttributes attributes, float scaledWidth) {
+		if (isDisposed()) {
+			SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
+		}
+		boolean changed = false;
+		if (scaledWidth != this.lineWidth) {
+			this.lineWidth = (int) scaledWidth;
+			changed = true;
+		}
+		// Handle line style with validation
+		int lineStyle = attributes.style;
+		if (lineStyle != this.lineStyle) {
+			switch (lineStyle) {
+			case SWT.LINE_SOLID:
+			case SWT.LINE_DASH:
+			case SWT.LINE_DOT:
+			case SWT.LINE_DASHDOT:
+			case SWT.LINE_DASHDOTDOT:
+				break;
+			case SWT.LINE_CUSTOM:
+				if (attributes.dash == null) {
+					lineStyle = SWT.LINE_SOLID;
+				}
+				break;
+			default:
+				SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+			}
+			this.lineStyle = lineStyle;
+			changed = true;
+		}
+		// Handle line cap with validation
+		final int cap = attributes.cap;
+		if (cap != this.lineCap) {
+			switch (cap) {
+			case SWT.CAP_FLAT:
+			case SWT.CAP_ROUND:
+			case SWT.CAP_SQUARE:
+				break;
+			default:
+				SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+			}
+			this.lineCap = cap;
+			changed = true;
+		}
+		// Handle line join with validation
+		final int join = attributes.join;
+		if (join != this.lineJoin) {
+			switch (join) {
+			case SWT.JOIN_MITER:
+			case SWT.JOIN_ROUND:
+			case SWT.JOIN_BEVEL:
+				break;
+			default:
+				SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+			}
+			this.lineJoin = join;
+			changed = true;
+		}
+		// Handle dash pattern with validation and DPI scaling
+		final float[] dashes = attributes.dash;
+		final float[] currentDashes = this.lineDashes;
+
+		if (dashes != null && dashes.length > 0) {
+			boolean dashesChanged = currentDashes == null || currentDashes.length != dashes.length;
+			final float[] newDashes = new float[dashes.length];
+
+			for (int i = 0; i < dashes.length; i++) {
+				final float dash = dashes[i];
+				if (dash <= 0) {
+					SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+				}
+
+				// Scale dash values for DPI
+				newDashes[i] = DPIScaler.autoScaleUp(dash);
+
+				if (!dashesChanged && currentDashes != null && currentDashes[i] != newDashes[i]) {
+					dashesChanged = true;
+				}
+			}
+			if (dashesChanged) {
+				this.lineDashes = newDashes;
+				changed = true;
+			}
+		} else {
+			// Clear dash pattern
+			if (currentDashes != null && currentDashes.length > 0) {
+				this.lineDashes = null;
+				changed = true;
+			}
+		}
+		// Handle dash offset - store for use in createPathEffectForLineStyle()
+		final float dashOffset = attributes.dashOffset;
+		if (this.dashOffset != dashOffset) {
+			this.dashOffset = dashOffset;
+			changed = true;
+		}
+		// Handle miter limit - store for use in performDrawLine()
+		final float miterLimit = attributes.miterLimit;
+		if (this.miterLimit != miterLimit) {
+			this.miterLimit = miterLimit;
+			changed = true;
+		}
+		if (!changed) {
+			return;
+		}
 	}
 
 	@Override
 	public void setLineCap(int cap) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		if (cap != SWT.CAP_FLAT && cap != SWT.CAP_ROUND && cap != SWT.CAP_SQUARE) {
+			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+		}
+		this.lineCap = cap;
 	}
 
 	@Override
 	public void setLineDash(int[] dashes) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		if (dashes != null && dashes.length > 0) {
+			boolean changed = this.lineStyle != SWT.LINE_CUSTOM || lineDashes == null
+					|| lineDashes.length != dashes.length;
+			final float[] newDashes = new float[dashes.length];
+			for (int i = 0; i < dashes.length; i++) {
+				if (dashes[i] <= 0) {
+					SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+				}
+				newDashes[i] = DPIScaler.autoScaleUp((float) dashes[i]);
+				if (!changed && lineDashes != null && lineDashes[i] != newDashes[i]) {
+					changed = true;
+				}
+			}
+			if (!changed) {
+				return;
+			}
+			this.lineDashes = newDashes;
+			this.lineStyle = SWT.LINE_CUSTOM;
+		} else {
+			if (this.lineStyle == SWT.LINE_SOLID && (lineDashes == null || lineDashes.length == 0)) {
+				return;
+			}
+			this.lineDashes = null;
+			this.lineStyle = SWT.LINE_SOLID;
+		}
 	}
 
 	@Override
 	public void setLineJoin(int join) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		if (join != SWT.JOIN_MITER && join != SWT.JOIN_ROUND && join != SWT.JOIN_BEVEL) {
+			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+		}
+		this.lineJoin = join;
 	}
 
 	@Override
@@ -1355,8 +1895,11 @@ public class SkiaGC implements IExternalGC {
 		case ARGB_4444 -> 16;
 		case RGBA_8888 -> 32;
 		case BGRA_8888 -> 32;
-		case RGBA_F16 -> /* Typically could represent more colors, but SWT doesn't support floating-point */ /* depths. */ 64; // This is theoretical; SWT will usually not handle more than 32
-		case RGBA_F32 -> /* Same as RGBA_F16 with regards to SWT support */ 128; // Theoretical; actual handling requires custom treatment
+		case RGBA_F16 -> /*
+		 * Typically could represent more colors, but SWT doesn't support floating-point
+		 */ /* depths. */ 64; // This is theoretical; SWT will usually not handle more than 32
+		case RGBA_F32 -> /* Same as RGBA_F16 with regards to SWT support */ 128; // Theoretical; actual handling
+		// requires custom treatment
 		default -> throw new IllegalArgumentException("Unknown Skija ColorType: " + colorType);
 		};
 	}
@@ -1414,9 +1957,7 @@ public class SkiaGC implements IExternalGC {
 		return colorTypeMap.get(colorType);
 	}
 
-
 	void drawRectangleInPixels(int x, int y, int width, int height) {
-
 
 		final Paint p = new Paint();
 		p.setColor(convertSWTColorToSkijaColor(getForeground()));
@@ -1426,7 +1967,7 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	public Color getBackground() {
-		if(background != null) {
+		if (background != null) {
 			return background;
 		}
 
@@ -1448,6 +1989,17 @@ public class SkiaGC implements IExternalGC {
 	public boolean isDisposed() {
 		// TODO Auto-generated method stub
 		return false;
+	}
+
+	/**
+	 * Converts an SWT Pattern to a Skija Shader.
+	 *
+	 * @param pattern the SWT Pattern to convert
+	 * @return the Skija Shader or null if conversion fails
+	 */
+	private Shader convertSWTPatternToSkijaShader(Pattern pattern) {
+		//TODO find an implementation in the new skia canvas setup
+		return null;
 	}
 
 }

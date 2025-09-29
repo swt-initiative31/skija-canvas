@@ -146,11 +146,20 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	public SkiaGC(ISkiaCanvas skiaCanvas) {
-
 		this.drawable = (Drawable) skiaCanvas;
-
 		initFont();
 
+	}
+
+	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvas exst,
+			int style) {
+		innerGC = this;
+		this.drawable = canvas;
+		final org.eclipse.swt.widgets.Canvas c = (org.eclipse.swt.widgets.Canvas)drawable;
+		device = c.getDisplay();
+		originalDrawingSize = extractSize(drawable);
+		this.surface = exst.getSurface();
+		initFont();
 	}
 
 	private static Point extractSize(Drawable drawable) {

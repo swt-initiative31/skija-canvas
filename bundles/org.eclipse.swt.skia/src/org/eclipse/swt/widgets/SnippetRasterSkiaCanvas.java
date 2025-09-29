@@ -29,7 +29,9 @@ public class SnippetRasterSkiaCanvas {
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas");
 		// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
-		final Canvas c = new SkiaGlCanvas(shell,  SWT.DOUBLE_BUFFERED);
+		SkiaConfiguration.activateSkiaRaster();
+		final Canvas c = new Canvas(shell,  SWT.DOUBLE_BUFFERED);
+		SkiaConfiguration.resetCanvasConfiguration();
 
 		for( int x = 0 ; x < RECTANGLES_PER_LINE ; x++ ) {
 			for(int y = 0 ; y < RECTANGLES_PER_LINE ; y++) {

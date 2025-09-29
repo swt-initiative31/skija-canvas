@@ -12,21 +12,11 @@ public class SnippetCanvasCompare {
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas Compare");
 
-		{
-			final Canvas c1 = new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED);
-			c1.setSize(100, 100);
-			shell.addListener(SWT.Resize, e -> onResize(e, c1, 1));
-			c1.addListener(SWT.Paint, SnippetCanvasCompare::onPaint);
-		}
-		{
-			final Canvas c2 = new Canvas(shell, SWT.DOUBLE_BUFFERED);
-			c2.setSize(100, 100);
-			shell.addListener(SWT.Resize, e -> onResize(e, c2, 2));
-			c2.addListener(SWT.Paint, SnippetCanvasCompare::onPaint);
-		}
+		configureCanvas(shell, new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED), 1, "SkiaGlCanvas");
+		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED), 2, "SWT Canvas");
+		configureCanvas(shell, new SkiaRasterCanvas(shell, SWT.DOUBLE_BUFFERED), 3, "SkiaRasterCanvas");
 
-
-		shell.setSize(1000, 1000);
+		shell.setSize(1500, 1000);
 
 		shell.open();
 		while (!shell.isDisposed()) {
@@ -37,15 +27,18 @@ public class SnippetCanvasCompare {
 		display.dispose();
 	}
 
-	private static void onPaint(Event e) {
+	private static void configureCanvas(final Shell shell, final Canvas canvas, int index, String title) {
+		canvas.setSize(100, 100);
+		shell.addListener(SWT.Resize, e -> onResize(canvas, index));
+		canvas.addListener(SWT.Paint, e -> onPaint(e, title));
+	}
 
+	private static void onPaint(Event e, String title) {
 		final Display d = e.widget.getDisplay();
 		final GC gc = e.gc;
 
 		gc.setForeground(d.getSystemColor(SWT.COLOR_RED));
 		gc.drawRectangle(new Rectangle(0, 0, 100, 100));
-
-		//		((Canvas)e.widget).redraw();
 
 		gc.setForeground(d.getSystemColor(SWT.COLOR_BLUE));
 		gc.drawRectangle(new Rectangle(100, 0, 100, 100));
@@ -64,6 +57,9 @@ public class SnippetCanvasCompare {
 
 		gc.setForeground(d.getSystemColor(SWT.COLOR_RED));
 		gc.drawArc(200, 100, 100, 100, 90, 200);
+
+		gc.setForeground(d.getSystemColor(SWT.COLOR_BLACK));
+		gc.drawText(title, 100, 250);
 
 		gc.setForeground(d.getSystemColor(SWT.COLOR_DARK_CYAN));
 		gc.drawOval(0, 300, 100, 50);
@@ -128,21 +124,16 @@ public class SnippetCanvasCompare {
 		gc.fillRectangle(new Rectangle(100, 800, 100, 100));
 
 		gc.fillRoundRectangle(200, 800, 100, 100, 20, 20);
-
 	}
 
-	private static void onResize(Event e, Canvas c, int index) {
-
-
+	private static void onResize(Canvas c, int index) {
 		final var ca = c.getShell().getClientArea();
-		if(index == 2) {
-			c.setBounds(new Rectangle(ca.width / 2, 0, ca.width / 2, ca.height));
+		switch(index) {
+		case 1 -> c.setBounds(new Rectangle(0, 0, ca.width / 3, ca.height));
+		case 2 -> c.setBounds(new Rectangle(ca.width / 3, 0, ca.width / 3, ca.height));
+		case 3 -> c.setBounds(new Rectangle(2*ca.width / 3, 0, ca.width / 3, ca.height));
+		default -> { /* nothing to do */ }
 		}
-		else {
-			c.setBounds(new Rectangle(0, 0, ca.width / 2, ca.height));
-		}
-
-
 	}
 
 }

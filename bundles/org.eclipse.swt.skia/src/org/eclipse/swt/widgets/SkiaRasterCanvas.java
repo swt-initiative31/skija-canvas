@@ -37,8 +37,7 @@ public class SkiaRasterCanvas extends RasterCanvas implements ISkiaCanvas {
 			return;
 		}
 
-		// TODO get bg color from canvas...
-		surface.getCanvas().clear(0xFFFFFFFF);
+		surface.getCanvas().clear(SkiaGC.convertSWTColorToSkijaColor(getBackground()));
 
 		final Event event = new Event();
 		event.count = 1;

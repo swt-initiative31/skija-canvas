@@ -25,8 +25,9 @@ public class SnippetSkijaCanvas {
 		shell.setText("Snippet 1");
 
 		shell.setLayout(new FillLayout());
-
-		final Canvas c = new SkiaGlCanvas(shell, SWT.FILL | SWT.DOUBLE_BUFFERED);
+		SkiaConfiguration.activateSkiaGl();
+		final Canvas c = new Canvas(shell, SWT.FILL | SWT.DOUBLE_BUFFERED);
+		SkiaConfiguration.resetCanvasConfiguration();
 
 
 		for (int x = 0; x < RECTANGLES_PER_LINE; x++) {

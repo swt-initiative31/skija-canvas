@@ -88,6 +88,7 @@ public class SkiaGC implements IExternalGC {
 
 	private Surface surface;
 
+	@Deprecated
 	private IExternalGC innerGC;
 
 	private Color background;
@@ -198,13 +199,7 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private void initFont() {
-
-		org.eclipse.swt.graphics.Font originalFont = ((Control) this.drawable).getFont();
-
-		if (originalFont == null || originalFont.isDisposed()) {
-			originalFont = innerGC.getDevice().getSystemFont();
-		}
-		setFont(originalFont);
+		setFont(getDefaultFont());
 	}
 
 	@Override
@@ -1218,7 +1213,7 @@ public class SkiaGC implements IExternalGC {
 				SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 			}
 		} else {
-			font = innerGC.getFont();
+			font = getDefaultFont();
 		}
 		this.swtFont = font;
 		this.skiaFont = getSkijaFont(font);
@@ -2000,6 +1995,15 @@ public class SkiaGC implements IExternalGC {
 	private Shader convertSWTPatternToSkijaShader(Pattern pattern) {
 		//TODO find an implementation in the new skia canvas setup
 		return null;
+	}
+
+	private org.eclipse.swt.graphics.Font getDefaultFont() {
+		org.eclipse.swt.graphics.Font originalFont = ((Control) this.drawable).getFont();
+
+		if (originalFont == null || originalFont.isDisposed()) {
+			originalFont = getDevice().getSystemFont();
+		}
+		return originalFont;
 	}
 
 }

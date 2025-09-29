@@ -44,6 +44,7 @@ import org.eclipse.swt.internal.win32.*;
 public class Canvas extends Composite {
 	Caret caret;
 	IME ime;
+	private IExternalCanvasHandler externalCanvasHandler;
 
 /**
  * Prevents uninitialized instances from being created outside the package.
@@ -79,16 +80,27 @@ Canvas () {
  */
 public Canvas (Composite parent, int style) {
 	super (parent, style);
+	if(ExternalCanvasHandler.isActive())
+		externalCanvasHandler = ExternalCanvasHandler.createHandler(this);
+}
+
+@Override
+public void redraw () {
+
+	if(externalCanvasHandler != null) {
+		externalCanvasHandler.redrawTriggered();
+	}
+	super.redraw();
 }
 
 @Override
 LRESULT WM_PAINT (long wParam, long lParam) {
-	if(this instanceof IExternalCanvas ec)
+	if(externalCanvasHandler != null)
 	{
 
 		if ((state & DISPOSE_SENT) != 0) return LRESULT.ZERO;
 
-		var result = ec.paint(e -> sendEvent(SWT.Paint,e),wParam, lParam);
+		var result = externalCanvasHandler.paint(e -> sendEvent(SWT.Paint,e),wParam, lParam);
 		if(result instanceof Integer i)
 			return new LRESULT(i);
 

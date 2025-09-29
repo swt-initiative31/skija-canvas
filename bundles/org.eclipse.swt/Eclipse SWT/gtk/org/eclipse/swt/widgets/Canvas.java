@@ -45,6 +45,7 @@ public class Canvas extends Composite {
 	Caret caret;
 	IME ime;
 	boolean blink, drawFlag;
+	private IExternalCanvasHandler externalCanvasHandler;
 
 Canvas () {}
 
@@ -76,6 +77,17 @@ Canvas () {}
  */
 public Canvas (Composite parent, int style) {
 	super (parent, checkStyle (style));
+	if(ExternalCanvasHandler.isActive())
+		externalCanvasHandler = ExternalCanvasHandler.createHandler(this);
+}
+
+@Override
+public void redraw () {
+
+	if(externalCanvasHandler != null) {
+		externalCanvasHandler.redrawTriggered();
+	}
+	super.redraw();
 }
 
 /**
@@ -171,8 +183,8 @@ long gtk_commit (long imcontext, long text) {
 long gtk_draw (long widget, long cairo) {
 	if ((state & OBSCURED) != 0) return 0;
 
-	if(this instanceof IExternalCanvas ec) {
-		ec.paint((e)-> sendEvent(SWT.Paint, e),widget, cairo);
+	if(externalCanvasHandler != null) {
+		externalCanvasHandler.paint((e)-> sendEvent(SWT.Paint, e),widget, cairo);
 		return 0;
 	}
 

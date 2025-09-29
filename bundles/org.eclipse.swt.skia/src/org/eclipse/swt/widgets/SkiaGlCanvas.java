@@ -75,7 +75,7 @@ public class SkiaGlCanvas extends OpenGLCanvas implements ISkiaCanvas {
 
 		surface = Surface.makeFromBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT,
 				SurfaceColorFormat.RGBA_8888, ColorSpace.getDisplayP3(), new SurfaceProps(PixelGeometry.RGB_H));
-		surface.getCanvas().clear(0xFFFFFFFF);
+		surface.getCanvas().clear(getBackroundForSkia());
 
 	}
 
@@ -110,7 +110,7 @@ public class SkiaGlCanvas extends OpenGLCanvas implements ISkiaCanvas {
 				/* fbid */0, FramebufferFormat.GR_GL_RGBA8);
 		surface = Surface.makeFromBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT,
 				SurfaceColorFormat.RGBA_8888, ColorSpace.getDisplayP3(), new SurfaceProps(PixelGeometry.RGB_H));
-		surface.getCanvas().clear(0xFFFFFFFF);
+		surface.getCanvas().clear(getBackroundForSkia());
 
 	}
 
@@ -121,8 +121,7 @@ public class SkiaGlCanvas extends OpenGLCanvas implements ISkiaCanvas {
 			return;
 		}
 
-		// TODO get bg color from canvas...
-		surface.getCanvas().clear(0xFFFFFFFF);
+		surface.getCanvas().clear(getBackroundForSkia());
 
 
 		final Event event = new Event ();
@@ -142,16 +141,15 @@ public class SkiaGlCanvas extends OpenGLCanvas implements ISkiaCanvas {
 		event.gc = null;
 
 		skijaContext.flush();
-
-
 	}
-
 
 	@Override
 	public void internal_dispose_GC (long  handle, GCData data) {
 
 	}
 
-
+	private int getBackroundForSkia() {
+		return SkiaGC.convertSWTColorToSkijaColor(getBackground());
+	}
 
 }

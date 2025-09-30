@@ -1101,7 +1101,7 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void fillArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
 		performDrawFilled(paint -> surface.getCanvas().drawArc(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y),
-				DPIScaler.autoScaleUp(x + width), DPIScaler.autoScaleUp(y + height), -startAngle, -arcAngle, false,
+				DPIScaler.autoScaleUp(x + width), DPIScaler.autoScaleUp(y + height), -startAngle, -arcAngle, true,
 				paint));
 	}
 

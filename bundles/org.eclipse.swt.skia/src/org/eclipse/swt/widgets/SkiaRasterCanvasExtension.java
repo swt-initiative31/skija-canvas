@@ -18,6 +18,8 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.SkiaGC;
 
 import io.github.humbleui.skija.ColorAlphaType;
+import io.github.humbleui.skija.ColorInfo;
+import io.github.humbleui.skija.ColorType;
 import io.github.humbleui.skija.ImageInfo;
 import io.github.humbleui.skija.Surface;
 
@@ -71,7 +73,10 @@ public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements 
 
 		final var s = canvas.getSize();
 		final ColorAlphaType type = info.premule ? ColorAlphaType.PREMUL : ColorAlphaType.UNPREMUL;
-		final ImageInfo imageInfo = ImageInfo.makeN32(size.x, size.y, type);
+		final ColorType t = getType(  info ) ;
+		final ColorInfo ci = new ColorInfo(t, type, null);
+
+		final ImageInfo imageInfo = new ImageInfo(ci, size.x, size.y);
 
 		this.surface = Surface.makeRasterDirect(imageInfo, pointer, 4 * (size.x));
 
@@ -79,6 +84,17 @@ public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements 
 			surface.getCanvas().scale(1, -1);
 			surface.getCanvas().translate(0, -s.y);
 		}
+
+	}
+
+	private ColorType getType(RasterImageInfo info) {
+
+		return switch (info.colorType) {
+		case RGBA_8888 -> ColorType.RGBA_8888;
+		case BGRA_8888 -> ColorType.BGRA_8888;
+		default -> ColorType.N32;
+		};
+
 
 	}
 

@@ -47,7 +47,7 @@ public abstract class RasterCanvasExtension implements Listener, IExternalCanvas
 
 			preResize(e);
 			setupSurface();
-			createSurface(pointer, currentAreaSize, new RasterImageInfo(false, RasterColorType.ARBG32));
+			createSurface(pointer, currentAreaSize, new RasterImageInfo(false, RasterColorType.BGRA_8888));
 		}
 
 

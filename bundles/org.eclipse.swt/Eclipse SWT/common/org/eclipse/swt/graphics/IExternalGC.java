@@ -121,6 +121,8 @@ public interface IExternalGC {
 
 	int getCharWidth(char ch);
 
+	Color getBackground();
+
 	Pattern getBackgroundPattern();
 
 	Pattern getForegroundPattern();

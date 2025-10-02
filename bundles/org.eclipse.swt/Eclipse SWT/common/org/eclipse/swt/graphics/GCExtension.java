@@ -68,6 +68,11 @@ public final class GCExtension extends GC {
 	}
 
 	@Override
+	public Color getBackground() {
+		return e.getBackground();
+	}
+
+	@Override
 	public Pattern getBackgroundPattern() {
 		return e.getBackgroundPattern();
 	}

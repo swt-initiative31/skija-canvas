@@ -8,9 +8,9 @@ concurrency:
 
 on:
   push:
-    branches: [ master ]
+    branches: [ skia_canvas ]
   pull_request:
-    branches: [ master ]
+    branches: [ skia_canvas ]
     types: [opened, reopened, synchronize, labeled]
 
 env:

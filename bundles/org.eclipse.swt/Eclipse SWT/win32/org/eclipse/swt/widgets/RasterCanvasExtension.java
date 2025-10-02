@@ -51,7 +51,7 @@ public abstract class RasterCanvasExtension implements Listener, IExternalCanvas
 				surfaceIsEmpty = true;
 				preResize(e);
 				setupSurface();
-				createSurface(this.memoryPointer, currentAreaSize, new RasterImageInfo(true, RasterColorType.ARBG32));
+				createSurface(this.memoryPointer, currentAreaSize, new RasterImageInfo(true, RasterColorType.BGRA_8888));
 				canvas.redraw();
 			}
 		}

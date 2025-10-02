@@ -19,10 +19,8 @@ public class RasterImageInfo {
 	public RasterColorType colorType;
 	public boolean transform;
 
-	public enum RasterColorType{
-		ARBG32, RGBA8888;
+	public static enum RasterColorType{
+		RGBA_8888, BGRA_8888;
 	}
-
-
 
 }

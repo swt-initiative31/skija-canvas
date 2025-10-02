@@ -69,24 +69,7 @@ public class SkiaGC implements IExternalGC {
 	static final float[] LINE_DASHDOT_PATTERN = new float[] { 9, 6, 3, 6 };
 	static final float[] LINE_DASHDOTDOT_PATTERN = new float[] { 9, 3, 3, 3, 3, 3 };
 
-	public SkiaGC() {
-		this.surface = null;
-		originalDrawingSize = null;
-	}
-
-	public static SkiaGC createDefaultInstance(GC gc) {
-		return new SkiaGC(gc, gc.drawable, false);
-	}
-
-	public static SkiaGC createDefaultInstance(GC gc, Control control) {
-		return new SkiaGC(gc, control, false);
-	}
-
-	public static SkiaGC createMeasureInstance(GC gc, Control control) {
-		return new SkiaGC(gc, control, true);
-	}
-
-	private Surface surface;
+	private final Surface surface;
 
 	@Deprecated
 	private IExternalGC innerGC;
@@ -110,9 +93,9 @@ public class SkiaGC implements IExternalGC {
 	private Pattern foregroundPattern;
 	private Pattern backgroundPattern;
 
-	private Point originalDrawingSize;
-	private Drawable drawable;
-	private Display device;
+	private final Point originalDrawingSize;
+	private final Drawable drawable;
+	private final Display device;
 
 	private static Map<ColorType, int[]> colorTypeMap = null;
 	private Matrix33 currentTransform = Matrix33.IDENTITY;
@@ -122,35 +105,6 @@ public class SkiaGC implements IExternalGC {
 	private boolean isClipSet;
 	private Rectangle currentClipBounds;
 
-	public SkiaGC(Drawable drawable, int style) {
-		innerGC = this;
-		this.drawable = drawable;
-		final org.eclipse.swt.widgets.Canvas c = (org.eclipse.swt.widgets.Canvas) drawable;
-		device = c.getDisplay();
-		originalDrawingSize = extractSize(drawable);
-		if (drawable instanceof final ISkiaCanvas sc) {
-			this.surface = sc.getSurface();
-		}
-		initFont();
-
-	}
-
-	private SkiaGC(GC gc, Drawable drawable, boolean onlyForMeasuring) {
-		innerGC = this;
-		originalDrawingSize = extractSize(drawable);
-
-		if (drawable instanceof final ISkiaCanvas sc) {
-			this.surface = sc.getSurface();
-			surface.getCanvas().clear(0xFFFFFFFF);
-		}
-	}
-
-	public SkiaGC(ISkiaCanvas skiaCanvas) {
-		this.drawable = (Drawable) skiaCanvas;
-		initFont();
-
-	}
-
 	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvas exst,
 			int style) {
 		innerGC = this;
@@ -158,6 +112,7 @@ public class SkiaGC implements IExternalGC {
 		final org.eclipse.swt.widgets.Canvas c = (org.eclipse.swt.widgets.Canvas)drawable;
 		device = c.getDisplay();
 		originalDrawingSize = extractSize(drawable);
+		currentClipBounds = new Rectangle(0, 0, originalDrawingSize.x, originalDrawingSize.y);
 		this.surface = exst.getSurface();
 		initFont();
 	}
@@ -1546,8 +1501,7 @@ public class SkiaGC implements IExternalGC {
 		if (interpolationMode == SamplingMode.LINEAR) {
 			return SWT.HIGH;
 		}
-		if (interpolationMode instanceof FilterMipmap) {
-			final FilterMipmap fm = (FilterMipmap) interpolationMode;
+		if (interpolationMode instanceof final FilterMipmap fm) {
 			if (fm.getFilterMode() == FilterMode.LINEAR && fm.getMipmapMode() == MipmapMode.LINEAR) {
 				return SWT.LOW;
 			}
@@ -1970,6 +1924,7 @@ public class SkiaGC implements IExternalGC {
 
 	}
 
+	@Override
 	public Color getBackground() {
 		if (background != null) {
 			return background;
@@ -1991,8 +1946,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public boolean isDisposed() {
-		// TODO Auto-generated method stub
-		return false;
+		return surface.isClosed();
 	}
 
 	/**

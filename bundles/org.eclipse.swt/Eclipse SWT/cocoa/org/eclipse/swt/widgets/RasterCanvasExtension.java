@@ -82,7 +82,7 @@ abstract class RasterCanvasExtension implements Listener, IExternalCanvasHandler
 	memoryPointer = imageRep.bitmapData();
 
 	createSurface(memoryPointer, new Point(width, height),
-		new RasterImageInfo(false, RasterColorType.RGBA8888, true));
+		new RasterImageInfo(false, RasterColorType.RGBA_8888, true));
 
     }
 

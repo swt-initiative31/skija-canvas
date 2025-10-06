@@ -35,11 +35,13 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 	private BackendRenderTarget renderTarget;
 	private Surface surface;
 	private final Canvas canvas;
+	private SkiaResources resources;
 
 	private static final int SAMPLES = 0;
 
 	public SkiaGlCanvasExtension(Canvas canvas) {
 		this(canvas,createGLData());
+		this.resources = new SkiaResources(canvas);
 	}
 
 	private static GLData createGLData() {
@@ -157,6 +159,12 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 	}
 	private int getBackroundForSkia() {
 		return SkiaGC.convertSWTColorToSkijaColor(canvas.getBackground());
+	}
+
+	@Override
+	public SkiaResources getResources() {
+
+		return this.resources;
 	}
 
 }

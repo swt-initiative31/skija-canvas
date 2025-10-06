@@ -27,6 +27,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.ISkiaCanvas;
+import org.eclipse.swt.widgets.SkiaResources;
 
 import io.github.humbleui.skija.Bitmap;
 import io.github.humbleui.skija.Canvas;
@@ -74,11 +75,8 @@ public class SkiaGC implements IExternalGC {
 	@Deprecated
 	private IExternalGC innerGC;
 
-	private Color background;
-	private Color foreground;
 	private org.eclipse.swt.graphics.Font swtFont;
-	private Font skiaFont;
-	private float baseSymbolHeight = 0; // Height of symbol with "usual" height, like "T", to be vertically centered
+	private final float baseSymbolHeight = 0; // Height of symbol with "usual" height, like "T", to be vertically centered
 	private int lineWidth;
 	private int lineStyle;
 	private int lineCap = SWT.CAP_FLAT;
@@ -105,16 +103,19 @@ public class SkiaGC implements IExternalGC {
 	private boolean isClipSet;
 	private Rectangle currentClipBounds;
 
+	private final ISkiaCanvas skiaExtension;
+	private final SkiaResources resources;
 	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvas exst,
 			int style) {
 		innerGC = this;
 		this.drawable = canvas;
-		final org.eclipse.swt.widgets.Canvas c = (org.eclipse.swt.widgets.Canvas)drawable;
+		final org.eclipse.swt.widgets.Canvas c = (org.eclipse.swt.widgets.Canvas) drawable;
 		device = c.getDisplay();
 		originalDrawingSize = extractSize(drawable);
 		currentClipBounds = new Rectangle(0, 0, originalDrawingSize.x, originalDrawingSize.y);
 		this.surface = exst.getSurface();
-		initFont();
+		this.skiaExtension = exst;
+		this.resources = skiaExtension.getResources();
 	}
 
 	private static Point extractSize(Drawable drawable) {
@@ -162,10 +163,6 @@ public class SkiaGC implements IExternalGC {
 		}
 	}
 
-	private void initFont() {
-		setFont(getDefaultFont());
-	}
-
 	@Override
 	public void dispose() {
 		if (hasAlphaLayer) {
@@ -173,7 +170,6 @@ public class SkiaGC implements IExternalGC {
 			hasAlphaLayer = false;
 		}
 		innerGC = null;
-		skiaFont = null;
 		swtFont = null;
 	}
 
@@ -298,10 +294,15 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private void performDrawText(Consumer<Paint> operations) {
-		performDraw(paint -> {
+		performForegroundDraw(paint -> {
 			applyForegroundPattern(paint);
 			operations.accept(paint);
 		});
+	}
+
+	private void performForegroundDraw(Consumer<Paint> operations) {
+		final var paint = getForegroundPaint();
+		operations.accept(paint);
 	}
 
 	private void performDrawFilled(Consumer<Paint> operations) {
@@ -326,8 +327,8 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	/**
-	 * Applies the foreground pattern to the paint object if one is set.
-	 * If no pattern is set, uses the foreground color.
+	 * Applies the foreground pattern to the paint object if one is set. If no
+	 * pattern is set, uses the foreground color.
 	 *
 	 * @param paint the Paint object to apply the pattern to
 	 */
@@ -396,18 +397,12 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setBackground(Color color) {
-		if (color == null) {
-			SWT.error(SWT.ERROR_NULL_ARGUMENT);
-		}
-		this.background = color;
+		this.resources.setBackground(color);
 	}
 
 	@Override
 	public void setForeground(Color color) {
-		if (color == null) {
-			SWT.error(SWT.ERROR_NULL_ARGUMENT);
-		}
-		this.foreground = color;
+		this.resources.setForeground(color);
 	}
 
 	@Override
@@ -576,13 +571,13 @@ public class SkiaGC implements IExternalGC {
 				convertedData[index + 2] = b;
 				convertedData[index + 3] = a;
 
-				//				if (alphaData != null && alphaData.length > arrayPos) {
-				//					convertedData[index + 3] = alphaData[arrayPos];
-				//				} else if (imageData.alpha != -1) {
-				//					convertedData[index + 3] = defaultAlpha;
-				//				} else if(!byteSourceContainsAlpha) {
-				//					convertedData[index + 3] = defaultAlpha;
-				//				}
+				// if (alphaData != null && alphaData.length > arrayPos) {
+				// convertedData[index + 3] = alphaData[arrayPos];
+				// } else if (imageData.alpha != -1) {
+				// convertedData[index + 3] = defaultAlpha;
+				// } else if(!byteSourceContainsAlpha) {
+				// convertedData[index + 3] = defaultAlpha;
+				// }
 			}
 		}
 
@@ -711,14 +706,15 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public Color getForeground() {
+		return this.resources.getForeground();
+	}
 
-		if (foreground == null) {
-			if (drawable instanceof final org.eclipse.swt.widgets.Canvas c) {
-				return c.getForeground();
-			}
-		}
+	private Paint getForegroundPaint() {
+		return this.resources.getForegroundPaint();
+	}
 
-		return foreground;
+	private Paint getBackgroundPaint() {
+		return this.resources.getBackgroundPaint();
 	}
 
 	@Override
@@ -739,21 +735,9 @@ public class SkiaGC implements IExternalGC {
 		if (text.contains("\t")) {
 			text = expandTabs(text, x);
 		}
-		final TextBlob textBlob = buildTextBlob(text);
-		if (textBlob == null) {
-			return;
-		}
-		if ((flags & (SWT.TRANSPARENT | SWT.DRAW_TRANSPARENT)) == 0) {
-			final int textWidth = Math.round(textBlob.getBounds().getWidth());
-			final int fontHeight = Math.round(skiaFont.getMetrics().getHeight());
-			performDrawFilled(
-					paint -> surface.getCanvas()
-					.drawRect(new Rect(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y),
-							DPIScaler.autoScaleUp(x) + textWidth, DPIScaler.autoScaleUp(y) + fontHeight),
-							paint));
-		}
-		final Point point = calculateSymbolCenterPoint(x, y);
-		performDrawText(paint -> surface.getCanvas().drawTextBlob(textBlob, point.x, point.y, paint));
+		final var textImage = buildTextBlob(text, flags);
+		surface.getCanvas().drawImage(textImage, x, y);
+
 	}
 
 	/**
@@ -771,7 +755,7 @@ public class SkiaGC implements IExternalGC {
 		final StringBuilder result = new StringBuilder();
 		int currentX = 0;
 		final int spaceWidth = textExtent(" ").x;
-		final float _avgCharWidth = skiaFont.getMetrics()._avgCharWidth;
+		final float _avgCharWidth = getSkiaFont().getMetrics()._avgCharWidth;
 		int avgCharWidth = (int) _avgCharWidth;
 		if (avgCharWidth <= 0) {
 			avgCharWidth = spaceWidth > 0 ? spaceWidth : 1;
@@ -802,27 +786,61 @@ public class SkiaGC implements IExternalGC {
 	// parameter y being the top left text box position and the text box height
 	// according to font metrics)
 	private Point calculateSymbolCenterPoint(int x, int y) {
-		final int topLeftTextBoxYPosition = DPIScaler.autoScaleUp(y);
-		final float heightOfTextBoxConsideredByClients = skiaFont.getMetrics().getHeight();
-		final float heightOfSymbolToCenter = baseSymbolHeight;
-		final Point point = new Point(DPIScaler.autoScaleUp(x),
-				(int) (topLeftTextBoxYPosition + heightOfTextBoxConsideredByClients / 2 + heightOfSymbolToCenter / 2));
-		return point;
+		final int top = (int) (y - getSkiaFont().getMetrics().getAscent());
+		return new Point(x,top);
 	}
 
-	private TextBlob buildTextBlob(String text) {
+	private io.github.humbleui.skija.Font getSkiaFont() {
+		return this.resources.getSkiaFont();
+	}
+
+	private io.github.humbleui.skija.Image buildTextBlob(String text, int flags) {
+
+		final var i = this.resources.getTextImage(text, flags);
+		if (i != null) {
+			return i;
+		}
+
 		text = replaceMnemonics(text);
 		final String[] lines = splitString(text);
 		final TextBlobBuilder blobBuilder = new TextBlobBuilder();
-		final float lineHeight = skiaFont.getMetrics().getHeight();
+		final float lineHeight = getSkiaFont().getMetrics().getAscent() + getSkiaFont().getMetrics().getDescent();
 		int yOffset = 0;
 		for (final String line : lines) {
-			blobBuilder.appendRun(skiaFont, line, 0, yOffset);
+			blobBuilder.appendRun(getSkiaFont(), line, 0, yOffset);
 			yOffset += lineHeight;
 		}
 		final TextBlob textBlob = blobBuilder.build();
+
+		final var bd = textBlob.getBounds();
+
+		System.out.println("bot: " + bd.getBottom() + " top: " + bd.getTop());
+		System.out.println("height: " + bd.getHeight() );
+
+		final var subSurface = surface.makeSurface( (int)(textBlob.getBounds().getWidth())  + 1, ( int ) ( Math.abs(textBlob.getBounds().getBottom() - textBlob.getBounds().getTop() ) ) + (int)(getSkiaFont().getMetrics().getDescent()) +1 );
+
+		if(isTransparent(flags) || true ) {
+			subSurface.getCanvas().clear(0x00000000);
+			final var p = getForegroundPaint();
+		}else {
+			subSurface.getCanvas().clear(getBackgroundPaint().getColor());
+		}
+
+
+		final var p = calculateSymbolCenterPoint(0, 0);
+		subSurface.getCanvas().drawTextBlob(textBlob, p.x, p.y , getForegroundPaint());
+		final var img = subSurface.makeImageSnapshot();
+		this.resources.setTextImage(text, flags ,img );
+		subSurface.close();
+
+		textBlob.close();
 		blobBuilder.close();
-		return textBlob;
+
+		return img;
+	}
+
+	private boolean isTransparent(int flags) {
+		return (SWT.TRANSPARENT & flags) != 0;
 	}
 
 	private String replaceMnemonics(String text) {
@@ -950,17 +968,13 @@ public class SkiaGC implements IExternalGC {
 				skijaPath.lineTo(DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]));
 				break;
 			case SWT.PATH_CUBIC_TO:
-				skijaPath.cubicTo(
+				skijaPath.cubicTo(DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]),
 						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]),
-						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]),
-						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++])
-						);
+						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]));
 				break;
 			case SWT.PATH_QUAD_TO:
-				skijaPath.quadTo(
-						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]),
-						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++])
-						);
+				skijaPath.quadTo(DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]),
+						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]));
 				break;
 			case SWT.PATH_CLOSE:
 				skijaPath.closePath();
@@ -1043,13 +1057,13 @@ public class SkiaGC implements IExternalGC {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
 		if (!isTransparent) {
-			final int width = (int) DPIScaler.autoScaleDown(skiaFont.measureTextWidth(string));
-			final int height = (int) DPIScaler.autoScaleDown(skiaFont.getMetrics().getHeight());
+			final int width = (int) DPIScaler.autoScaleDown(getSkiaFont().measureTextWidth(string));
+			final int height = (int) DPIScaler.autoScaleDown(getSkiaFont().getMetrics().getHeight());
 			fillRectangle(x, y, width, height);
 		}
 		final Point point = calculateSymbolCenterPoint(x, y);
 		performDrawText(paint -> {
-			surface.getCanvas().drawString(string, point.x, point.y, skiaFont, paint);
+			surface.getCanvas().drawString(string, point.x, point.y, getSkiaFont(), paint);
 		});
 	}
 
@@ -1165,26 +1179,17 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public Point textExtent(String string, int flags) {
-		final float height = skiaFont.getMetrics().getHeight();
-		final float width = skiaFont.measureTextWidth(replaceMnemonics(string));
+		final float height = getSkiaFont().getMetrics().getHeight();
+		final float width = getSkiaFont().measureTextWidth(replaceMnemonics(string));
 		return new Point(DPIScaler.autoScaleDown((int) width), DPIScaler.autoScaleDown((int) height));
 	}
 
 	@Override
 	public void setFont(org.eclipse.swt.graphics.Font font) {
-		if (font != null) {
-			if (font.isDisposed()) {
-				SWT.error(SWT.ERROR_INVALID_ARGUMENT);
-			}
-		} else {
-			font = getDefaultFont();
-		}
-		this.swtFont = font;
-		this.skiaFont = getSkijaFont(font);
-		this.baseSymbolHeight = this.skiaFont.measureText("T").getHeight(); //$NON-NLS-1$
+		this.resources.setFont(font);
 	}
 
-	private static Font getSkijaFont(org.eclipse.swt.graphics.Font font) {
+	public static Font getSkijaFont(org.eclipse.swt.graphics.Font font) {
 		final FontData fontData = font.getFontData()[0];
 		final var cachedFont = FONT_CACHE.get(fontData);
 		if (cachedFont != null && cachedFont.isClosed()) {
@@ -1926,12 +1931,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public Color getBackground() {
-		if (background != null) {
-			return background;
-		}
-
-		final var s = (org.eclipse.swt.widgets.Canvas) drawable;
-		return s.getBackground();
+		return resources.getBackground();
 	}
 
 	@Override
@@ -1956,17 +1956,8 @@ public class SkiaGC implements IExternalGC {
 	 * @return the Skija Shader or null if conversion fails
 	 */
 	private Shader convertSWTPatternToSkijaShader(Pattern pattern) {
-		//TODO find an implementation in the new skia canvas setup
+		// TODO find an implementation in the new skia canvas setup
 		return null;
-	}
-
-	private org.eclipse.swt.graphics.Font getDefaultFont() {
-		org.eclipse.swt.graphics.Font originalFont = ((Control) this.drawable).getFont();
-
-		if (originalFont == null || originalFont.isDisposed()) {
-			originalFont = getDevice().getSystemFont();
-		}
-		return originalFont;
 	}
 
 }

@@ -6,4 +6,6 @@ public interface ISkiaCanvas {
 
 	Surface getSurface();
 
+	SkiaResources getResources();
+
 }

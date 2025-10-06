@@ -26,9 +26,11 @@ import io.github.humbleui.skija.Surface;
 public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements ISkiaCanvas {
 
 	private Surface surface;
+	private final SkiaResources resources;
 
 	public SkiaRasterCanvasExtension(Canvas canvas) {
 		super(canvas);
+		resources = new SkiaResources(canvas);
 	}
 
 	@Override
@@ -110,6 +112,11 @@ public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements 
 	@Override
 	public Surface getSurface() {
 		return surface;
+	}
+
+	@Override
+	public SkiaResources getResources() {
+		return this.resources;
 	}
 
 

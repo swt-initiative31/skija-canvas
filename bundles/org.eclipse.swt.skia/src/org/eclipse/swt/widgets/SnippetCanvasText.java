@@ -7,8 +7,9 @@ import org.eclipse.swt.graphics.Point;
 
 public class SnippetCanvasText {
 
-	final static int LETTERS_PER_LINE = 80;
-	final static int LINES = 30;
+	final static int LETTERS_PER_LINE = 400;
+	final static int LINES = 60;
+	final static int SHIFT_LEFT = 800;
 
 	static String[] text = new String[LINES];
 
@@ -17,9 +18,7 @@ public class SnippetCanvasText {
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas");
 		// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
-		SkiaConfiguration.activateSkiaGl();
-		final Canvas c = new Canvas(shell, SWT.DOUBLE_BUFFERED);
-		SkiaConfiguration.resetCanvasConfiguration();
+		final Canvas c = new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED);
 
 		final StringBuilder b = new StringBuilder();
 
@@ -65,12 +64,12 @@ public class SnippetCanvasText {
 
 		final double position = (double) currentPosTime / (double) 10000;
 
-		final int shift = (int) (position * size.x);
+		final int shift = (int) (position * size.x) - SHIFT_LEFT;
 		final int shiftDown = 20;
 
 
 		for(int j = 0 ; j < LINES; j++) {
-			e.gc.drawText(text[j], shift, shiftDown + 20 * j);
+			e.gc.drawText(text[j], shift, shiftDown + 20 * j,true);
 		}
 
 
@@ -99,7 +98,7 @@ public class SnippetCanvasText {
 			}
 			frames++;
 
-			e.gc.drawText("Frames: " + framesToDraw, 10, 10);
+			e.gc.drawText("Frames: " + framesToDraw, 10, 10,true);
 
 		}
 

@@ -7,7 +7,7 @@
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="lib" path="lib/skija-shared-0.116.3.jar"/>
+	<classpathentry kind="lib" path="lib/skija-shared-0.116.3.jar" sourcepath="lib/skija-shared-0.116.3-sources.jar"/>
 	<classpathentry kind="lib" path="lib/skija-shared-0.116.3-sources.jar"/>
 	<classpathentry kind="lib" path="lib/types-0.1.1.jar"/>
 	<classpathentry kind="lib" path="lib/types-0.1.1-sources.jar"/>

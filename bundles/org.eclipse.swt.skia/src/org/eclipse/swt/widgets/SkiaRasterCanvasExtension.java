@@ -119,5 +119,10 @@ public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements 
 		return this.resources;
 	}
 
+	@Override
+	public Surface createSupportSurface(int width, int height) {
+		return  surface.makeSurface(width,height);
+	}
+
 
 }

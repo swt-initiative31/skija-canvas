@@ -20,9 +20,13 @@ import org.eclipse.swt.opengl.GLData;
 import org.eclipse.swt.opengl.OpenGLCanvasExtension;
 
 import io.github.humbleui.skija.BackendRenderTarget;
+import io.github.humbleui.skija.ColorAlphaType;
+import io.github.humbleui.skija.ColorInfo;
 import io.github.humbleui.skija.ColorSpace;
+import io.github.humbleui.skija.ColorType;
 import io.github.humbleui.skija.DirectContext;
 import io.github.humbleui.skija.FramebufferFormat;
+import io.github.humbleui.skija.ImageInfo;
 import io.github.humbleui.skija.PixelGeometry;
 import io.github.humbleui.skija.Surface;
 import io.github.humbleui.skija.SurfaceColorFormat;
@@ -76,7 +80,7 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 		}
 
 		surface = Surface.makeFromBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT,
-				SurfaceColorFormat.RGBA_8888, ColorSpace.getDisplayP3(), new SurfaceProps(PixelGeometry.RGB_H));
+				SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB(), new SurfaceProps(PixelGeometry.RGB_H));
 		surface.getCanvas().clear(getBackroundForSkia());
 
 	}
@@ -101,8 +105,8 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 		final Rectangle rect = this.canvas.getClientArea();
 		renderTarget = BackendRenderTarget.makeGL(rect.width, rect.height, /* samples */32, /* stencil */0,
 				/* fbid */0, FramebufferFormat.GR_GL_RGBA8);
-		surface = Surface.makeFromBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT,
-				SurfaceColorFormat.RGBA_8888, ColorSpace.getDisplayP3(), new SurfaceProps(PixelGeometry.RGB_H));
+
+		surface = Surface.wrapBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT, SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB());
 		surface.getCanvas().clear(getBackroundForSkia());
 
 	}
@@ -142,8 +146,9 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 		if(event.type == SWT.Resize) {
 			final Rectangle rect = canvas.getClientArea();
 
-			renderTarget = BackendRenderTarget.makeGL(rect.width, rect.height, /* samples */SAMPLES, /* stencil */0,
-					/* fbid */0, FramebufferFormat.GR_GL_RGBA8);
+
+
+
 
 			System.out.println("CreateOpenGLRenderTarget");
 
@@ -151,9 +156,7 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 				surface.close();
 			}
 
-			surface = Surface.makeFromBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT,
-					SurfaceColorFormat.RGBA_8888, ColorSpace.getDisplayP3(), new SurfaceProps(PixelGeometry.RGB_H));
-			surface.getCanvas().clear(0xFFFFFFFF);
+			createSurface(0, new Point(rect.width,rect.height), null);
 		}
 
 	}
@@ -163,8 +166,14 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 
 	@Override
 	public SkiaResources getResources() {
-
 		return this.resources;
+	}
+
+	@Override
+	public Surface createSupportSurface(int width, int height) {
+		final ImageInfo i = new ImageInfo(new ColorInfo(ColorType.RGBA_8888	, ColorAlphaType.PREMUL	, null), width, height);
+		final var subSurface = Surface.makeRenderTarget(skijaContext	, true, i);
+		return subSurface;
 	}
 
 }

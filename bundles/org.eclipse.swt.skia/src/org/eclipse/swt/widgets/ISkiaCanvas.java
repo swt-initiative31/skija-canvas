@@ -8,4 +8,6 @@ public interface ISkiaCanvas {
 
 	SkiaResources getResources();
 
+	Surface createSupportSurface(int width, int height);
+
 }

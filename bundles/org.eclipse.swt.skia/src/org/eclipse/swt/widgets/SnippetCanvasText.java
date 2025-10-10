@@ -7,9 +7,9 @@ import org.eclipse.swt.graphics.Point;
 
 public class SnippetCanvasText {
 
-	final static int LETTERS_PER_LINE = 400;
+	final static int LETTERS_PER_LINE = 800;
 	final static int LINES = 60;
-	final static int SHIFT_LEFT = 800;
+	final static int SHIFT_LEFT = 2000;
 
 	static String[] text = new String[LINES];
 

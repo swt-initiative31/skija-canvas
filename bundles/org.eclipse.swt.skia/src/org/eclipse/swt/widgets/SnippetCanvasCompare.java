@@ -12,13 +12,9 @@ public class SnippetCanvasCompare {
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas Compare");
 
-		SkiaConfiguration.activateSkiaGl();
-		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED), 1, "SkiaGlCanvas");
-		SkiaConfiguration.resetCanvasConfiguration();
-		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED), 2, "SWT Canvas");
-		SkiaConfiguration.activateSkiaRaster();
-		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED), 3, "SkiaRasterCanvas");
-		SkiaConfiguration.resetCanvasConfiguration();
+		configureCanvas(shell, new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED | SWT.H_SCROLL), 1, "SkiaGlCanvas");
+		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED| SWT.H_SCROLL), 2, "SWT Canvas");
+		configureCanvas(shell, new SkiaRasterCanvas(shell, SWT.DOUBLE_BUFFERED| SWT.H_SCROLL), 3, "SkiaRasterCanvas");
 
 
 		shell.setSize(1500, 1000);

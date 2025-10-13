@@ -763,9 +763,16 @@ public class SkiaGC implements IExternalGC {
 
 	private void drawTextBlob(String text, int flags, int x, int y) {
 
+		if( this.surface.getWidth() < x   || this.surface.getHeight()  < y) {
+			return;
+		}
+
+
 		final var i = this.resources.getTextImage(text, flags);
 		if (i != null) {
-			surface.getCanvas().drawImage(i, x, y);
+			if(x < this.surface.getWidth() && y < this.surface.getHeight()) {
+				surface.getCanvas().drawImage(i, x, y);
+			}
 			return;
 		}
 
@@ -785,7 +792,6 @@ public class SkiaGC implements IExternalGC {
 		final int width = (int) (textBlob.getBounds().getWidth()) + 1;
 		final int height = yOffset + 1;
 
-
 		final var subSurface = skiaExtension.createSupportSurface(  width,height );
 
 		if (isTransparent(flags) ) {
@@ -802,8 +808,9 @@ public class SkiaGC implements IExternalGC {
 		subSurface.close();
 		textBlob.close();
 		blobBuilder.close();
-
-		surface.getCanvas().drawImage(img, x, y);
+		if(x < this.surface.getWidth() && y < this.surface.getHeight()) {
+			surface.getCanvas().drawImage(img, x, y);
+		}
 
 	}
 

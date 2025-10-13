@@ -25,13 +25,13 @@ public class SnippetRasterSkiaCanvas {
 	int width = 2;
 
 	public static void main(String[] args) {
+		SkiaRasterCanvasExtension.SKIA_TEST_PERFORMANCE = false;
+
 		final Display display = new Display();
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas");
 		// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
-		SkiaConfiguration.activateSkiaRaster();
-		final Canvas c = new Canvas(shell,  SWT.DOUBLE_BUFFERED);
-		SkiaConfiguration.resetCanvasConfiguration();
+		final Canvas c = new SkiaRasterCanvas(shell,  SWT.DOUBLE_BUFFERED);
 
 		for( int x = 0 ; x < RECTANGLES_PER_LINE ; x++ ) {
 			for(int y = 0 ; y < RECTANGLES_PER_LINE ; y++) {
@@ -53,7 +53,7 @@ public class SnippetRasterSkiaCanvas {
 		shell.open();
 		while (!shell.isDisposed()) {
 			if (!display.readAndDispatch()) {
-				display.sleep();
+				c.redraw();
 			}
 		}
 		display.dispose();
@@ -125,7 +125,6 @@ public class SnippetRasterSkiaCanvas {
 
 		}
 
-		s.redraw();;
 
 	}
 

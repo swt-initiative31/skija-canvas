@@ -42,8 +42,6 @@ import io.github.humbleui.skija.Matrix33;
 import io.github.humbleui.skija.MipmapMode;
 import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.PaintMode;
-import io.github.humbleui.skija.PaintStrokeCap;
-import io.github.humbleui.skija.PaintStrokeJoin;
 import io.github.humbleui.skija.PathEffect;
 import io.github.humbleui.skija.PathFillMode;
 import io.github.humbleui.skija.SamplingMode;
@@ -147,34 +145,34 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private void performDrawLine(Consumer<Paint> operations) {
-		performDraw(paint -> {
-			applyForegroundPattern(paint);
-			paint.setMode(PaintMode.STROKE);
-			paint.setStrokeWidth(lineWidth > 0 ? Math.max(lineWidth, 1) : 1);
-			paint.setAntiAlias(true);
-
-			// Apply line cap setting
-			final PaintStrokeCap skijaLineCap = switch (lineCap) {
-			case SWT.CAP_ROUND -> PaintStrokeCap.ROUND;
-			case SWT.CAP_SQUARE -> PaintStrokeCap.SQUARE;
-			case SWT.CAP_FLAT -> PaintStrokeCap.BUTT;
-			default -> PaintStrokeCap.BUTT;
-			};
-			paint.setStrokeCap(skijaLineCap);
-
-			// Apply line join setting
-			final PaintStrokeJoin skijaLineJoin = switch (lineJoin) {
-			case SWT.JOIN_MITER -> PaintStrokeJoin.MITER;
-			case SWT.JOIN_ROUND -> PaintStrokeJoin.ROUND;
-			case SWT.JOIN_BEVEL -> PaintStrokeJoin.BEVEL;
-			default -> PaintStrokeJoin.BEVEL;
-			};
-			paint.setStrokeJoin(skijaLineJoin);
-			// Apply line dash pattern based on line style
-			final PathEffect pathEffect = createPathEffectForLineStyle();
-			if (pathEffect != null) {
-				paint.setPathEffect(pathEffect);
-			}
+		performForegroundDraw(paint -> {
+			//			applyForegroundPattern(paint);
+			//			paint.setMode(PaintMode.STROKE);
+			//			paint.setStrokeWidth(lineWidth > 0 ? Math.max(lineWidth, 1) : 1);
+			//			paint.setAntiAlias(true);
+			//
+			//			// Apply line cap setting
+			//			final PaintStrokeCap skijaLineCap = switch (lineCap) {
+			//			case SWT.CAP_ROUND -> PaintStrokeCap.ROUND;
+			//			case SWT.CAP_SQUARE -> PaintStrokeCap.SQUARE;
+			//			case SWT.CAP_FLAT -> PaintStrokeCap.BUTT;
+			//			default -> PaintStrokeCap.BUTT;
+			//			};
+			//			paint.setStrokeCap(skijaLineCap);
+			//
+			//			// Apply line join setting
+			//			final PaintStrokeJoin skijaLineJoin = switch (lineJoin) {
+			//			case SWT.JOIN_MITER -> PaintStrokeJoin.MITER;
+			//			case SWT.JOIN_ROUND -> PaintStrokeJoin.ROUND;
+			//			case SWT.JOIN_BEVEL -> PaintStrokeJoin.BEVEL;
+			//			default -> PaintStrokeJoin.BEVEL;
+			//			};
+			//			paint.setStrokeJoin(skijaLineJoin);
+			//			// Apply line dash pattern based on line style
+			//			final PathEffect pathEffect = createPathEffectForLineStyle();
+			//			if (pathEffect != null) {
+			//				paint.setPathEffect(pathEffect);
+			//			}
 			operations.accept(paint);
 		});
 	}

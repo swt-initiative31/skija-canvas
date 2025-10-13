@@ -21,9 +21,27 @@ import io.github.humbleui.skija.ColorAlphaType;
 import io.github.humbleui.skija.ColorInfo;
 import io.github.humbleui.skija.ColorType;
 import io.github.humbleui.skija.ImageInfo;
+import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.Surface;
+import io.github.humbleui.types.Rect;
 
 public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements ISkiaCanvas {
+
+	final static int RECTANGLES_PER_LINE = 200;
+	public static boolean SKIA_TEST_PERFORMANCE = false;
+
+	public static int convertSWTColorToSkijaColor(org.eclipse.swt.graphics.Color swtColor) {
+		// extract RGB-components
+		final int red = swtColor.getRed();
+		final int green = swtColor.getGreen();
+		final int blue = swtColor.getBlue();
+		final int alpha = swtColor.getAlpha();
+
+		// create ARGB 32-Bit-color
+		final int skijaColor = (alpha << 24) | (red << 16) | (green << 8) | blue;
+
+		return skijaColor;
+	}
 
 	private Surface surface;
 	private final SkiaResources resources;
@@ -33,10 +51,17 @@ public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements 
 		resources = new SkiaResources(canvas);
 	}
 
+	long lastStart = 0;
+	int draws = 0;
+
 	@Override
 	public void doPaint(PaintEventSender s) {
 
 		if (surface == null) {
+			return;
+		}
+		if (SKIA_TEST_PERFORMANCE) {
+			drawRectangles();
 			return;
 		}
 
@@ -68,6 +93,55 @@ public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements 
 
 		surface.flush();
 
+
+
+	}
+
+	private void drawRectangles() {
+
+		if (System.currentTimeMillis() - lastStart > 1000) {
+			System.out.println("Frames: " + draws);
+			lastStart = System.currentTimeMillis();
+			draws = 0;
+		}
+		draws++;
+
+		surface.getCanvas().clear(0xFFFFFFFF);
+
+		final var size = canvas.getSize();
+
+		long currentPosTime = System.currentTimeMillis();
+
+		currentPosTime = currentPosTime % 10000;
+
+		final double position = (double) currentPosTime / (double) 10000;
+
+		final int shift = (int) (position * size.x);
+		final int shiftDown = 20;
+
+		final int[] col = new int[16];
+
+		for (int i = 0; i < 16; i++) {
+			col[i] = convertSWTColorToSkijaColor(Display.getDefault().getSystemColor((i) % 16));
+		}
+
+		try (var paint = new Paint()) {
+
+			for (int x = 0; x < RECTANGLES_PER_LINE; x++) {
+				for (int y = 0; y < RECTANGLES_PER_LINE; y++) {
+
+					final int left = shift + 2 * x;
+					final int top = shiftDown + 2 * y;
+					final int right = left + 2;
+					final int bottom = top + 2;
+
+					paint.setColor(col[(x + y) % 16]);
+					surface.getCanvas().drawRect(new Rect(left, top, right, bottom), paint);
+
+				}
+			}
+		}
+
 	}
 
 	@Override
@@ -75,7 +149,7 @@ public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements 
 
 		final var s = canvas.getSize();
 		final ColorAlphaType type = info.premule ? ColorAlphaType.PREMUL : ColorAlphaType.UNPREMUL;
-		final ColorType t = getType(  info ) ;
+		final ColorType t = getType(info);
 		final ColorInfo ci = new ColorInfo(t, type, null);
 
 		final ImageInfo imageInfo = new ImageInfo(ci, size.x, size.y);
@@ -96,7 +170,6 @@ public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements 
 		case BGRA_8888 -> ColorType.BGRA_8888;
 		default -> ColorType.N32;
 		};
-
 
 	}
 
@@ -121,8 +194,7 @@ public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements 
 
 	@Override
 	public Surface createSupportSurface(int width, int height) {
-		return  surface.makeSurface(width,height);
+		return surface.makeSurface(width, height);
 	}
-
 
 }

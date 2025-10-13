@@ -62,6 +62,15 @@ public abstract class RasterCanvasExtension implements Listener, IExternalCanvas
 	@Override
 	public Object paint (PaintEventSender p,long widget, long cairo) {
 
+		if(true) {
+		doPaint(p);
+
+		pushToCanvas(cairo);
+
+		return null;
+		}
+
+
 		if (System.currentTimeMillis() - lastRedraw > (1000 / fps) || surfaceIsEmpty) {
 			long paintStartTime = System.currentTimeMillis();
 			doPaint(p);

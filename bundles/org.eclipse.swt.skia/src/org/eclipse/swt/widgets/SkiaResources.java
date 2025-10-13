@@ -24,6 +24,7 @@ public class SkiaResources {
 	private Paint foregroundPaint;
 	private Paint backgroundPaint;
 	private final Map<TextProperties, io.github.humbleui.skija.Image> textBlobs = new HashMap<>();
+	private final Map<PaintProperties, io.github.humbleui.skija.Paint> paintCache = new HashMap<>();
 	private Color background;
 	private Color foreground;
 	private final Canvas canvas;
@@ -62,7 +63,6 @@ public class SkiaResources {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
 		if (this.foregroundPaint != null) {
-			this.foregroundPaint.close();
 			this.foregroundPaint = null;
 		}
 
@@ -73,11 +73,20 @@ public class SkiaResources {
 	public Paint getForegroundPaint() {
 		if (this.foregroundPaint == null) {
 
-			this.foregroundPaint = new Paint();
-			this.foregroundPaint.setColor(SkiaGC.convertSWTColorToSkijaColor(getForeground()));
-			this.foregroundPaint.setAntiAlias(true);
-			this.foregroundPaint.setAlpha(255);
-			this.foregroundPaint.setBlendMode(BlendMode.SRC_OVER);
+			final var prop = new PaintProperties(SkiaGC.convertSWTColorToSkijaColor(getForeground()),true,255);
+
+			paintCache.get(prop);
+
+			this.foregroundPaint = paintCache.computeIfAbsent(prop,  p -> {
+
+				final var pa = new Paint();
+				pa.setColor( p.color() );
+				pa.setAntiAlias( p.antialias());
+				pa.setAlpha(p.alpha());
+				pa.setBlendMode(BlendMode.SRC_OVER);
+				return pa;
+
+			}   );
 
 		}
 		return this.foregroundPaint;
@@ -250,14 +259,7 @@ public class SkiaResources {
 	public void resetBaseColors() {
 		foreground = null;
 		background = null;
-		if(foregroundPaint != null && !foregroundPaint.isClosed()) {
-			foregroundPaint.close();
-		}
 		foregroundPaint = null;
-
-		if(backgroundPaint != null && !backgroundPaint.isClosed()) {
-			backgroundPaint.close();
-		}
 		backgroundPaint = null;
 
 	}

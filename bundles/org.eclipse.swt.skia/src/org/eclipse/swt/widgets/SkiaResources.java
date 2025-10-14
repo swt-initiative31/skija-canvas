@@ -17,6 +17,7 @@ import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.FontStyle;
 import io.github.humbleui.skija.Image;
 import io.github.humbleui.skija.Paint;
+import io.github.humbleui.skija.PaintMode;
 import io.github.humbleui.skija.Typeface;
 
 public class SkiaResources {
@@ -84,6 +85,7 @@ public class SkiaResources {
 				pa.setAntiAlias( p.antialias());
 				pa.setAlpha(p.alpha());
 				pa.setBlendMode(BlendMode.SRC_OVER);
+				pa.setMode(PaintMode.STROKE);
 				return pa;
 
 			}   );
@@ -98,6 +100,7 @@ public class SkiaResources {
 			this.backgroundPaint = new Paint();
 			this.backgroundPaint.setColor(SkiaGC.convertSWTColorToSkijaColor(getBackground()));
 			this.backgroundPaint.setAntiAlias(false);
+			this.backgroundPaint.setMode(PaintMode.FILL);
 
 		}
 		return this.backgroundPaint;

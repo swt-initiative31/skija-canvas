@@ -27,8 +27,6 @@ public class SnippetTwoGlCanvasDrawing {
 		while (!shell.isDisposed()) {
 			if (!display.readAndDispatch()) {
 				display.sleep();
-				c1.redraw();
-				c2.redraw();
 
 			}
 		}

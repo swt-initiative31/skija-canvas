@@ -801,7 +801,12 @@ public class SkiaGC implements IExternalGC {
 		}
 
 		final var p = calculateSymbolCenterPoint(0, 0);
+
+		final var fgp = getForegroundPaint();
+		// for texts the fill mode is right, else transparency and anti alias does not work right.
+		fgp.setMode(PaintMode.FILL);
 		subSurface.getCanvas().drawTextBlob(textBlob, p.x, p.y, getForegroundPaint());
+		fgp.setMode(PaintMode.STROKE);
 		final var img = subSurface.makeImageSnapshot();
 		this.resources.setTextImage(text, flags, img);
 
@@ -1143,7 +1148,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void fillRectangle(int x, int y, int width, int height) {
-		performDrawFilled(paint -> surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), paint));
+		surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), getBackgroundPaint());
 	}
 
 	@Override

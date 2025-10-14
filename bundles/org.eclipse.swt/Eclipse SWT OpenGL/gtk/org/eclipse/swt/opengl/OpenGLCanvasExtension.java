@@ -26,6 +26,11 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension implements
 
 		if (canvas.isDisposed())
 			return null;
+
+		if(!isCurrent())
+		{
+			setCurrent();
+		}
 		doPaint(e);
 		swapBuffers();
 

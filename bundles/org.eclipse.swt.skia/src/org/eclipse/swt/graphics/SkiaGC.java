@@ -29,6 +29,7 @@ import org.eclipse.swt.widgets.ISkiaCanvas;
 import org.eclipse.swt.widgets.SkiaResources;
 
 import io.github.humbleui.skija.Bitmap;
+import io.github.humbleui.skija.BlendMode;
 import io.github.humbleui.skija.Canvas;
 import io.github.humbleui.skija.ClipMode;
 import io.github.humbleui.skija.ColorAlphaType;
@@ -92,6 +93,7 @@ public class SkiaGC implements IExternalGC {
 
 	private final ISkiaCanvas skiaExtension;
 	private final SkiaResources resources;
+	private boolean XORModeActive;
 
 	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvas exst, int style) {
 		this.drawable = canvas;
@@ -1010,8 +1012,17 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawRectangle(int x, int y, int width, int height) {
-		performDrawLine(paint -> surface.getCanvas()
-				.drawRect(offsetRectangle(createScaledRectangle(x, y, width, height)), paint));
+
+		final var p = getForegroundPaint();
+		final var bmode = p.getBlendMode();
+		if(XORModeActive) {
+			p.setBlendMode(BlendMode.DIFFERENCE);
+		}
+
+		surface.getCanvas().drawRect(offsetRectangle(createScaledRectangle(x, y, width, height)), p);
+
+		p.setBlendMode(bmode);
+
 	}
 
 	@Override
@@ -1764,7 +1775,9 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setXORMode(boolean xor) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+
+		this.XORModeActive = xor;
+
 	}
 
 	@Override

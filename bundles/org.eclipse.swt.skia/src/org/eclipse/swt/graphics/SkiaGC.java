@@ -667,6 +667,21 @@ public class SkiaGC implements IExternalGC {
 		return skijaColor;
 	}
 
+	public static int invertSWTColorToInt(Color swtColor) {
+
+		// extract RGB-components
+		final int red = swtColor.getRed();
+		final int green = swtColor.getGreen();
+		final int blue = swtColor.getBlue();
+		final int alpha = swtColor.getAlpha();
+
+		// create ARGB 32-Bit-color
+		final int skijaColor = (alpha << 24) | ((0xFF-red) << 16) | ((0xFF-green) << 8) | (0xFF-blue);
+
+		return skijaColor;
+
+	}
+
 	@Override
 	public void drawLine(int x1, int y1, int x2, int y2) {
 		final float scaledOffsetValue = getScaledOffsetValue();

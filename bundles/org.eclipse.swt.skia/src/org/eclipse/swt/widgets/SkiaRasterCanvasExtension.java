@@ -91,6 +91,7 @@ public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements 
 		gc.dispose();
 		event.gc = null;
 
+		SkiaCaretHandler.handleCaret(surface, canvas);
 		surface.flush();
 
 

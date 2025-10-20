@@ -136,6 +136,7 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 		e.sendPaintEvent(event);
 		gc.dispose ();
 		event.gc = null;
+		SkiaCaretHandler.handleCaret(surface, canvas);
 
 		skijaContext.flush();
 	}

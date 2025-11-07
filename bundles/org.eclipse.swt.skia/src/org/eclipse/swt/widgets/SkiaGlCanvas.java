@@ -1,5 +1,7 @@
 package org.eclipse.swt.widgets;
 
+import org.eclipse.swt.SWT;
+
 public class SkiaGlCanvas extends Canvas {
 
 	public SkiaGlCanvas(Composite parent, int style) {
@@ -9,7 +11,7 @@ public class SkiaGlCanvas extends Canvas {
 
 	private static int prepare(int style) {
 		SkiaConfiguration.activateSkiaGl();
-		return style;
+		return style | SWT.EDGE;
 	}
 
 

@@ -110,7 +110,8 @@ void sendFocusEvent(int type) {
  */
 public Canvas (Composite parent, int style) {
 	super (parent, style);
-	this.externalCanvasHandler = ExternalCanvasHandler.createHandler(this);
+	if((style & SWT.SKIA) != 0 && ExternalCanvasHandler.isActive())
+		externalCanvasHandler = ExternalCanvasHandler.createHandler(this);
 }
 
 @Override

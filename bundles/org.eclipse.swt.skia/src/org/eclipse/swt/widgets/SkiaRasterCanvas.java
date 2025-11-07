@@ -1,5 +1,7 @@
 package org.eclipse.swt.widgets;
 
+import org.eclipse.swt.SWT;
+
 public class SkiaRasterCanvas extends Canvas{
 
 	public SkiaRasterCanvas(Composite parent, int style) {
@@ -9,7 +11,7 @@ public class SkiaRasterCanvas extends Canvas{
 
 	private static int prepare(int style) {
 		SkiaConfiguration.activateSkiaRaster();
-		return style;
+		return style | SWT.EDGE;
 	}
 
 }

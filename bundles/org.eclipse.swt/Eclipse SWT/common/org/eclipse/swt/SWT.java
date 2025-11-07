@@ -2580,6 +2580,19 @@ public class SWT {
 	@Deprecated(forRemoval = true, since = "2024-03")
 	public static final int CHROMIUM = 1 << 17;
 
+	 /**
+	 * Style constant specifying that a Canvas should use Skia
+	 * for rendering its content (value is 1&lt;&lt;18).
+	 * <p><b>Used By:</b></p>
+	 * <ul>
+	 * <li><code>Canvas</code></li>
+	 * </ul>
+	 *
+	 * @since 3.132
+	 */
+	public static final int SKIA = 1 << 18;
+
+
 	/**
 	 * Style constant specifying that a Browser should use Edge (WebView2)
 	 * for rendering its content (value is 1&lt;&lt;18).

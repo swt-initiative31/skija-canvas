@@ -10,22 +10,18 @@
  *******************************************************************************/
 package org.eclipse.swt.widgets;
 
+import java.util.*;
+
 public class ExternalCanvasHandler {
 
-	private static IExternalCanvasFactory externalFactory;
-
-	public static void setExternalCanvasFactory(IExternalCanvasFactory external) {
-		externalFactory = external;
-	}
+	private static IExternalCanvasFactory externalFactory = ServiceLoader.load(IExternalCanvasFactory.class).findFirst().orElse(null);
 
 	public static boolean isActive() {
+
 		return externalFactory != null;
 	}
 
 	public static IExternalCanvasHandler createHandler(Canvas c) {
-
-		if(externalFactory == null)
-			return null;
 
 		return externalFactory.createCanvasExtension(c);
 

@@ -73,7 +73,7 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 		renderTarget = BackendRenderTarget.makeGL(rect.width, rect.height, /* samples */SAMPLES, /* stencil */0,
 				/* fbid */0, FramebufferFormat.GR_GL_RGBA8);
 
-		System.out.println("CreateOpenGLRenderTarget");
+		System.out.println("CreateOpenGLRenderTarget"); //$NON-NLS-1$
 
 		if (surface != null && !surface.isClosed()) {
 			surface.close();

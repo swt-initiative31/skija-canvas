@@ -101,7 +101,7 @@ public class SkiaRasterCanvasExtension extends RasterCanvasExtension implements 
 	private void drawRectangles() {
 
 		if (System.currentTimeMillis() - lastStart > 1000) {
-			System.out.println("Frames: " + draws);
+			System.out.println("Frames: " + draws); //$NON-NLS-1$
 			lastStart = System.currentTimeMillis();
 			draws = 0;
 		}

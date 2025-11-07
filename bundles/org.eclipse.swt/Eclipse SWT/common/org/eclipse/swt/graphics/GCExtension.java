@@ -13,9 +13,12 @@ package org.eclipse.swt.graphics;
 
 import java.util.*;
 
+/**
+ * Internal usage only!!.
+ */
 public final class GCExtension extends GC {
 
-	final IExternalGC e;
+	private final IExternalGC e;
 
 	public GCExtension(final IExternalGC ext) {
 		this.e = ext;

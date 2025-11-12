@@ -12,21 +12,24 @@ package org.eclipse.swt.widgets;
 
 public class SkiaConfiguration {
 
-	public static final String RASTER = "raster"; //$NON-NLS-1$
-	public static final String OPENGL = "opengl"; //$NON-NLS-1$
+    public static final int SKIA = 1 << 23;
 
-	public static final String SKIA_PROPERTY = "org.eclipse.swt.skia.configuration"; //$NON-NLS-1$
 
-	public static void activateSkiaRaster() {
-		System.setProperty("org.eclipse.swt.skia.configuration", RASTER);
-	}
+    public static final String RASTER = "raster"; //$NON-NLS-1$
+    public static final String OPENGL = "opengl"; //$NON-NLS-1$
 
-	public static void activateSkiaGl() {
-		System.setProperty("org.eclipse.swt.skia.configuration", OPENGL);
-	}
+    public static final String SKIA_PROPERTY = "org.eclipse.swt.skia.configuration"; //$NON-NLS-1$
 
-	public static void resetCanvasConfiguration() {
-		System.setProperty("org.eclipse.swt.skia.configuration", "");
-	}
+    public static void activateSkiaRaster() {
+	System.setProperty("org.eclipse.swt.skia.configuration", RASTER);
+    }
+
+    public static void activateSkiaGl() {
+	System.setProperty("org.eclipse.swt.skia.configuration", OPENGL);
+    }
+
+    public static void resetCanvasConfiguration() {
+	System.setProperty("org.eclipse.swt.skia.configuration", "");
+    }
 
 }

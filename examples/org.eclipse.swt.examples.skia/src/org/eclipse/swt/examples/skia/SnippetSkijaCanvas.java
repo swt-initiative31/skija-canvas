@@ -1,9 +1,14 @@
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.examples.skia;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.layout.FillLayout;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.SkiaConfiguration;
 
 public class SnippetSkijaCanvas {
 

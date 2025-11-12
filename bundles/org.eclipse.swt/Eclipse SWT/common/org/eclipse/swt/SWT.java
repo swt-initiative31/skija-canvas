@@ -2582,7 +2582,7 @@ public class SWT {
 
 	 /**
 	 * Style constant specifying that a Canvas should use Skia
-	 * for rendering its content (value is 1&lt;&lt;18).
+	 * for rendering its content (value is 1&lt;&lt;23).
 	 * <p><b>Used By:</b></p>
 	 * <ul>
 	 * <li><code>Canvas</code></li>
@@ -2590,7 +2590,7 @@ public class SWT {
 	 *
 	 * @since 3.132
 	 */
-	public static final int SKIA = 1 << 18;
+	public static final int SKIA = 1 << 23;
 
 
 	/**

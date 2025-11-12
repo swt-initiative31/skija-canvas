@@ -1,10 +1,15 @@
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.examples.skia;
 
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Path;
 import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.SkiaGlCanvas;
 
 public class SnippetTwoGlCanvasDrawing {
 

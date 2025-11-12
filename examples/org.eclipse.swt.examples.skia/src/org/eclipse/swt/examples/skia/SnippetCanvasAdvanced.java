@@ -1,4 +1,4 @@
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.examples.skia;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
@@ -15,6 +15,13 @@ import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Label;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.SkiaConfiguration;
 
 public class SnippetCanvasAdvanced {
 
@@ -149,7 +156,7 @@ public class SnippetCanvasAdvanced {
 	}
 
 	private static void coloredTextNoAACanvas(Composite shell) {
-		final Canvas coloredTextCanvas = new Canvas(shell, SWT.BORDER);
+		final Canvas coloredTextCanvas = createCanvas(shell);
 		coloredTextCanvas.setBackground(shell.getDisplay().getSystemColor(SWT.COLOR_YELLOW));
 		coloredTextCanvas.addPaintListener(e -> {
 			final GC gc = e.gc;
@@ -197,7 +204,7 @@ public class SnippetCanvasAdvanced {
 	}
 
 	private static void clipCanvasPath(Composite shell) {
-		final Canvas c = new Canvas(shell, SWT.BORDER);
+		final Canvas c = createCanvas(shell);
 		final var display = shell.getDisplay();
 
 		c.addPaintListener(e -> {
@@ -220,7 +227,7 @@ public class SnippetCanvasAdvanced {
 
 	private static void clipCanvasRegion(Composite shell) {
 
-		final Canvas c = new Canvas(shell, SWT.BORDER);
+		final Canvas c = createCanvas(shell);
 		final var display = shell.getDisplay();
 
 		c.addPaintListener(e -> {
@@ -241,7 +248,7 @@ public class SnippetCanvasAdvanced {
 	}
 
 	private static void clipRectangleCanvas(Composite shell) {
-		final Canvas c = new Canvas(shell, SWT.BORDER);
+		final Canvas c = createCanvas(shell);
 		final var display = shell.getDisplay();
 
 		c.addPaintListener(e -> {
@@ -259,7 +266,7 @@ public class SnippetCanvasAdvanced {
 	}
 
 	private static void alphaCanvas(Composite shell) {
-		final Canvas alphaCanvas = new Canvas(shell, SWT.NONE);
+		final Canvas alphaCanvas = createCanvas(shell);
 		final var display = shell.getDisplay();
 		final Image image = new Image(display, 100, 50);
 		final GC gcImage = new GC(image);
@@ -278,7 +285,7 @@ public class SnippetCanvasAdvanced {
 	}
 
 	private static void antiAliasCanvas(Composite shell) {
-		final Canvas antiAliasCanvas = new Canvas(shell, SWT.NONE);
+		final Canvas antiAliasCanvas = createCanvas(shell);
 		antiAliasCanvas.addPaintListener(e -> {
 			final GC gc = e.gc;
 			gc.setAntialias(SWT.ON);
@@ -291,7 +298,7 @@ public class SnippetCanvasAdvanced {
 
 	private static void patternCanvas(Composite shell) {
 
-		final Canvas patternCanvas = new Canvas(shell, SWT.NONE);
+		final Canvas patternCanvas = createCanvas(shell);
 		patternCanvas.addPaintListener(e -> {
 			final GC gc = e.gc;
 
@@ -307,7 +314,7 @@ public class SnippetCanvasAdvanced {
 	}
 
 	private static void regionCanvas(Composite shell) {
-		final Canvas regionCanvas = new Canvas(shell, SWT.NONE);
+		final Canvas regionCanvas = createCanvas(shell);
 		regionCanvas.addPaintListener(e -> {
 			final GC gc = e.gc;
 			final Region region = new Region();
@@ -324,7 +331,7 @@ public class SnippetCanvasAdvanced {
 	}
 
 	private static void transformCanvas(Composite shell) {
-		final Canvas transformCanvas = new Canvas(shell, SWT.NONE);
+		final Canvas transformCanvas = createCanvas(shell);
 		transformCanvas.addPaintListener(e -> {
 			final GC gc = e.gc;
 			final Transform transform = new Transform(shell.getDisplay());
@@ -343,7 +350,7 @@ public class SnippetCanvasAdvanced {
 
 		final var dis = shell.getDisplay();
 
-		final Canvas xorModeCanvas = new Canvas(shell, SWT.NONE);
+		final Canvas xorModeCanvas = createCanvas(shell);
 		xorModeCanvas.setBackground(dis.getSystemColor(SWT.COLOR_BLACK));
 		xorModeCanvas.addPaintListener(e -> {
 			final GC gc = e.gc;
@@ -357,9 +364,14 @@ public class SnippetCanvasAdvanced {
 		setGridData(xorModeCanvas);
 
 	}
+	
+	private static Canvas createCanvas(Composite shell) {
+	    return new Canvas(shell, SWT.BORDER | SkiaConfiguration.SKIA);
+	}
+	
 
 	private static void pathCanvas(Composite shell) {
-		final Canvas pathCanvas = new Canvas(shell, SWT.NONE);
+		final Canvas pathCanvas = createCanvas(shell);
 		pathCanvas.addPaintListener(e -> {
 			final GC gc = e.gc;
 			final Path path = new Path(shell.getDisplay());
@@ -390,7 +402,7 @@ public class SnippetCanvasAdvanced {
 	}
 
 	private static void lineAttributesCanvas(Composite shell) {
-		final Canvas lineAttributesCanvas = new Canvas(shell, SWT.NONE);
+		final Canvas lineAttributesCanvas = createCanvas(shell);
 		lineAttributesCanvas.addPaintListener(e -> {
 			final GC gc = e.gc;
 			gc.setLineWidth(5);
@@ -404,7 +416,7 @@ public class SnippetCanvasAdvanced {
 	}
 
 	private static void coloredTextCanvas(Composite shell) {
-		final Canvas coloredTextCanvas = new Canvas(shell, SWT.BORDER);
+		final Canvas coloredTextCanvas = createCanvas(shell);
 		coloredTextCanvas.setBackground(shell.getDisplay().getSystemColor(SWT.COLOR_YELLOW));
 		coloredTextCanvas.addPaintListener(e -> {
 			final GC gc = e.gc;

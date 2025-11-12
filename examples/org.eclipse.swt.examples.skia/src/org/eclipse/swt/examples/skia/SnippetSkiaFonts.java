@@ -1,4 +1,4 @@
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.examples.skia;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.PaintListener;
@@ -7,6 +7,11 @@ import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Control;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.SkiaRasterCanvas;
 
 public class SnippetSkiaFonts {
 

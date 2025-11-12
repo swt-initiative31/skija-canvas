@@ -1,8 +1,14 @@
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.examples.skia;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Caret;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.SkiaGlCanvas;
+import org.eclipse.swt.widgets.SkiaRasterCanvas;
 
 public class SnippetCanvasCaret {
 
@@ -70,7 +76,6 @@ public class SnippetCanvasCaret {
 		for (final var c : canvases) {
 			final Caret caret = new Caret(c, SWT.NONE);
 			caret.setBounds(10, 10, 2, 32);
-			caret.setFocus();
 		}
 
 	}

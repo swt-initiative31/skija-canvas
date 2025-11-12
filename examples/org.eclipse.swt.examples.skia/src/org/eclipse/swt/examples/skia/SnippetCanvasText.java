@@ -1,64 +1,52 @@
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.examples.skia;
+
+import java.util.Random;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.SkiaGlCanvas;
 
-public class SnippetRasterSkiaCanvas {
+public class SnippetCanvasText {
 
-	final static int RECTANGLES_PER_LINE = 200;
+	final static int LETTERS_PER_LINE = 800;
+	final static int LINES = 60;
+	final static int SHIFT_LEFT = 2000;
 
-	static class RecDraw{
-
-		public RecDraw(int xPos, int yPos, Color c) {
-			super();
-			this.xPos = xPos;
-			this.yPos = yPos;
-			this.c = c;
-		}
-		int xPos ,yPos;
-		Color c;
-
-	}
-
-	static RecDraw[][] recDraws = new RecDraw[RECTANGLES_PER_LINE][RECTANGLES_PER_LINE];
-	int width = 2;
+	static String[] text = new String[LINES];
 
 	public static void main(String[] args) {
-		SkiaRasterCanvasExtension.SKIA_TEST_PERFORMANCE = false;
-
 		final Display display = new Display();
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas");
 		// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
-		final Canvas c = new SkiaRasterCanvas(shell,  SWT.DOUBLE_BUFFERED);
+		final Canvas c = new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED);
 
-		for( int x = 0 ; x < RECTANGLES_PER_LINE ; x++ ) {
-			for(int y = 0 ; y < RECTANGLES_PER_LINE ; y++) {
+		final StringBuilder b = new StringBuilder();
 
-				recDraws[x][y] = new RecDraw( x*2,y*2,Display.getDefault().getSystemColor((x+y )% 16 ));
-
-			}
+		for (int j = 0; j < LINES; j++) {
+			text[j] = generateText(LETTERS_PER_LINE);
 		}
 
 		c.setSize(100, 100);
 
 		shell.addListener(SWT.Resize, e -> onResize(e, c));
-		c.addListener(SWT.Paint, SnippetRasterSkiaCanvas::onPaint);
-		c.addListener(SWT.Paint, SnippetRasterSkiaCanvas::onPaint2);
+		c.addListener(SWT.Paint, SnippetCanvasText::onPaint);
+		c.addListener(SWT.Paint, SnippetCanvasText::onPaint2);
 
-		shell.setSize(1000, RECTANGLES_PER_LINE*3+80);
-
+		shell.setSize(1000, LETTERS_PER_LINE * 3 + 80);
 
 		shell.open();
 		while (!shell.isDisposed()) {
 			if (!display.readAndDispatch()) {
-				c.redraw();
+				display.sleep();
 			}
 		}
 		display.dispose();
 	}
-
 
 	static long startTime = System.currentTimeMillis();
 	private static boolean printFrameRate = true;
@@ -81,17 +69,12 @@ public class SnippetRasterSkiaCanvas {
 
 		final double position = (double) currentPosTime / (double) 10000;
 
-		final int shift = (int) (position * size.x);
+		final int shift = (int) (position * size.x) - SHIFT_LEFT;
 		final int shiftDown = 20;
 
-		for( int x = 0 ; x < RECTANGLES_PER_LINE ; x++ ) {
-			for(int y = 0 ; y < RECTANGLES_PER_LINE ; y++) {
 
-				final var rec = recDraws[x][y];
-				e.gc.setForeground(rec.c);
-				e.gc.drawRectangle(shift + rec.xPos ,shiftDown + rec.yPos,  2,2 );
-
-			}
+		for(int j = 0 ; j < LINES; j++) {
+			e.gc.drawText(text[j], shift, shiftDown + 20 * j,true);
 		}
 
 
@@ -112,23 +95,22 @@ public class SnippetRasterSkiaCanvas {
 		if (printFrameRate) {
 
 			if (System.currentTimeMillis() - lastFrame > 1000) {
-				//				System.out.println("Frames: " + frames);
+				// System.out.println("Frames: " + frames);
 				framesToDraw = frames;
-
 
 				frames = 0;
 				lastFrame = System.currentTimeMillis();
 			}
 			frames++;
 
-			e.gc.drawText("Frames: " + framesToDraw, 10,10);
+			e.gc.drawText("Frames: " + framesToDraw, 10, 10,true);
 
 		}
 
+		s.redraw();
+		;
 
 	}
-
-
 
 	private static void onResize(Event e, Canvas c) {
 
@@ -137,5 +119,19 @@ public class SnippetRasterSkiaCanvas {
 		c.setSize(ca.width, ca.height);
 
 	}
+	public static String generateText(int textLength) {
+		final int leftLimit = 97; // letter 'a'
+		final int rightLimit = 122; // letter 'z'
+		final Random random = new Random();
+
+		final String generatedString = random.ints(leftLimit, rightLimit + 1)
+				.limit(textLength)
+				.collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+				.toString();
+
+
+		return generatedString;
+	}
+
 
 }

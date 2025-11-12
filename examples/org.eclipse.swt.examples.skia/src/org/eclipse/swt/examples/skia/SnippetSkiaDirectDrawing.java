@@ -1,8 +1,13 @@
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.examples.skia;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ControlEvent;
 import org.eclipse.swt.events.ControlListener;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.SkiaRasterCanvas;
+import org.eclipse.swt.widgets.SkiaRasterCanvasExtension;
 
 public class SnippetSkiaDirectDrawing {
 

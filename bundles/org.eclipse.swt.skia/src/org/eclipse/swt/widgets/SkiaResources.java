@@ -10,10 +10,10 @@ import org.eclipse.swt.graphics.DPIScaler;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.SkiaGC;
-import org.eclipse.swt.internal.DPIUtil;
 
 import io.github.humbleui.skija.BlendMode;
 import io.github.humbleui.skija.FontEdging;
+import io.github.humbleui.skija.FontHinting;
 import io.github.humbleui.skija.FontStyle;
 import io.github.humbleui.skija.Image;
 import io.github.humbleui.skija.Paint;
@@ -35,13 +35,11 @@ public class SkiaResources {
 
 	private final Map<FontData, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
 
-
 	private final DPIScaler scaler;
-
 
 	public SkiaResources(Canvas canvas) {
 		this.canvas = canvas;
-		scaler = new DPIScaler();
+		scaler = new DPIScaler(canvas);
 	}
 
 	public void setBackground(Color color) {
@@ -74,21 +72,21 @@ public class SkiaResources {
 	public Paint getForegroundPaint() {
 		if (this.foregroundPaint == null) {
 
-			final var prop = new PaintProperties(SkiaGC.convertSWTColorToSkijaColor(getForeground()),true,255);
+			final var prop = new PaintProperties(SkiaGC.convertSWTColorToSkijaColor(getForeground()), true, 255);
 
 			paintCache.get(prop);
 
-			this.foregroundPaint = paintCache.computeIfAbsent(prop,  p -> {
+			this.foregroundPaint = paintCache.computeIfAbsent(prop, p -> {
 
 				final var pa = new Paint();
-				pa.setColor( p.color() );
-				pa.setAntiAlias( p.antialias());
+				pa.setColor(p.color());
+				pa.setAntiAlias(p.antialias());
 				pa.setAlpha(p.alpha());
 				pa.setBlendMode(BlendMode.SRC_OVER);
 				pa.setMode(PaintMode.STROKE);
 				return pa;
 
-			}   );
+			});
 
 		}
 		return this.foregroundPaint;
@@ -147,7 +145,7 @@ public class SkiaResources {
 
 		io.github.humbleui.skija.Font f = null;
 
-		if(cachedFont == null) {
+		if (cachedFont == null) {
 			f = createSkijaFont(fontData);
 			fontCache.put(fontData, f);
 			return f;
@@ -167,27 +165,47 @@ public class SkiaResources {
 		} else if (isItalic) {
 			style = FontStyle.ITALIC;
 		}
-		final io.github.humbleui.skija.Font skijaFont = new io.github.humbleui.skija.Font(Typeface.makeFromName(fontData.getName(), style));
+		final io.github.humbleui.skija.Font skijaFont = new io.github.humbleui.skija.Font(
+				Typeface.makeFromName(fontData.getName(), style));
 
-		System.out.println("Height: " + fontData.getHeight());
-		System.out.println("DeviceZoom: "  + scaler.getDeviceZoom());
-		System.out.println("NativeDeviceZoom: "  + scaler.getNativeDeviceZoom());
+		// System.out.println("Canvas native zoom: " + canvas.nativeZoom);
+		// System.out.println("Height: " + fontData.getHeight());
+		// System.out.println("DeviceZoom: " + scaler.getDeviceZoom());
+		// System.out.println("NativeDeviceZoom: " + scaler.getNativeDeviceZoom());
+		//
+		// System.out.println("Util: DeviceZoom: " + DPIUtil.getDeviceZoom());
+		// System.out.println("Util: NativeDeviceZoom: " +
+		// DPIUtil.getNativeDeviceZoom());
 
-		System.out.println("Util: DeviceZoom: "  + DPIUtil.getDeviceZoom());
-		System.out.println("Util: NativeDeviceZoom: "  + DPIUtil.getNativeDeviceZoom());
-
-
-		int fontSize = (int)( fontData.getHeight() * scaler.getNativeDeviceZoom() / 100f);
+		int fontSize = (fontData.getHeight());
 		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
-			fontSize *= skijaFont.getSize() / Display.getDefault().getSystemFont().getFontData()[0].getHeight();
+			fontSize = scaler.getZoomedFontSize(fontSize);
 		}
-		if (SWT.getPlatform().equals("gtk")) { //$NON-NLS-1$
+		if (SWT.getPlatform().equals("gtk") || true) { //$NON-NLS-1$
 			// SWT's font size is in points, 1pt = 1/72 inch, adjust skija font size to this
 			fontSize = (fontSize * Display.getDefault().getDPI().y) / 72;
 		}
 		skijaFont.setSize(fontSize);
+		// --------------------------------------------------
+		// This might be the same option like the windows gdi text antialias option.
 		skijaFont.setEdging(FontEdging.SUBPIXEL_ANTI_ALIAS);
 		skijaFont.setSubpixel(true);
+		skijaFont.setHinting(FontHinting.NORMAL);
+		skijaFont.setAutoHintingForced(true);
+
+		final var m = skijaFont.getMetrics();
+
+		final var asc = m.getAscent();
+		final var des = m.getDescent();
+
+		final var ascI = (int) Math.ceil(Math.abs(asc));
+		final var desI = (int) Math.ceil(Math.abs(des));
+		final var heightI = ascI + desI;
+
+		//		System.out.println("Fontsize: AscF:" + m.getAscent() + "  DescF:" + m.getDescent() + " HeightF:" + m.getHeight()
+		//		+ "AscI:" + ascI + "  DescI:" + desI + " HeightI:" + heightI);
+
+		// --------------------------------------------------
 		return skijaFont;
 	}
 
@@ -201,7 +219,7 @@ public class SkiaResources {
 	}
 
 	public io.github.humbleui.skija.Font getSkiaFont() {
-		if(skiaFont == null) {
+		if (skiaFont == null) {
 			setFont(null);
 		}
 		return skiaFont;
@@ -209,8 +227,9 @@ public class SkiaResources {
 
 	public io.github.humbleui.skija.Image getTextImage(String text, int flags) {
 
-		final TextProperties tp = new TextProperties(text, getSkiaFont().getSize(), getSkiaFont().getTypeface().getFamilyName(),
-				(flags & SWT.TRANSPARENT) != 0, getBackgroundPaint().getColor(), getForegroundPaint().getColor());
+		final TextProperties tp = new TextProperties(text, getSkiaFont().getSize(),
+				getSkiaFont().getTypeface().getFamilyName(), (flags & SWT.TRANSPARENT) != 0,
+				getBackgroundPaint().getColor(), getForegroundPaint().getColor());
 
 		return this.textBlobs.get(tp);
 
@@ -218,8 +237,9 @@ public class SkiaResources {
 
 	public void setTextImage(String text, int flags, Image img) {
 
-		this.textBlobs.put(new TextProperties(text, getSkiaFont().getSize(), getSkiaFont().getTypeface().getFamilyName(),
-				(flags & SWT.TRANSPARENT) != 0, getBackgroundPaint().getColor(), getForegroundPaint().getColor()), img);
+		this.textBlobs.put(new TextProperties(text, getSkiaFont().getSize(),
+				getSkiaFont().getTypeface().getFamilyName(), (flags & SWT.TRANSPARENT) != 0,
+				getBackgroundPaint().getColor(), getForegroundPaint().getColor()), img);
 
 	}
 
@@ -233,13 +253,13 @@ public class SkiaResources {
 		foregroundPaint.close();
 		backgroundPaint.close();
 		textBlobs.forEach((t, u) -> {
-			if(u != null && !u.isClosed()) {
+			if (u != null && !u.isClosed()) {
 				u.close();
 			}
 		});
 
 		textBlobs.forEach((t, u) -> {
-			if(u != null && !u.isClosed()) {
+			if (u != null && !u.isClosed()) {
 				u.close();
 			}
 		});
@@ -247,15 +267,22 @@ public class SkiaResources {
 		fontCache.clear();
 		textBlobs.clear();
 
-
 		skiaFont = null;
 		foregroundPaint = null;
 		backgroundPaint = null;
 
-
 	}
 
 	public Font getFont() {
+
+		if (swtFont != null) {
+			if (swtFont.isDisposed()) {
+				SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+			}
+		} else {
+			swtFont = getDefaultFont();
+		}
+
 		return swtFont;
 	}
 
@@ -266,7 +293,5 @@ public class SkiaResources {
 		backgroundPaint = null;
 
 	}
-
-
 
 }

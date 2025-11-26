@@ -22,6 +22,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.internal.DPIUtil;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.ISkiaCanvas;
@@ -47,8 +48,6 @@ import io.github.humbleui.skija.PathFillMode;
 import io.github.humbleui.skija.SamplingMode;
 import io.github.humbleui.skija.Shader;
 import io.github.humbleui.skija.Surface;
-import io.github.humbleui.skija.TextBlob;
-import io.github.humbleui.skija.TextBlobBuilder;
 import io.github.humbleui.types.RRect;
 import io.github.humbleui.types.Rect;
 
@@ -58,6 +57,9 @@ public class SkiaGC implements IExternalGC {
 	static final float[] LINE_DASH_PATTERN = new float[] { 18, 6 };
 	static final float[] LINE_DASHDOT_PATTERN = new float[] { 9, 6, 3, 6 };
 	static final float[] LINE_DASHDOTDOT_PATTERN = new float[] { 9, 3, 3, 3, 3, 3 };
+
+	private final int TEXT_MARGIN_TOP = 2;
+	private final int TEXT_MARGIN_SIDE = 1;
 
 	private final Surface surface;
 
@@ -795,22 +797,48 @@ public class SkiaGC implements IExternalGC {
 		}
 
 		text = replaceMnemonics(text);
-		final String[] lines = splitString(text);
-		final TextBlobBuilder blobBuilder = new TextBlobBuilder();
-		final float lineHeight = Math.round(
-				Math.abs(getSkiaFont().getMetrics().getAscent()) + Math.abs(getSkiaFont().getMetrics().getDescent()));
-		int yOffset = 0;
+		// final String[] lines = splitString(text);
+		//
+		//
+		// final ParagraphBuilder blobBuilder = new ParagraphBuilder( new
+		// ParagraphStyle(), new FontCollection() );
+		// final float lineHeight = Math.round(
+		// Math.abs(getSkiaFont().getMetrics().getAscent()) +
+		// Math.abs(getSkiaFont().getMetrics().getDescent()));
+		// final int yOffset = 0;
+		//
+		//
+		// for (final String line : lines) {
+		//
+		// blobBuilder.addText(line);
+		// }
 
-		for (final String line : lines) {
-			blobBuilder.appendRun(getSkiaFont(), line, 0, yOffset);
-			yOffset += lineHeight;
-		}
-		final TextBlob textBlob = blobBuilder.build();
+		final var f = getSkiaFont();
 
-		final int width = (int) (textBlob.getBounds().getWidth()) + 1;
-		final int height = yOffset + 1;
+		final var fgp = getForegroundPaint();
 
-		final var subSurface = skiaExtension.createSupportSurface(width, height);
+		fgp.setAntiAlias(false);
+		fgp.setMode(PaintMode.FILL);
+
+		final var textWidth = f.measureTextWidth(text, fgp);
+
+		final var metric = f.getMetrics();
+		final var asc = metric.getAscent();
+		final var des = metric.getDescent();
+
+		final var ascI = (int) Math.ceil(Math.abs(asc));
+		final var desI = (int) Math.ceil(Math.abs(des));
+		final var heightI = ascI + desI;
+
+		final int width = 1;
+		// if(ascI > 20 ) {
+		// width++;
+		// }
+		// if(ascI > 30) {
+		// width++;
+		// }
+
+		final var subSurface = skiaExtension.createSupportSurface((int) Math.ceil(textWidth) + width, heightI);
 
 		if (isTransparent(flags)) {
 			subSurface.getCanvas().clear(0x00000000);
@@ -818,20 +846,13 @@ public class SkiaGC implements IExternalGC {
 			subSurface.getCanvas().clear(getBackgroundPaint().getColor());
 		}
 
-		final var p = calculateSymbolCenterPoint(0, 0);
+		subSurface.getCanvas().drawString(text, 0, Math.abs(asc), getSkiaFont(), fgp);
 
-		final var fgp = getForegroundPaint();
-		// for texts the fill mode is right, else transparency and anti alias does not
-		// work right.
-		fgp.setMode(PaintMode.FILL);
-		subSurface.getCanvas().drawTextBlob(textBlob, p.x, p.y, getForegroundPaint());
 		fgp.setMode(PaintMode.STROKE);
 		final var img = subSurface.makeImageSnapshot();
 		this.resources.setTextImage(text, flags, img);
 
 		subSurface.close();
-		textBlob.close();
-		blobBuilder.close();
 		if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
 			surface.getCanvas().drawImage(img, x, y);
 		}
@@ -1305,8 +1326,8 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private Rect createScaledRectangle(int x, int y, int width, int height) {
-		return new Rect(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y), DPIScaler.autoScaleUp(x + width),
-				DPIScaler.autoScaleUp(y + height));
+		final var r = resources.getScaler().scaleBounds(new Rectangle(x, y, width, height), DPIUtil.getDeviceZoom());
+		return new Rect(r.x, r.y, r.width + r.x, r.height + r.y);
 	}
 
 	private float getScaledOffsetValue() {
@@ -1594,7 +1615,6 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void setClipping(Region region) {
 
-
 		/**
 		 * this is a minimal implementation for set clipping with skija.
 		 */
@@ -1609,11 +1629,11 @@ public class SkiaGC implements IExternalGC {
 		currentClipBounds = new Rectangle(0, 0, originalDrawingSize.x, originalDrawingSize.y);
 		currentClipRegion = region;
 
-		if(region == null) {
+		if (region == null) {
 			return;
 		}
 
-		final SkiaRegionCalculator calc = new SkiaRegionCalculator(region,skiaExtension);
+		final SkiaRegionCalculator calc = new SkiaRegionCalculator(region, skiaExtension);
 		final var skiaRegion = calc.getSkiaRegion();
 		canvas.save();
 		canvas.clipRegion(skiaRegion);

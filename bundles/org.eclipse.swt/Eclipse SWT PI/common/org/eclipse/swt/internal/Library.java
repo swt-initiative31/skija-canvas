@@ -13,15 +13,10 @@
  *******************************************************************************/
 package org.eclipse.swt.internal;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.JarURLConnection;
-import java.net.URL;
-import java.net.URLConnection;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
-import java.util.jar.Attributes;
+import java.io.*;
+import java.net.*;
+import java.nio.file.*;
+import java.util.jar.*;
 
 public class Library {
 

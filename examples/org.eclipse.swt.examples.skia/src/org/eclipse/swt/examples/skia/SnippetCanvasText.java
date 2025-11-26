@@ -56,10 +56,7 @@ public class SnippetCanvasText {
 
 	private static void onPaint(Event e) {
 
-
 		final var s = ((Canvas) e.widget);
-
-		//		surface.getCanvas().clear(0xFFFFFFFF);
 
 		final Point size = s.getSize();
 
@@ -76,16 +73,6 @@ public class SnippetCanvasText {
 		for(int j = 0 ; j < LINES; j++) {
 			e.gc.drawText(text[j], shift, shiftDown + 20 * j,true);
 		}
-
-
-		//		int colorAsRGB = 0xFF42FFF4;
-		//		int colorRed = 0xFFFF0000;
-		//		int colorGreen = 0xFF00FF00;
-		//		int colorBlue = 0xFF0000FF;
-		//
-		//		e.gc.setForeground(s.getDisplay().getSystemColor(SWT.COLOR_RED));
-
-
 	}
 
 	private static void onPaint2(Event e) {
@@ -95,7 +82,6 @@ public class SnippetCanvasText {
 		if (printFrameRate) {
 
 			if (System.currentTimeMillis() - lastFrame > 1000) {
-				// System.out.println("Frames: " + frames);
 				framesToDraw = frames;
 
 				frames = 0;

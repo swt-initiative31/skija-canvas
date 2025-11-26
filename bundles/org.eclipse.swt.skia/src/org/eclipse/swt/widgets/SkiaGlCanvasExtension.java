@@ -44,7 +44,7 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 	private static final int SAMPLES = 0;
 
 	public SkiaGlCanvasExtension(Canvas canvas) {
-		this(canvas,createGLData());
+		this(canvas, createGLData());
 		this.resources = new SkiaResources(canvas);
 	}
 
@@ -56,41 +56,42 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 	}
 
 	public SkiaGlCanvasExtension(Canvas canvas, GLData data) {
-		super(canvas,data);
+		super(canvas, data);
 
 		setCurrent();
 		skijaContext = DirectContext.makeGL();
 		this.canvas = canvas;
 
-
 		this.canvas.addListener(SWT.Resize, this::onResize);
+		this.canvas.addListener(SWT.ZoomChanged, this::onResize);
 
 	}
 
 	private void onResize(Event e) {
 		final Rectangle rect = this.canvas.getClientArea();
 
-		renderTarget = BackendRenderTarget.makeGL(rect.width, rect.height, /* samples */SAMPLES, /* stencil */0,
-				/* fbid */0, FramebufferFormat.GR_GL_RGBA8);
+		final var scaled = resources.getScaler().scaleSize(rect.width, rect.height);
 
-		System.out.println("CreateOpenGLRenderTarget"); //$NON-NLS-1$
+		renderTarget = BackendRenderTarget.makeGL(scaled.x, scaled.y, /* samples */SAMPLES, /* stencil */0, /* fbid */0,
+				FramebufferFormat.GR_GL_RGBA8);
+
+		// System.out.println("CreateOpenGLRenderTarget"); //$NON-NLS-1$
 
 		if (surface != null && !surface.isClosed()) {
 			surface.close();
 		}
 
 		surface = Surface.makeFromBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT,
-				SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB(), new SurfaceProps(PixelGeometry.RGB_H));
+				SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB(),
+				new SurfaceProps(PixelGeometry.RGB_H).withDeviceIndependentFonts(false));
 		surface.getCanvas().clear(getBackroundForSkia());
 
 	}
-
 
 	@Override
 	public Surface getSurface() {
 		return surface;
 	}
-
 
 	@Override
 	public void preResize(Event e) {
@@ -103,10 +104,11 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 	@Override
 	public void createSurface(long pointer, Point size, RasterImageInfo info) {
 		final Rectangle rect = this.canvas.getClientArea();
-		renderTarget = BackendRenderTarget.makeGL(rect.width, rect.height, /* samples */32, /* stencil */0,
-				/* fbid */0, FramebufferFormat.GR_GL_RGBA8);
+		renderTarget = BackendRenderTarget.makeGL(rect.width, rect.height, /* samples */32, /* stencil */0, /* fbid */0,
+				FramebufferFormat.GR_GL_RGBA8);
 
-		surface = Surface.wrapBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT, SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB());
+		surface = Surface.makeFromBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT,
+				SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB(), new SurfaceProps(PixelGeometry.RGB_H));
 		surface.getCanvas().clear(getBackroundForSkia());
 
 	}
@@ -120,21 +122,20 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 
 		surface.getCanvas().clear(getBackroundForSkia());
 
-
-		final Event event = new Event ();
+		final Event event = new Event();
 		event.count = 1;
 
-		final var size = canvas.getSize();
+		final var size = getSize();
 
-		final Rectangle eventBounds = new Rectangle (0, 0, size.x, size.y);
-		event.setBounds (eventBounds);
-		final GCData data = new GCData ();
+		final Rectangle eventBounds = new Rectangle(0, 0, size.x, size.y);
+		event.setBounds(eventBounds);
+		final GCData data = new GCData();
 		data.device = this.canvas.getDisplay();
 		// critical for drawing without clearing
-		final SkiaGC gc = new SkiaGC(canvas, this,SWT.None);
+		final SkiaGC gc = new SkiaGC(canvas, this, SWT.None);
 		event.gc = new GCExtension(gc);
 		e.sendPaintEvent(event);
-		gc.dispose ();
+		gc.dispose();
 		event.gc = null;
 		SkiaCaretHandler.handleCaret(surface, canvas);
 
@@ -144,12 +145,8 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 	@Override
 	public void handleEvent(Event event) {
 
-		if(event.type == SWT.Resize) {
+		if (event.type == SWT.Resize) {
 			final Rectangle rect = canvas.getClientArea();
-
-
-
-
 
 			System.out.println("CreateOpenGLRenderTarget");
 
@@ -157,10 +154,11 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 				surface.close();
 			}
 
-			createSurface(0, new Point(rect.width,rect.height), null);
+			createSurface(0, new Point(rect.width, rect.height), null);
 		}
 
 	}
+
 	private int getBackroundForSkia() {
 		return SkiaGC.convertSWTColorToSkijaColor(canvas.getBackground());
 	}
@@ -170,10 +168,20 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 		return this.resources;
 	}
 
+	private Point getSize() {
+
+		final var c = canvas.getSize();
+		final var p = resources.getScaler().scaleSize(c.x, c.y);
+		final var s = new Point(p.x, p.y);
+
+		return s;
+	}
+
 	@Override
 	public Surface createSupportSurface(int width, int height) {
-		final ImageInfo i = new ImageInfo(new ColorInfo(ColorType.RGBA_8888	, ColorAlphaType.PREMUL	, null), width, height);
-		final var subSurface = Surface.makeRenderTarget(skijaContext	, true, i);
+		final ImageInfo i = new ImageInfo(new ColorInfo(ColorType.RGBA_8888, ColorAlphaType.PREMUL, null), width,
+				height);
+		final var subSurface = Surface.makeRenderTarget(skijaContext, true, i);
 		return subSurface;
 	}
 

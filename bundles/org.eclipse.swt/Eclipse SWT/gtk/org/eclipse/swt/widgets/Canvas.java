@@ -45,7 +45,7 @@ public class Canvas extends Composite {
 	Caret caret;
 	IME ime;
 	boolean blink, drawFlag;
-	private IExternalCanvasHandler externalCanvasHandler;
+	public IExternalCanvasHandler externalCanvasHandler;
 
 Canvas () {}
 

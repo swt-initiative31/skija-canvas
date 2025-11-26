@@ -44,7 +44,7 @@ import org.eclipse.swt.internal.win32.*;
 public class Canvas extends Composite {
 	Caret caret;
 	IME ime;
-	private IExternalCanvasHandler externalCanvasHandler;
+	public IExternalCanvasHandler externalCanvasHandler;
 
 /**
  * Prevents uninitialized instances from being created outside the package.

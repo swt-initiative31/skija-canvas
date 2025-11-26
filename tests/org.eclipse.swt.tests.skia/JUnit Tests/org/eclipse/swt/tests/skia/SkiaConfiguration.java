@@ -22,9 +22,6 @@ public class SkiaConfiguration {
 
     public static final String SKIA_PROPERTY = "org.eclipse.swt.skia.configuration"; //$NON-NLS-1$
 
-    public static void activateSkiaRaster() {
-	System.setProperty("org.eclipse.swt.skia.configuration", RASTER);
-    }
 
     public static void activateSkiaGl() {
 	System.setProperty("org.eclipse.swt.skia.configuration", OPENGL);

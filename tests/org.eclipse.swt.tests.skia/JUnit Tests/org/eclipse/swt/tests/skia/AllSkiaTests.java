@@ -17,7 +17,8 @@ import org.junit.platform.suite.api.Suite;
 
 @Suite(failIfNoTests = false)
 @SelectClasses({
-	Test_org_eclipse_swt_widgets_SkiaCanvasCompare.class
+	Test_org_eclipse_swt_widgets_SkiaCanvas_Rectangle.class, //
+	Test_org_eclipse_swt_widgets_SkiaCanvas_Text.class,//
 })
 public class AllSkiaTests {
 

@@ -6,19 +6,17 @@ import org.eclipse.swt.events.ControlListener;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.SkiaRasterCanvas;
-import org.eclipse.swt.widgets.SkiaRasterCanvasExtension;
+import org.eclipse.swt.widgets.SkiaGlCanvas;
 
 public class SnippetSkiaDirectDrawing {
 
 	public static void main(String[] arg) {
 
-		SkiaRasterCanvasExtension.SKIA_TEST_PERFORMANCE = true;
 
 		final Display d = new Display();
 		final Shell s = new Shell(d);
 
-		final Canvas c = new SkiaRasterCanvas(s, SWT.DOUBLE_BUFFERED | SWT.FILL );
+		final Canvas c = new SkiaGlCanvas(s, SWT.DOUBLE_BUFFERED | SWT.FILL );
 
 		s.addControlListener(new ControlListener() {
 

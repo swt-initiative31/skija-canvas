@@ -7,8 +7,7 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.SkiaRasterCanvas;
-import org.eclipse.swt.widgets.SkiaRasterCanvasExtension;
+import org.eclipse.swt.widgets.SkiaGlCanvas;
 
 public class SnippetRasterSkiaCanvas {
 
@@ -31,13 +30,12 @@ public class SnippetRasterSkiaCanvas {
 	int width = 2;
 
 	public static void main(String[] args) {
-		SkiaRasterCanvasExtension.SKIA_TEST_PERFORMANCE = false;
 
 		final Display display = new Display();
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas");
 		// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
-		final Canvas c = new SkiaRasterCanvas(shell,  SWT.DOUBLE_BUFFERED);
+		final Canvas c = new SkiaGlCanvas(shell,  SWT.DOUBLE_BUFFERED);
 
 		for( int x = 0 ; x < RECTANGLES_PER_LINE ; x++ ) {
 			for(int y = 0 ; y < RECTANGLES_PER_LINE ; y++) {

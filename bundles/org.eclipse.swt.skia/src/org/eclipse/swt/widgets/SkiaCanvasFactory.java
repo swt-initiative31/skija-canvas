@@ -15,14 +15,14 @@ public class SkiaCanvasFactory implements IExternalCanvasFactory {
 	@Override
 	public IExternalCanvasHandler createCanvasExtension(Canvas c) {
 
-		final var prop = System.getProperty(SkiaConfiguration.SKIA_PROPERTY);
-		if(SkiaConfiguration.RASTER.equals(prop)) {
-			return new SkiaRasterCanvasExtension(c);
-		}
-		if(SkiaConfiguration.OPENGL.equals(prop)) {
-			return new SkiaGlCanvasExtension(c);
-		}
-		return null;
+		//		final var prop = System.getProperty(SkiaConfiguration.SKIA_PROPERTY);
+		//		if(SkiaConfiguration.RASTER.equals(prop)) {
+		//			return new SkiaRasterCanvasExtension(c);
+		//		}
+		//		if(SkiaConfiguration.OPENGL.equals(prop)) {
+		return new SkiaGlCanvasExtension(c);
+		//		}
+		//		return null;
 	}
 
 }

@@ -9,7 +9,6 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.SkiaGlCanvas;
-import org.eclipse.swt.widgets.SkiaRasterCanvas;
 
 public class SnippetCanvasCompare {
 
@@ -20,7 +19,7 @@ public class SnippetCanvasCompare {
 
 		configureCanvas(shell, new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED | SWT.H_SCROLL), 1, "SkiaGlCanvas");
 		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED| SWT.H_SCROLL), 2, "SWT Canvas");
-		configureCanvas(shell, new SkiaRasterCanvas(shell, SWT.DOUBLE_BUFFERED| SWT.H_SCROLL), 3, "SkiaRasterCanvas");
+		configureCanvas(shell, new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED| SWT.H_SCROLL), 3, "SkiaRasterCanvas");
 
 
 		shell.setSize(1500, 1000);

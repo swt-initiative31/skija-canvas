@@ -709,7 +709,6 @@ Region copy() {
  * application code.
  *
  * Gets the handle for the region scaled at required zoom level
- *
  * @param region the region to be scaled
  *
  * @param zoom the zoom level for which the region is needed

@@ -2,10 +2,10 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: SWT SKIA Examples
 Bundle-SymbolicName: org.eclipse.swt.examples.skia;singleton:=true
-Bundle-Version: 3.132.200.qualifier
+Bundle-Version: 3.131.100.qualifier
 Bundle-Vendor: %providerName
 Bundle-Localization: plugin
 Bundle-RequiredExecutionEnvironment: JavaSE-17
-Require-Bundle: org.eclipse.swt;bundle-version="[3.132.200,4.0.0)"
+Require-Bundle: org.eclipse.swt;bundle-version="3.131.100"
 Bundle-ActivationPolicy: lazy
 Automatic-Module-Name: org.eclipse.swt.examples.skia

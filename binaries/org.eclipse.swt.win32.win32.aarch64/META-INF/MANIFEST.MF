@@ -1,17 +1,9 @@
 Manifest-Version: 1.0
-Fragment-Host: org.eclipse.swt;bundle-version="[3.132.200,4.0.0)"
+Fragment-Host: org.eclipse.swt;bundle-version="[3.128.0,4.0.0)"
 Bundle-Name: %fragmentName
 Bundle-Vendor: %providerName
 Bundle-SymbolicName: org.eclipse.swt.win32.win32.aarch64; singleton:=true
-<<<<<<< Upstream, based on cf0919d3d38b11aec5a8fa77cfe0df24cc8761eb
-<<<<<<< Upstream, based on cf0919d3d38b11aec5a8fa77cfe0df24cc8761eb
 Bundle-Version: 3.133.0.qualifier
-=======
-Bundle-Version: 3.132.2.qualifier
->>>>>>> cbb9c50 SkiaCanvas: new Canvas Configuration with Skia
-=======
-Bundle-Version: 3.132.200.qualifier
->>>>>>> 7572acc SkiaCanvas: Region handling first implementation
 Bundle-ManifestVersion: 2
 Bundle-Localization: fragment
 Export-Package: 

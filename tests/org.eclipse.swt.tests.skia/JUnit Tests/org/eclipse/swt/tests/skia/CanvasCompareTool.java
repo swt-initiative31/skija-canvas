@@ -1,3 +1,15 @@
+/*******************************************************************************
+ * Copyright (c) 2025 SAP SE and others.
+ *
+ * This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ * Contributors:
+ *     SAP SE and others - initial API and implementation
+ *******************************************************************************/
 package org.eclipse.swt.tests.skia;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,6 +37,8 @@ public class CanvasCompareTool {
 
 	private static int WAIT_IN_SECONDS = 0;
 
+	boolean twoSkiaCanvas = false;
+
 	Display display;
 	Shell shell;
 	Canvas classicalCanvas;
@@ -41,7 +55,12 @@ public class CanvasCompareTool {
 		shell.setLayout(layout);
 		shell.setSize(1000, 1000);
 
-		classicalCanvas = new Canvas(shell, SWT.NONE);
+		if (twoSkiaCanvas) {
+			SkiaConfiguration.activateSkiaGl();
+			classicalCanvas = new Canvas(shell, SWT.SKIA);
+		} else {
+			classicalCanvas = new Canvas(shell, SWT.NONE);
+		}
 		SkiaConfiguration.activateSkiaGl();
 		skiaCanvas = new Canvas(shell, SkiaConfiguration.SKIA);
 

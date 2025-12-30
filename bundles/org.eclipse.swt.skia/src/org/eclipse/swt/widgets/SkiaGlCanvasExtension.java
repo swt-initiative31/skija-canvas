@@ -120,6 +120,8 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 			return;
 		}
 
+		setCurrent();
+
 		surface.getCanvas().clear(getBackroundForSkia());
 
 		final Event event = new Event();

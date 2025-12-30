@@ -94,7 +94,7 @@ public class DPIScaler {
 	public Rectangle scaleBounds(Rectangle rectangle, int deviceZoom) {
 
 		int zoomFactor = (canvas.nativeZoom / 100); // zoom on windows works in 100 % steps for rectangles
-		return Win32DPIUtils.scaleBounds(rectangle, zoomFactor * 100, DPIUtil.getDeviceZoom());
+		return Win32DPIUtils.scaleBounds(rectangle, zoomFactor * 100,deviceZoom);
 	}
 
 	public Point scaleSize(int x, int y) {

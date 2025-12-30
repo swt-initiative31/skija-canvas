@@ -94,6 +94,17 @@ public void redraw () {
 }
 
 @Override
+public void redraw (int x, int y, int width, int height, boolean all) {
+
+	if(externalCanvasHandler != null) {
+		externalCanvasHandler.redrawTriggered( x,  y,  width,  height,  all);
+		super.redraw();
+	}
+	else
+		super.redraw( x,  y,  width,  height,  all);
+}
+
+@Override
 LRESULT WM_PAINT (long wParam, long lParam) {
 	if(externalCanvasHandler != null)
 	{

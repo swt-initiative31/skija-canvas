@@ -15,7 +15,7 @@ import org.eclipse.swt.internal.opengl.win32.*;
 import org.eclipse.swt.internal.win32.*;
 import org.eclipse.swt.widgets.*;
 
-public abstract class GLCanvasExtension implements Listener, IExternalCanvasHandler {
+public abstract class GLCanvasExtension implements IExternalCanvasHandler {
 
 	long context;
 	int pixelFormat;

@@ -10,10 +10,9 @@
  *******************************************************************************/
 package org.eclipse.swt.opengl;
 
-import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.widgets.*;
 
-public abstract class OpenGLCanvasExtension extends GLCanvasExtension implements IExternalCanvasHandler {
+public abstract class OpenGLCanvasExtension extends GLCanvasExtension  {
 
 	private boolean redrawTriggered;
 	private Canvas canvas;
@@ -49,7 +48,7 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension implements
 
 	abstract public void preResize(Event e);
 
-	public abstract void createSurface(long pointer, Point size, RasterImageInfo info);
+//	public abstract void createSurface(long pointer, Point size, RasterImageInfo info);
 
 	public abstract void doPaint(PaintEventSender e);
 

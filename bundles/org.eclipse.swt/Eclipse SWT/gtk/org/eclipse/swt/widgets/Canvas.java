@@ -90,6 +90,17 @@ public void redraw () {
 	super.redraw();
 }
 
+@Override
+public void redraw (int x, int y, int width, int height, boolean all) {
+	if(externalCanvasHandler != null) {
+		externalCanvasHandler.redrawTriggered(x,y,width,height,all);
+		super.redraw();
+	}
+	else {
+		super.redraw(x,y,width,height,all);
+	}
+}
+
 /**
  * Fills the interior of the rectangle specified by the arguments,
  * with the receiver's background.

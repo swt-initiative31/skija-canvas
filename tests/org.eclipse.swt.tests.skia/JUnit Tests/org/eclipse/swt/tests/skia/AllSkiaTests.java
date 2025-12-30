@@ -21,6 +21,7 @@ import org.junit.platform.suite.api.Suite;
 	Test_org_eclipse_swt_widgets_SkiaCanvas_Text.class,//
 	Test_org_eclipse_swt_widgets_SkiaCanvas_Text_Simple.class, //
 	Test_org_eclipse_swt_widgets_SkiaCanvas_Two.class, //
+	Test_org_eclipse_swt_widgets_SkiaCanvas_Redraw_Area.class, //
 })
 public class AllSkiaTests {
 

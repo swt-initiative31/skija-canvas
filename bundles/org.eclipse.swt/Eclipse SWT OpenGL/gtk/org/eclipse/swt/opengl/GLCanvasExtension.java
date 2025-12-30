@@ -30,7 +30,7 @@ import org.eclipse.swt.widgets.*;
  * @since 3.2
  */
 
-public abstract class GLCanvasExtension implements Listener, IExternalCanvasHandler{
+public abstract class GLCanvasExtension implements IExternalCanvasHandler{
 	long context;
 	long xWindow;
 	long glWindow;

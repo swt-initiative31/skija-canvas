@@ -21,16 +21,13 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.junit.jupiter.api.Test;
-
+import org.junit.jupiter.api.parallel.Isolated;
+@Isolated
 public class Test_org_eclipse_swt_widgets_SkiaCanvas_Rectangle {
 
 	static void fillRectangles(PaintEvent e, Color col1, Color col2) {
 
 		Canvas c = (Canvas) e.widget;
-		boolean classic = true;
-		if (c.externalCanvasHandler != null) {
-			classic = false;
-		}
 
 		var s = c.getSize();
 		e.gc.setBackground(col1);
@@ -47,6 +44,7 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Rectangle {
 		for (var zoom : DPIScaler.getSupportedZooms()) {
 
 			CanvasCompareTool t = new CanvasCompareTool();
+			try{
 			t.init(null);
 
 			DPIScaler.setNativeZoom(t.classicalCanvas, zoom);
@@ -68,7 +66,10 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Rectangle {
 			i1.dispose();
 			i2.dispose();
 
-			t.dispose();
+			}finally {
+				t.dispose();
+
+			}
 
 		}
 

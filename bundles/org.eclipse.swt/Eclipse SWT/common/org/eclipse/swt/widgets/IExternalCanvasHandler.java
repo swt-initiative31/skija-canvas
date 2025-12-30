@@ -16,4 +16,6 @@ public interface IExternalCanvasHandler {
 
 	void redrawTriggered();
 
+	void redrawTriggered(int x, int y, int width, int height, boolean all);
+
 }

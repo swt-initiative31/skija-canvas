@@ -33,9 +33,8 @@ public class CanvasCompareTool {
 	final static int MAX_DIFF = 0;
 
 	public static boolean SHOW_COMPARE_VIEW = false;
-	public final static int[] zooms = new int[] { 100, 150, 200, 250, 300, 350, 400 };
 
-	private static int WAIT_IN_SECONDS = 0;
+	private static int WAIT_IN_SECONDS = 0; // present the comparisons for xxx seconds
 
 	boolean twoSkiaCanvas = false;
 
@@ -102,10 +101,14 @@ public class CanvasCompareTool {
 
 	public void dispose() {
 
-		classicalCanvas.dispose();
-		skiaCanvas.dispose();
-		shell.dispose();
-		display.dispose();
+		if (classicalCanvas != null)
+			classicalCanvas.dispose();
+		if (skiaCanvas != null)
+			skiaCanvas.dispose();
+		if (shell != null)
+			shell.dispose();
+		if (display != null)
+			display.dispose();
 
 	}
 
@@ -128,20 +131,54 @@ public class CanvasCompareTool {
 
 	}
 
+	void removePaintListeners() {
+
+		for (var l : this.listeners) {
+			classicalCanvas.removePaintListener(l);
+			skiaCanvas.removePaintListener(l);
+		}
+
+		this.listeners.clear();
+
+	}
+
 	public void waitForExecution() {
+		waitForExecution(null, true);
+	}
+
+	public void waitForExecution(Rectangle r, boolean expectingRedraw) {
+
+		classicExecuted.set(false);
+		skiaExecuted.set(false);
 
 		long start = System.currentTimeMillis();
-		classicalCanvas.redraw();
-		skiaCanvas.redraw();
-
-		while (!shell.isDisposed() && !(classicExecuted.get() && skiaExecuted.get())
-				|| System.currentTimeMillis() - start < WAIT_IN_SECONDS * 1000) {
-			Display.getDefault().readAndDispatch();
+		if (r == null) {
+			classicalCanvas.redraw();
+			skiaCanvas.redraw();
+		} else {
+			classicalCanvas.redraw(r.x, r.x, r.width, r.height, true);
+			skiaCanvas.redraw(r.x, r.x, r.width, r.height, true);
 		}
 
-		if (!classicExecuted.get() || !skiaExecuted.get()) {
-			throw new IllegalStateException("No redraw on both canvases..");
+		while (!shell.isDisposed() // is the shell is disposed, the test is definetly over
+				&& (Display.getDefault().readAndDispatch() // if there are no more redraw events, we can continue
+						|| (expectingRedraw && (!classicExecuted.get() && !skiaExecuted.get()))) // if we expect the redraw and the canvas was
+																									// drawn, we can
+																									// check the image
+				|| System.currentTimeMillis() - start < WAIT_IN_SECONDS * 1000 // if the extended waiting time is set,
+																				// we have to wait longer
+		) {
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
+
+		if (expectingRedraw)
+			if (!classicExecuted.get() || !skiaExecuted.get()) {
+				throw new IllegalStateException("No redraw on both canvases..");
+			}
 
 	}
 

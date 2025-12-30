@@ -34,16 +34,18 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Text_Simple {
 
 	int zoom = 100;
 	int size = 10;
-	char letter = 'T';
+	char letter = 'a';
 
 	final static int MAX_DIFF = 3;
 
 	@BeforeEach
 	public void setUp() {
+
 	}
 
 	@AfterEach
 	public void tearDown() {
+
 	}
 
 	@Test
@@ -54,32 +56,34 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Text_Simple {
 			return;
 		}
 
-
-		CanvasCompareTool t = new CanvasCompareTool();
-		t.init(new FillLayout(SWT.HORIZONTAL));
-
-		DPIScaler.setNativeZoom(t.classicalCanvas, zoom);
-		DPIScaler.setNativeZoom(t.skiaCanvas, zoom);
-
-		executeTextCompareTest(t, letter, zoom, size);
-		t.dispose();
+		executeTextCompareTest(letter, zoom, size);
 	}
 
-	private void executeTextCompareTest(CanvasCompareTool t, char letter, int zoom, int textHeight) {
-		var d = Display.getDefault();
-		Color col1 = d.getSystemColor(SWT.COLOR_RED);
-		Color col2 = d.getSystemColor(SWT.COLOR_GREEN);
+	private void executeTextCompareTest(char letter, int zoom, int textHeight) {
 
-		t.addPaintListener(p -> drawText(letter + "", p, col1, col2, textHeight));
-		t.waitForExecution();
+		CanvasCompareTool t = new CanvasCompareTool();
+		try {
+			t.init(new FillLayout(SWT.HORIZONTAL));
+			var d = t.display;
+			DPIScaler.setNativeZoom(t.classicalCanvas, zoom);
+			DPIScaler.setNativeZoom(t.skiaCanvas, zoom);
 
-		Image i1 = t.extractImageFromClassic();
-		Image i2 = t.extractImageFromSkia();
+			Color col1 = d.getSystemColor(SWT.COLOR_RED);
+			Color col2 = d.getSystemColor(SWT.COLOR_GREEN);
 
-		assertTextsAreEquals(letter, i1, i2, col1, col2, zoom, textHeight);
+			t.addPaintListener(p -> drawText(letter + "", p, col1, col2, textHeight));
+			t.waitForExecution();
 
-		i1.dispose();
-		i2.dispose();
+			Image i1 = t.extractImageFromClassic();
+			Image i2 = t.extractImageFromSkia();
+
+			assertTextsAreEquals(letter, i1, i2, col1, col2, zoom, textHeight);
+
+			i1.dispose();
+			i2.dispose();
+		} finally {
+			t.dispose();
+		}
 	}
 
 	private static void drawText(String text, PaintEvent e, Color col1, Color col2, int textHeight) {
@@ -107,7 +111,6 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Text_Simple {
 		assertTextAreaEquals(letter, ta1, ta2, zoom, textHeight);
 
 	}
-
 
 	private void assertTextAreaEquals(char letter, TextAreaPosition ta1, TextAreaPosition ta2, int zoom,
 			int textHeight) {

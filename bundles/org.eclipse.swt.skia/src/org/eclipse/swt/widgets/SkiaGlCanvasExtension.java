@@ -11,11 +11,13 @@
 package org.eclipse.swt.widgets;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.DPIScaler;
 import org.eclipse.swt.graphics.GCData;
 import org.eclipse.swt.graphics.GCExtension;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.SkiaGC;
+import org.eclipse.swt.internal.DPIUtil;
 import org.eclipse.swt.opengl.GLData;
 import org.eclipse.swt.opengl.OpenGLCanvasExtension;
 
@@ -26,12 +28,14 @@ import io.github.humbleui.skija.ColorSpace;
 import io.github.humbleui.skija.ColorType;
 import io.github.humbleui.skija.DirectContext;
 import io.github.humbleui.skija.FramebufferFormat;
+import io.github.humbleui.skija.Image;
 import io.github.humbleui.skija.ImageInfo;
 import io.github.humbleui.skija.PixelGeometry;
 import io.github.humbleui.skija.Surface;
 import io.github.humbleui.skija.SurfaceColorFormat;
 import io.github.humbleui.skija.SurfaceOrigin;
 import io.github.humbleui.skija.SurfaceProps;
+import io.github.humbleui.types.Rect;
 
 public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISkiaCanvas {
 
@@ -40,12 +44,16 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 	private Surface surface;
 	private final Canvas canvas;
 	private SkiaResources resources;
+	private Rectangle redrawRectangle;
+	private DPIScaler scaler;
+	private Image lastImage;
 
 	private static final int SAMPLES = 0;
 
 	public SkiaGlCanvasExtension(Canvas canvas) {
 		this(canvas, createGLData());
-		this.resources = new SkiaResources(canvas);
+		this.resources = new SkiaResources(canvas, this);
+		this.scaler = new DPIScaler(canvas);
 	}
 
 	private static GLData createGLData() {
@@ -63,7 +71,6 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 		this.canvas = canvas;
 
 		this.canvas.addListener(SWT.Resize, this::onResize);
-		this.canvas.addListener(SWT.ZoomChanged, this::onResize);
 
 	}
 
@@ -72,8 +79,9 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 
 		final var scaled = resources.getScaler().scaleSize(rect.width, rect.height);
 
-		renderTarget = BackendRenderTarget.makeGL(scaled.x, scaled.y, /* samples */SAMPLES, /* stencil */0, /* fbid */0,
-				FramebufferFormat.GR_GL_RGBA8);
+		if (renderTarget != null && !renderTarget.isClosed()) {
+			renderTarget.close();
+		}
 
 		// System.out.println("CreateOpenGLRenderTarget"); //$NON-NLS-1$
 
@@ -81,10 +89,15 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 			surface.close();
 		}
 
+		renderTarget = BackendRenderTarget.makeGL(scaled.x, scaled.y, /* samples */SAMPLES, /* stencil */0, /* fbid */0,
+				FramebufferFormat.GR_GL_RGBA8);
 		surface = Surface.makeFromBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT,
 				SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB(),
 				new SurfaceProps(PixelGeometry.RGB_H).withDeviceIndependentFonts(false));
 		surface.getCanvas().clear(getBackroundForSkia());
+		if (this.lastImage != null) {
+			this.lastImage.close();
+		}
 
 	}
 
@@ -101,16 +114,29 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 		this.canvas.redraw();
 	}
 
+	// @Override
+	// public void createSurface(long pointer, Point size, RasterImageInfo info) {
+	// final Rectangle rect = this.canvas.getClientArea();
+	// renderTarget = BackendRenderTarget.makeGL(rect.width, rect.height, /* samples
+	// */32, /* stencil */0, /* fbid */0,
+	// FramebufferFormat.GR_GL_RGBA8);
+	//
+	// surface = Surface.makeFromBackendRenderTarget(skijaContext, renderTarget,
+	// SurfaceOrigin.BOTTOM_LEFT,
+	// SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB(), new
+	// SurfaceProps(PixelGeometry.RGB_H));
+	// // surface.getCanvas().clear(getBackroundForSkia());
+	//
+	// }
+
 	@Override
-	public void createSurface(long pointer, Point size, RasterImageInfo info) {
-		final Rectangle rect = this.canvas.getClientArea();
-		renderTarget = BackendRenderTarget.makeGL(rect.width, rect.height, /* samples */32, /* stencil */0, /* fbid */0,
-				FramebufferFormat.GR_GL_RGBA8);
+	public void redrawTriggered(int x, int y, int width, int height, boolean all) {
+		this.redrawRectangle = new Rectangle(x, y, width, height);
+	}
 
-		surface = Surface.makeFromBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT,
-				SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB(), new SurfaceProps(PixelGeometry.RGB_H));
-		surface.getCanvas().clear(getBackroundForSkia());
-
+	@Override
+	public void redrawTriggered() {
+		this.redrawRectangle = null;
 	}
 
 	@Override
@@ -122,15 +148,38 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 
 		setCurrent();
 
-		surface.getCanvas().clear(getBackroundForSkia());
+		boolean redrawWithClipping = false;
+		final var size = getSize();
+		Rectangle bounds = null;
+
+		if (this.redrawRectangle != null) {
+			if (this.lastImage != null) {
+				surface.getCanvas().drawImage(lastImage, 0, 0);
+				this.lastImage.close();
+				this.lastImage = null;
+			}
+			final var ca = canvas.getClientArea();
+			ca.intersect(this.redrawRectangle);
+			bounds = ca;
+
+			if (bounds.width == 0 || bounds.height == 0) {
+				skijaContext.flush();
+				return;
+			}
+
+			redrawWithClipping = true;
+			final var r = resources.getScaler().scaleBounds(redrawRectangle, DPIUtil.getDeviceZoom());
+			surface.getCanvas().clipRect(new Rect(r.x, r.y, r.x + r.width, r.y + r.height));
+
+		} else {
+			surface.getCanvas().clear(getBackroundForSkia());
+			bounds = new Rectangle(0, 0, size.x, size.y);
+		}
 
 		final Event event = new Event();
 		event.count = 1;
 
-		final var size = getSize();
-
-		final Rectangle eventBounds = new Rectangle(0, 0, size.x, size.y);
-		event.setBounds(eventBounds);
+		event.setBounds(bounds);
 		final GCData data = new GCData();
 		data.device = this.canvas.getDisplay();
 		// critical for drawing without clearing
@@ -141,23 +190,15 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 		event.gc = null;
 		SkiaCaretHandler.handleCaret(surface, canvas);
 
-		skijaContext.flush();
-	}
-
-	@Override
-	public void handleEvent(Event event) {
-
-		if (event.type == SWT.Resize) {
-			final Rectangle rect = canvas.getClientArea();
-
-			System.out.println("CreateOpenGLRenderTarget");
-
-			if (surface != null && !surface.isClosed()) {
-				surface.close();
-			}
-
-			createSurface(0, new Point(rect.width, rect.height), null);
+		if (this.lastImage != null && !this.lastImage.isClosed()) {
+			this.lastImage.close();
 		}
+		this.redrawRectangle = null;
+		this.lastImage = surface.makeImageSnapshot();
+		if (redrawWithClipping) {
+			surface.getCanvas().restore();
+		}
+		skijaContext.flush();
 
 	}
 
@@ -185,6 +226,11 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 				height);
 		final var subSurface = Surface.makeRenderTarget(skijaContext, true, i);
 		return subSurface;
+	}
+
+	@Override
+	public DPIScaler getScaler() {
+		return scaler;
 	}
 
 }

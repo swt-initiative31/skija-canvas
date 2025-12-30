@@ -21,7 +21,9 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Isolated;
 
+@Isolated
 public class Test_org_eclipse_swt_widgets_SkiaCanvas_Two {
 
 	static void fillRectangles(PaintEvent e, Color col1, Color col2) {
@@ -46,29 +48,32 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Two {
 
 		int zoom = 100;
 		CanvasCompareTool t = new CanvasCompareTool();
-		t.twoSkiaCanvas = true;
-		t.init(null);
 
-		DPIScaler.setNativeZoom(t.classicalCanvas, zoom);
-		DPIScaler.setNativeZoom(t.skiaCanvas, zoom);
+		try {
+			t.twoSkiaCanvas = true;
+			t.init(null);
 
-		Display d = t.display;
+			DPIScaler.setNativeZoom(t.classicalCanvas, zoom);
+			DPIScaler.setNativeZoom(t.skiaCanvas, zoom);
 
-		Color col1 = d.getSystemColor(SWT.COLOR_RED);
-		Color col2 = d.getSystemColor(SWT.COLOR_GREEN);
+			Display d = t.display;
 
-		t.addPaintListener(p -> fillRectangles(p, col1, col2));
-		t.waitForExecution();
+			Color col1 = d.getSystemColor(SWT.COLOR_RED);
+			Color col2 = d.getSystemColor(SWT.COLOR_GREEN);
 
-		Image i1 = t.extractImageFromClassic(); // extractImage(classicalCanvas);
-		Image i2 = t.extractImageFromSkia(); // extractImage(skiaCanvas);
+			t.addPaintListener(p -> fillRectangles(p, col1, col2));
+			t.waitForExecution();
 
-		t.assertImagesEqual(zoom, i1, i2);
+			Image i1 = t.extractImageFromClassic(); // extractImage(classicalCanvas);
+			Image i2 = t.extractImageFromSkia(); // extractImage(skiaCanvas);
 
-		i1.dispose();
-		i2.dispose();
+			t.assertImagesEqual(zoom, i1, i2);
 
-		t.dispose();
+			i1.dispose();
+			i2.dispose();
+		} finally {
+			t.dispose();
+		}
 
 	}
 

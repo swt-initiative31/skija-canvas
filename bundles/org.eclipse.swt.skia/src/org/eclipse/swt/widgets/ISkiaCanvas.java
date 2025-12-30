@@ -1,20 +1,24 @@
 package org.eclipse.swt.widgets;
 
+import org.eclipse.swt.graphics.DPIScaler;
+
 import io.github.humbleui.skija.Matrix33;
 import io.github.humbleui.skija.Surface;
 
 public interface ISkiaCanvas {
 
-    Surface getSurface();
+	Surface getSurface();
 
-    SkiaResources getResources();
+	SkiaResources getResources();
 
-    Surface createSupportSurface(int width, int height);
+	Surface createSupportSurface(int width, int height);
 
-    default Matrix33 getTransformation() {
+	default Matrix33 getTransformation() {
 
-	return null;
+		return null;
 
-    }
+	}
+
+	DPIScaler getScaler();
 
 }

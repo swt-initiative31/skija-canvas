@@ -34,12 +34,11 @@ public class SkiaResources {
 	private float baseSymbolHeight;
 
 	private final Map<FontData, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
+	private final ISkiaCanvas skiaExtension;
 
-	private final DPIScaler scaler;
-
-	public SkiaResources(Canvas canvas) {
+	public SkiaResources(Canvas canvas, ISkiaCanvas skiaExtension ) {
 		this.canvas = canvas;
-		scaler = new DPIScaler(canvas);
+		this.skiaExtension = skiaExtension;
 	}
 
 	public void setBackground(Color color) {
@@ -179,7 +178,7 @@ public class SkiaResources {
 
 		int fontSize = (fontData.getHeight());
 		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
-			fontSize = scaler.getZoomedFontSize(fontSize);
+			fontSize = skiaExtension.getScaler().getZoomedFontSize(fontSize);
 		}
 		if (SWT.getPlatform().equals("gtk") || true) { //$NON-NLS-1$
 			// SWT's font size is in points, 1pt = 1/72 inch, adjust skija font size to this
@@ -244,7 +243,7 @@ public class SkiaResources {
 	}
 
 	public DPIScaler getScaler() {
-		return scaler;
+		return skiaExtension.getScaler();
 	}
 
 	private void resetResources() {

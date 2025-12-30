@@ -64,13 +64,16 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Text {
 //				size = 23;
 
 				CanvasCompareTool t = new CanvasCompareTool();
-				t.init(new FillLayout(SWT.HORIZONTAL));
+				try {
+					t.init(new FillLayout(SWT.HORIZONTAL));
 
-				DPIScaler.setNativeZoom(t.classicalCanvas, zoom);
-				DPIScaler.setNativeZoom(t.skiaCanvas, zoom);
+					DPIScaler.setNativeZoom(t.classicalCanvas, zoom);
+					DPIScaler.setNativeZoom(t.skiaCanvas, zoom);
 
-				executeTextCompareTest(t, letter, zoom, size);
-				t.dispose();
+					executeTextCompareTest(t, letter, zoom, size);
+				} finally {
+					t.dispose();
+				}
 			}
 		}
 

@@ -2592,7 +2592,6 @@ public class SWT {
 	 */
 	public static final int SKIA = 1 << 23;
 
-
 	/**
 	 * Style constant specifying that a Browser should use Edge (WebView2)
 	 * for rendering its content (value is 1&lt;&lt;18).

@@ -15,7 +15,7 @@
  *
  * IBM
  * -  Binding to permit interfacing between Cairo and SWT
- * -  Copyright (C) 2005, 2023 IBM Corp.  All Rights Reserved.
+ * -  Copyright (C) 2005, 2025 IBM Corp.  All Rights Reserved.
  *
  * ***** END LICENSE BLOCK ***** */
 

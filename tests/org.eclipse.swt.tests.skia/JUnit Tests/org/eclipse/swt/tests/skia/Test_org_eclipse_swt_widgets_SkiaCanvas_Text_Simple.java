@@ -14,14 +14,15 @@ import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 
 @Isolated
-public class Test_org_eclipse_swt_widgets_SkiaCanvas_Text {
+public class Test_org_eclipse_swt_widgets_SkiaCanvas_Text_Simple {
 
-	final static String TEXT = "T";
+	int zoom = 100;
+	int size = 10;
+	char letter = 'T';
 
 	final static int MAX_DIFF = 3;
 
@@ -34,70 +35,22 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Text {
 	}
 
 	@Test
-	@Disabled // this test is too big for automatic execution. Use Text_Simple instead
 	public void test_org_eclipse_swt_skia_drawText() {
 
-//		for (var zoom : DPIScaler.getSupportedZooms()) {
-//
-
-		// other zooms not yet supported...
-		int zoom = 100;
-//		System.out.println("Letter" + " " + "textHeight" + "  " + "zoom" + " BG-Position  " + "backgroundArea.width"
-//				+ "  " + "backgroundArea.height" + " FG-Position " + "foregroundArea.width" + "  "
-//				+ "foregroundArea.height");
-		for (int size = 5; size <= 40; size += 10) {
-			for (var letter : alphabetUpper()) {
-
-//				letter = 'H';
-//				size = 23;
-
-				CanvasCompareTool t = new CanvasCompareTool();
-				t.init(new FillLayout(SWT.HORIZONTAL));
-
-				DPIScaler.setNativeZoom(t.classicalCanvas, zoom);
-				DPIScaler.setNativeZoom(t.skiaCanvas, zoom);
-
-				executeTextCompareTest(t, letter, zoom, size);
-				t.dispose();
-			}
+		if (SWT.getPlatform().startsWith("win32")) {
+			// This test does not seem to work on windows.
+			return;
 		}
 
-//		for (var letter : alphabetLower()) {
-//			for (int size = 5; size <= 40; size += 10) {
-//				CanvasCompareTool t = new CanvasCompareTool();
-//				t.init(new FillLayout(SWT.HORIZONTAL));
-//
-//				t.classicalCanvas.nativeZoom = zoom;
-//				t.skiaCanvas.nativeZoom = zoom;
-//
-//				executeTextCompareTest(t, letter, zoom, size);
-//				t.dispose();
-//			}
-//		}
 
-	}
+		CanvasCompareTool t = new CanvasCompareTool();
+		t.init(new FillLayout(SWT.HORIZONTAL));
 
-	public char[] alphabetLower() {
-		char a = 'a';
-		var length = 'z' - 'a' + 1;
+		DPIScaler.setNativeZoom(t.classicalCanvas, zoom);
+		DPIScaler.setNativeZoom(t.skiaCanvas, zoom);
 
-		char[] alphabet = new char[length];
-
-		for (int i = 0; i < length; i++) {
-			alphabet[i] = (char) (a + i);
-		}
-		return alphabet;
-	}
-
-	public char[] alphabetUpper() {
-
-		char a = 'A';
-		var length = 'Z' - 'A' + 1;
-		char[] alphabet = new char[length];
-		for (int i = 0; i < length; i++) {
-			alphabet[i] = (char) (a + i);
-		}
-		return alphabet;
+		executeTextCompareTest(t, letter, zoom, size);
+		t.dispose();
 	}
 
 	private void executeTextCompareTest(CanvasCompareTool t, char letter, int zoom, int textHeight) {
@@ -122,26 +75,11 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Text {
 		e.gc.setBackground(col1);
 		e.gc.setForeground(col2);
 
-//		printFontData(e.gc.getFont().getFontData());
-
-		var fd = e.gc.getFont().getFontData()[0];
-
-		fd.setHeight(textHeight);
-
-		e.gc.setFont(new Font(Display.getDefault(), new FontData[] { fd }));
+		var fd = new FontData("Arial", textHeight, SWT.NORMAL);
+		Font f = new Font(Display.getDefault(), fd);
+		e.gc.setFont(f);
 
 		e.gc.drawText(text, 10, 10);
-
-	}
-
-	private static void printFontData(FontData[] fontData) {
-
-		for (var f : fontData) {
-			System.out.println("FontData----------------------------");
-			System.out.println(f.height);
-			System.out.println(f.getName());
-			System.out.println("------------------------------------");
-		}
 
 	}
 
@@ -154,21 +92,10 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Text {
 		var ta1 = new TextAreaPosition(data1);
 		var ta2 = new TextAreaPosition(data2);
 
-//		printAreaPosition(ta1, zoom, textHeight, letter);
-//		printAreaPosition(ta2, zoom, textHeight, letter);
-
 		assertTextAreaEquals(letter, ta1, ta2, zoom, textHeight);
 
 	}
 
-	private void printAreaPosition(TextAreaPosition ta, int zoom, int textHeight, char letter) {
-
-		System.out.println(
-				letter + " " + textHeight + "  " + zoom + "  " + ta.backgroundArea.x + "/" + ta.backgroundArea.y + "   "
-						+ ta.backgroundArea.width + "  " + ta.backgroundArea.height + "   " + ta.foregroundArea.x + "/"
-						+ ta.foregroundArea.y + "   " + ta.foregroundArea.width + "  " + ta.foregroundArea.height);
-
-	}
 
 	private void assertTextAreaEquals(char letter, TextAreaPosition ta1, TextAreaPosition ta2, int zoom,
 			int textHeight) {

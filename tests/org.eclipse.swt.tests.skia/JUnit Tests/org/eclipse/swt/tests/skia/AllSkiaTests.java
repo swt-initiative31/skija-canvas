@@ -19,6 +19,7 @@ import org.junit.platform.suite.api.Suite;
 @SelectClasses({
 	Test_org_eclipse_swt_widgets_SkiaCanvas_Rectangle.class, //
 	Test_org_eclipse_swt_widgets_SkiaCanvas_Text.class,//
+	Test_org_eclipse_swt_widgets_SkiaCanvas_Text_Simple.class, //
 })
 public class AllSkiaTests {
 

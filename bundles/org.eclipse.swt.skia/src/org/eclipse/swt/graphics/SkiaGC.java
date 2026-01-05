@@ -95,6 +95,8 @@ public class SkiaGC implements IExternalGC {
 	private final ISkiaCanvas skiaExtension;
 	private final SkiaResources resources;
 	private boolean XORModeActive;
+	private final int style;
+	private int textAntiAlias;
 
 	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvas exst, int style) {
 		this.drawable = canvas;
@@ -105,6 +107,7 @@ public class SkiaGC implements IExternalGC {
 		this.surface = exst.getSurface();
 		this.skiaExtension = exst;
 		this.resources = skiaExtension.getResources();
+		this.style = style;
 	}
 
 	private static Point extractSize(Drawable drawable) {
@@ -887,26 +890,6 @@ public class SkiaGC implements IExternalGC {
 		});
 	}
 
-	void drawIcon(Image srcImage, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth,
-			int destHeight, boolean simple) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-	}
-
-	void drawBitmap(Image srcImage, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY,
-			int destWidth, int destHeight, boolean simple) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-	}
-
-	void drawBitmapAlpha(Image srcImage, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY,
-			int destWidth, int destHeight, boolean simple) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-	}
-
-	void drawBitmapTransparentByClipping(long srcHdc, long maskHdc, int srcX, int srcY, int srcWidth, int srcHeight,
-			int destX, int destY, int destWidth, int destHeight, boolean simple, int imgWidth, int imgHeight) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-	}
-
 	@Override
 	public void drawOval(int x, int y, int width, int height) {
 		performDrawLine(paint -> surface.getCanvas()
@@ -1444,8 +1427,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public boolean isClipped() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return false;
+		return isClipSet;
 	}
 
 	@Override
@@ -1455,19 +1437,33 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void getClipping(Region region) {
+		if (region == null) {
+			SWT.error (SWT.ERROR_NULL_ARGUMENT);
+		}
+		if (region.isDisposed()) {
+			SWT.error (SWT.ERROR_INVALID_ARGUMENT);
+		}
+
 		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
 	}
 
 	@Override
 	public int getAdvanceWidth(char ch) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return 0;
+
+		final var f = getSkiaFont();
+
+		final var fgp = getForegroundPaint();
+
+		fgp.setAntiAlias(false);
+		fgp.setMode(PaintMode.FILL);
+
+		final var textWidth = f.measureTextWidth(String.valueOf(ch), fgp);
+		return (int) Math.ceil(textWidth);
 	}
 
 	@Override
 	public boolean getAdvanced() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return false;
+		return true;
 	}
 
 	@Override
@@ -1477,8 +1473,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public int getCharWidth(char ch) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return 0;
+		return getAdvanceWidth(ch);
 	}
 
 	@Override
@@ -1488,7 +1483,6 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public GCData getGCData() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
 		return null;
 	}
 
@@ -1527,14 +1521,12 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public int getStyle() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return 0;
+		return style;
 	}
 
 	@Override
 	public int getTextAntialias() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return 0;
+		return textAntiAlias;
 	}
 
 	@Override
@@ -1552,8 +1544,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public boolean getXORMode() {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
-		return false;
+		return XORModeActive;
 	}
 
 	@Override
@@ -1844,7 +1835,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setTextAntialias(int antialias) {
-		System.err.println("WARN: Not implemented yet: " + new Throwable().getStackTrace()[0]);
+		this.textAntiAlias = antialias;
 	}
 
 	static PaletteData getPaletteData(ColorType colorType) {

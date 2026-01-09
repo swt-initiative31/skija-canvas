@@ -794,7 +794,8 @@ public class SkiaGC implements IExternalGC {
 		final var i = this.resources.getTextImage(text, flags);
 		if (i != null) {
 			if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
-				surface.getCanvas().drawImage(i, x, y);
+				final var r = resources.getScaler().scaleSize(x, y);
+				surface.getCanvas().drawImage(i, r.x, r.y);
 			}
 			return;
 		}
@@ -857,7 +858,9 @@ public class SkiaGC implements IExternalGC {
 
 		subSurface.close();
 		if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
-			surface.getCanvas().drawImage(img, x, y);
+
+			final var r = resources.getScaler().scaleSize(x, y);
+			surface.getCanvas().drawImage(img, r.x, r.y);
 		}
 
 	}

@@ -95,7 +95,7 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 				SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB(),
 				new SurfaceProps(PixelGeometry.RGB_H).withDeviceIndependentFonts(false));
 		surface.getCanvas().clear(getBackroundForSkia());
-		if (this.lastImage != null) {
+		if (this.lastImage != null && !this.lastImage.isClosed()) {
 			this.lastImage.close();
 		}
 

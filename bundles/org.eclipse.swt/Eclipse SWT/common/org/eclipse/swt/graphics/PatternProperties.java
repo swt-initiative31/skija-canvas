@@ -19,6 +19,25 @@ public class PatternProperties {
 		this.alpha1 = alpha1;
 		this.alpha2 = alpha2;
 	}
+
+	public PatternProperties(Image image) {
+		this.image = image;
+	}
+
+	public PatternProperties(float baseX1, float baseY1, float baseX2, float baseY2, Color color1,
+			 int alpha1, Color color2, int alpha2) {
+		super();
+		this.image = null;
+		this.baseX1 = baseX1;
+		this.baseY1 = baseY1;
+		this.baseX2 = baseX2;
+		this.baseY2 = baseY2;
+		this.color1 = color1;
+		this.color2 = color2;
+		this.alpha1 = alpha1;
+		this.alpha2 = alpha2;
+	}
+
 	public Image getImage() {
 		return image;
 	}

@@ -219,6 +219,10 @@ void destroyHandlesExcept(Set<Integer> zoomLevels) {
 	});
 }
 
+PatternProperties getProperties() {
+	return new PatternProperties(image,  baseX1, baseY1, baseX2, baseY2, color1, alpha1, color2, alpha2);
+}
+
 Pattern copy() {
 	if (image != null) {
 		return new Pattern(device, image);

@@ -974,7 +974,7 @@ public class SkiaGC implements IExternalGC {
 		performDrawLine(paint -> surface.getCanvas().drawPolygon(convertToFloat(pointArray), paint));
 	}
 
-	private int[] createLinesArray(int[] array) {
+	private static int[] createLinesArray(int[] array) {
 
 		final List<Point> pts1 = new LinkedList<>();
 		final List<Point> pts2 = new LinkedList<>();
@@ -1118,21 +1118,18 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void fillOval(int x, int y, int width, int height) {
 
-		final Paint p = new Paint();
-		p.setAlpha(255);
-		p.setColor(0xFF00FFFF);
+		try (Paint p = new Paint()) {
+			p.setAlpha(255);
+			p.setColor(0xFF00FFFF);
 
-		// final Shader s = Shader.makeLinearGradient(0,0, 100 , 100 , new int[] {
-		// 0xFF00FFFF, 0x00FF00FF} );
-		// p.setShader(s);
-		//
-		final var s = convertSWTPatternToSkijaShader(backgroundPattern);
+			if (backgroundPattern != null) {
+				final var s = convertSWTPatternToSkijaShader(backgroundPattern);
+				p.setShader(s);
+			}
 
-		p.setShader(s);
-		// surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p);
-		performDrawFilled(paint -> surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p));
+			performDrawFilled(paint -> surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p));
 
-		p.close();
+		}
 	}
 
 	@Override

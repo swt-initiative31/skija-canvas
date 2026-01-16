@@ -37,7 +37,7 @@ import io.github.humbleui.skija.SurfaceOrigin;
 import io.github.humbleui.skija.SurfaceProps;
 import io.github.humbleui.types.Rect;
 
-public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISkiaCanvas {
+public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISkiaCanvas, Listener {
 
 	private final DirectContext skijaContext;
 	private BackendRenderTarget renderTarget;
@@ -231,6 +231,16 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 	@Override
 	public DPIScaler getScaler() {
 		return scaler;
+	}
+
+	@Override
+	public void handleEvent(Event event) {
+	}
+
+	@Override
+	public void createSurface(long pointer, Point size, RasterImageInfo info) {
+		// TODO Auto-generated method stub
+
 	}
 
 }

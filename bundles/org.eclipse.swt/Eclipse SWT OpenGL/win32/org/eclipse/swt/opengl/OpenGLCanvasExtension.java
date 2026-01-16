@@ -10,6 +10,7 @@
  *******************************************************************************/
 package org.eclipse.swt.opengl;
 
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.widgets.*;
 
 public abstract class OpenGLCanvasExtension extends GLCanvasExtension  {
@@ -48,7 +49,7 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension  {
 
 	abstract public void preResize(Event e);
 
-//	public abstract void createSurface(long pointer, Point size, RasterImageInfo info);
+	public abstract void createSurface(long pointer, Point size, RasterImageInfo info);
 
 	public abstract void doPaint(PaintEventSender e);
 

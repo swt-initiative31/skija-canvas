@@ -17,9 +17,8 @@ public class SnippetCanvasCompare {
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas Compare");
 
-		configureCanvas(shell, new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED | SWT.H_SCROLL), 1, "SkiaGlCanvas");
-		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED| SWT.H_SCROLL), 2, "SWT Canvas");
-		configureCanvas(shell, new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED| SWT.H_SCROLL), 3, "SkiaRasterCanvas");
+		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED| SWT.H_SCROLL), 1, "SWT Canvas");
+		configureCanvas(shell, new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED | SWT.H_SCROLL), 2, "SkiaGlCanvas");
 
 
 		shell.setSize(1500, 1000);
@@ -135,9 +134,8 @@ public class SnippetCanvasCompare {
 	private static void onResize(Canvas c,  int index) {
 		final var ca = c.getShell().getClientArea();
 		switch(index) {
-		case 1 -> c.setBounds(new Rectangle(0, 0, ca.width / 3, ca.height));
-		case 2 -> c.setBounds(new Rectangle(ca.width / 3, 0, ca.width / 3, ca.height));
-		case 3 -> c.setBounds(new Rectangle(2*ca.width / 3, 0, ca.width / 3, ca.height));
+		case 1 -> c.setBounds(new Rectangle(0, 0, ca.width / 2, ca.height));
+		case 2 -> c.setBounds(new Rectangle(ca.width / 2, 0, ca.width / 2, ca.height));
 		default -> { /* nothing to do */ }
 		}
 	}

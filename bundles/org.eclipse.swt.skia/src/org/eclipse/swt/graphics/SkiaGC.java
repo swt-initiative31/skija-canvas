@@ -1173,18 +1173,19 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void fillRectangle(int x, int y, int width, int height) {
 
-		final Paint p = new Paint();
-		p.setAlpha(255);
+		//		final Paint p = new Paint();
+		//		p.setAlpha(255);
 
 		// final Shader s = Shader.makeLinearGradient(0,0, 100 , 100 , new int[] {
 		// 0xFF00FFFF, 0x00FF00FF} );
 		// p.setShader(s);
 		//
-		final var s = convertSWTPatternToSkijaShader(backgroundPattern);
 
-		p.setShader(s);
+		//		final var s = convertSWTPatternToSkijaShader(backgroundPattern);
+		//
+		//		p.setShader(s);
 		// surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p);
-		performDrawFilled(paint -> surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p));
+		performDrawFilled(paint -> surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), paint));
 
 		// surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height),
 		// getBackgroundPaint());

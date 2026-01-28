@@ -789,14 +789,14 @@ public class SkiaGC implements IExternalGC {
 			return;
 		}
 
-		final var i = this.resources.getTextImage(text, flags);
-		if (i != null) {
-			if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
-				final var r = resources.getScaler().scaleSize(x, y);
-				surface.getCanvas().drawImage(i, r.x, r.y);
-			}
-			return;
-		}
+		//		final var i = this.resources.getTextImage(text, flags);
+		//		if (i != null) {
+		//			if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
+		//				final var r = resources.getScaler().scaleSize(x, y);
+		//				surface.getCanvas().drawImage(i, r.x, r.y);
+		//			}
+		//			return;
+		//		}
 
 		text = replaceMnemonics(text);
 

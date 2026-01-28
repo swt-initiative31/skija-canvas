@@ -8,12 +8,13 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.DPIScaler;
 import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.FontData;
+import org.eclipse.swt.graphics.FontProperties;
 import org.eclipse.swt.graphics.SkiaGC;
 
 import io.github.humbleui.skija.BlendMode;
 import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.FontHinting;
+import io.github.humbleui.skija.FontSlant;
 import io.github.humbleui.skija.FontStyle;
 import io.github.humbleui.skija.Image;
 import io.github.humbleui.skija.Paint;
@@ -33,7 +34,7 @@ public class SkiaResources {
 	private io.github.humbleui.skija.Font skiaFont;
 	private float baseSymbolHeight;
 
-	private final Map<FontData, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
+	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
 	private final ISkiaCanvas skiaExtension;
 
 	public SkiaResources(Canvas canvas, ISkiaCanvas skiaExtension ) {
@@ -135,37 +136,35 @@ public class SkiaResources {
 	}
 
 	private io.github.humbleui.skija.Font getSkijaFont(org.eclipse.swt.graphics.Font font) {
-		final FontData fontData = font.getFontData()[0];
-		var cachedFont = fontCache.get(fontData);
+		final FontProperties props = FontProperties.getFontProperties(font);
+		var cachedFont = fontCache.get(props);
 		if (cachedFont != null && cachedFont.isClosed()) {
-			fontCache.remove(fontData);
+			fontCache.remove(props);
 			cachedFont = null;
 		}
 
 		io.github.humbleui.skija.Font f = null;
 
 		if (cachedFont == null) {
-			f = createSkijaFont(fontData);
-			fontCache.put(fontData, f);
+			f = createSkijaFont(props);
+			fontCache.put(props, f);
 			return f;
 		}
 
-		return fontCache.get(fontData);
+		return fontCache.get(props);
 	}
 
-	private io.github.humbleui.skija.Font createSkijaFont(FontData fontData) {
-		FontStyle style = FontStyle.NORMAL;
-		final boolean isBold = (fontData.getStyle() & SWT.BOLD) != 0;
-		final boolean isItalic = (fontData.getStyle() & SWT.ITALIC) != 0;
-		if (isBold && isItalic) {
-			style = FontStyle.BOLD_ITALIC;
-		} else if (isBold) {
-			style = FontStyle.BOLD;
-		} else if (isItalic) {
-			style = FontStyle.ITALIC;
+	private io.github.humbleui.skija.Font createSkijaFont(FontProperties props) {
+
+
+		FontSlant slant = FontSlant.UPRIGHT;
+		if(props.lfItalic != 0) {
+			slant = FontSlant.ITALIC;
 		}
+
+		final FontStyle style = new FontStyle(props.lfWeight, props.lfWidth, slant);
 		final io.github.humbleui.skija.Font skijaFont = new io.github.humbleui.skija.Font(
-				Typeface.makeFromName(fontData.getName(), style));
+				Typeface.makeFromName(props.name, style));
 
 		// System.out.println("Canvas native zoom: " + canvas.nativeZoom);
 		// System.out.println("Height: " + fontData.getHeight());
@@ -176,7 +175,7 @@ public class SkiaResources {
 		// System.out.println("Util: NativeDeviceZoom: " +
 		// DPIUtil.getNativeDeviceZoom());
 
-		int fontSize = (fontData.getHeight());
+		int fontSize = (props.lfHeight);
 		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
 			fontSize = skiaExtension.getScaler().getZoomedFontSize(fontSize);
 		}

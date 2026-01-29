@@ -672,6 +672,19 @@ public class SkiaGC implements IExternalGC {
 		return skijaColor;
 	}
 
+	public static int convertSWTColorToSkijaColor(Color swtColor, int alphaOverride) {
+		// extract RGB-components
+		final int red = swtColor.getRed();
+		final int green = swtColor.getGreen();
+		final int blue = swtColor.getBlue();
+		final int alpha = alphaOverride;
+
+		// create ARGB 32-Bit-color
+		final int skijaColor = (alpha << 24) | (red << 16) | (green << 8) | blue;
+
+		return skijaColor;
+	}
+
 	public static int invertSWTColorToInt(Color swtColor) {
 
 		// extract RGB-components
@@ -1981,8 +1994,8 @@ public class SkiaGC implements IExternalGC {
 
 		if (props.getImage() == null) {
 
-			final int col1 = convertSWTColorToSkijaColor(props.getColor1());
-			final int col2 = convertSWTColorToSkijaColor(props.getColor2());
+			final int col1 = convertSWTColorToSkijaColor(props.getColor1(), props.getAlpha1());
+			final int col2 = convertSWTColorToSkijaColor(props.getColor2(), props.getAlpha2());
 
 			final var gs = new GradientStyle(FilterTileMode.REPEAT, true, null);
 			final Shader s = Shader.makeLinearGradient(props.getBaseX1(), props.getBaseY1(), props.getBaseX2(),

@@ -29,7 +29,7 @@ import org.eclipse.swt.widgets.*;
 
 public class SnippetPattern {
 	
-	final static boolean USE_SKIA = false;
+	final static boolean USE_SKIA = true;
 	static int skiaStyle = USE_SKIA ? SWT.SKIA : SWT.NONE;
 	
 	final static int WIDTH = 100;

@@ -25,6 +25,18 @@ import org.eclipse.swt.widgets.SkiaConfiguration;
 
 public class SnippetCanvasAdvanced {
 
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	private static boolean skiaEnabled = false;
+
 	public static void main(String[] args) {
 		final Display display = new Display();
 		final Shell s = new Shell(display);
@@ -39,99 +51,96 @@ public class SnippetCanvasAdvanced {
 
 		coloredTextCanvas(shell);
 
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		coloredTextCanvas(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
-
+		resetCanvasConfiguration();
 
 		text(shell, "Zeichne Text AntiAlias-Modi");
 
 		coloredTextNoAACanvas(shell);
 
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		coloredTextNoAACanvas(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
-
+		resetCanvasConfiguration();
 
 		text(shell, "Zeichne rechteckige Linien mit verschiedenen Strichstärken");
 
 		lineAttributesCanvas(shell);
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		lineAttributesCanvas(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
+		resetCanvasConfiguration();
 
 		text(shell, " Zeichne mit einem Path");
 
 		pathCanvas(shell);
 
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		pathCanvas(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
+		resetCanvasConfiguration();
 
 		text(shell, " XOR-Mode");
 
 		xorMode(shell);
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		xorMode(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
+		resetCanvasConfiguration();
 
 		text(shell, " Geänderte Transformationsmatrix");
 
 		transformCanvas(shell);
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		transformCanvas(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
+		resetCanvasConfiguration();
 
 		text(shell, " Benutze Region");
 
 		regionCanvas(shell);
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		regionCanvas(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
+		resetCanvasConfiguration();
 
 		text(shell, " Zeichne mit einem Muster");
 
 		patternCanvas(shell);
 
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		patternCanvas(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
+		resetCanvasConfiguration();
 
 		text(shell, " Anti-Aliasing für Grafik");
 
 		antiAliasCanvas(shell);
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		antiAliasCanvas(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
+		resetCanvasConfiguration();
 
 		text(shell, " Zeichne Bilder mit verschiedenen Alpha-Werten");
 
 		alphaCanvas(shell);
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		alphaCanvas(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
+		resetCanvasConfiguration();
 
 		text(shell, "Clipping Rectangle");
 
 		clipRectangleCanvas(shell);
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		clipRectangleCanvas(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
+		resetCanvasConfiguration();
 
 		text(shell, "Clipping Region");
 
 		clipCanvasRegion(shell);
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		clipCanvasRegion(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
-
+		resetCanvasConfiguration();
 
 		text(shell, "Clipping Path");
 
 		clipCanvasPath(shell);
-		SkiaConfiguration.activateSkiaRaster();
+		activateSkiaRaster();
 		clipCanvasPath(shell);
-		SkiaConfiguration.resetCanvasConfiguration();
+		resetCanvasConfiguration();
 
 		final var size = shell.computeSize(SWT.DEFAULT, SWT.DEFAULT);
 
@@ -155,6 +164,14 @@ public class SnippetCanvasAdvanced {
 		display.dispose();
 	}
 
+	private static void resetCanvasConfiguration() {
+		skiaEnabled = false;
+	}
+
+	private static void activateSkiaRaster() {
+		skiaEnabled = true;
+	}
+
 	private static void coloredTextNoAACanvas(Composite shell) {
 		final Canvas coloredTextCanvas = createCanvas(shell);
 		coloredTextCanvas.setBackground(shell.getDisplay().getSystemColor(SWT.COLOR_YELLOW));
@@ -170,7 +187,7 @@ public class SnippetCanvasAdvanced {
 
 			fd.height = 20;
 
-			final Font nf = new Font(shell.getDisplay(),new FontData[] {fd});
+			final Font nf = new Font(shell.getDisplay(), new FontData[] { fd });
 
 			e.gc.setFont(nf);
 
@@ -180,7 +197,6 @@ public class SnippetCanvasAdvanced {
 			final Color blue = shell.getDisplay().getSystemColor(SWT.COLOR_BLUE);
 			gc.setForeground(blue);
 			gc.drawText("No AntiAlias Text", 10, 10);
-
 
 			final Color red = shell.getDisplay().getSystemColor(SWT.COLOR_RED);
 			gc.setForeground(red);
@@ -192,14 +208,12 @@ public class SnippetCanvasAdvanced {
 			e.gc.setTextAntialias(SWT.DEFAULT);
 			gc.drawText("Default Text", 10, 130);
 
-
 			gc.setAdvanced(advanced);
 			gc.setTextAntialias(textAA);
 
-
 		});
 
-		setGridData(coloredTextCanvas,200);
+		setGridData(coloredTextCanvas, 200);
 
 	}
 
@@ -221,7 +235,7 @@ public class SnippetCanvasAdvanced {
 			e.gc.fillRectangle(0, 0, width, height);
 		});
 
-		setGridData(c,200);
+		setGridData(c, 200);
 
 	}
 
@@ -243,7 +257,7 @@ public class SnippetCanvasAdvanced {
 			e.gc.fillPolygon(new int[] { 0, 0, width, 0, width / 2, height });
 		});
 
-		setGridData(c,200);
+		setGridData(c, 200);
 
 	}
 
@@ -261,7 +275,7 @@ public class SnippetCanvasAdvanced {
 			e.gc.fillPolygon(new int[] { 0, 0, width, 0, width / 2, height });
 		});
 
-		setGridData(c,200);
+		setGridData(c, 200);
 
 	}
 
@@ -364,11 +378,11 @@ public class SnippetCanvasAdvanced {
 		setGridData(xorModeCanvas);
 
 	}
-	
+
 	private static Canvas createCanvas(Composite shell) {
-	    return new Canvas(shell, SWT.BORDER | SkiaConfiguration.SKIA);
+		int style = skiaEnabled ? SWT.SKIA : SWT.NONE;
+		return new Canvas(shell, SWT.BORDER | style);
 	}
-	
 
 	private static void pathCanvas(Composite shell) {
 		final Canvas pathCanvas = createCanvas(shell);

@@ -1,6 +1,37 @@
 package org.eclipse.swt.graphics;
 
+import java.util.*;
+
 public class FontProperties {
+
+	// Standard OpenType stretch values
+	private static final Map<String, Integer> STRETCH_MAP = new HashMap<>();
+	private static final Set<String> REGION_KEYS = new HashSet<>();
+
+	static {
+		STRETCH_MAP.put("UltraCondensed", 1); // 50.0%
+		STRETCH_MAP.put("ExtraCondensed", 2); // 62.5%
+		STRETCH_MAP.put("Condensed", 3); // 75.0%
+		STRETCH_MAP.put("SemiCondensed", 4); // 87.5%
+		STRETCH_MAP.put("Normal", 5); // 100.0%
+		STRETCH_MAP.put("Medium", 5);
+		STRETCH_MAP.put("SemiExpanded", 6); // 112.5%
+		STRETCH_MAP.put("Expanded", 7); // 125.0%
+		STRETCH_MAP.put("ExtraExpanded", 8); // 150.0%
+		STRETCH_MAP.put("UltraExpanded", 9); // 200.0%
+
+
+		REGION_KEYS.add(" Greek");
+		REGION_KEYS.add(" TUR");
+		REGION_KEYS.add(" Baltic");
+		REGION_KEYS.add(" CE");
+		REGION_KEYS.add(" CYR");
+		REGION_KEYS.add(" Transparent");
+	}
+
+
+
+
 
 	public int lfHeight;
 	public int lfWidth;
@@ -20,7 +51,19 @@ public class FontProperties {
 		var fp = new FontProperties();
 		var d = fd.data;
 
-		fp.name = fd.getName();
+		String name = fd.getName();
+
+		for(String local : REGION_KEYS) {
+			if(name.endsWith(local)) {
+				name = name.substring(0, name.length() - local.length());
+				break;
+			}
+
+		}
+
+		var fontName = analyzeManual(name);
+
+		fp.name = fontName.baseName;
 		fp.lfHeight = fd.getHeight();
 		fp.lfItalic = d.lfItalic;
 		fp.lfEscapement = d.lfEscapement;
@@ -28,13 +71,38 @@ public class FontProperties {
 		fp.lfStrikeOut = d.lfStrikeOut;
 		fp.lfUnderline = d.lfUnderline;
 		fp.lfWeight = d.lfWeight;
-		fp.lfWidth = d.lfWidth;
+		var stretch = STRETCH_MAP.get(fontName.detectedStretch);
+		if(stretch != null)
+			fp.lfWidth = stretch;
 
 		return fp;
 	}
 
 	public static FontProperties getFontProperties(Font font) {
 		return getFontProperties(font.getFontData()[0]);
+	}
+
+	private static FontName analyzeManual(String fullDescription) {
+		// Bekannte Stretch-Keywords definieren
+		String[] stretchKeywords = { "UltraCondensed", "ExtraCondensed", "Condensed", "SemiCondensed", "SemiExpanded",
+				"Expanded" };
+
+		String baseName = fullDescription;
+		String detectedStretch = "Normal";
+
+		for (String keyword : stretchKeywords) {
+			if (fullDescription.contains(keyword)) {
+				detectedStretch = keyword;
+				baseName = fullDescription;
+				break;
+			}
+		}
+
+		return new FontName(baseName, detectedStretch);
+
+	}
+
+	private record FontName(String baseName, String detectedStretch) {
 	}
 
 }

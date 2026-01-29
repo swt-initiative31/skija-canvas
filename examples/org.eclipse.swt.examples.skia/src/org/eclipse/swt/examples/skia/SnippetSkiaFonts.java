@@ -46,7 +46,7 @@ public class SnippetSkiaFonts {
 
 				final Font font = new Font(display, fd);
 				gc.setFont(font);
-				final String fontName = fd.getName();
+				final String fontName = "'" + fd.getName() +"'" ;
 				gc.drawText(fontName, 10, y);
 				y += stepSize;
 				font.dispose();  // Frees system resources

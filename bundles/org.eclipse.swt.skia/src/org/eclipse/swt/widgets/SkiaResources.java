@@ -162,9 +162,15 @@ public class SkiaResources {
 			slant = FontSlant.ITALIC;
 		}
 
-		final FontStyle style = new FontStyle(props.lfWeight, props.lfWidth, slant);
+		final FontStyle style = new FontStyle(props.lfWeight,5, slant);
 		final io.github.humbleui.skija.Font skijaFont = new io.github.humbleui.skija.Font(
 				Typeface.makeFromName(props.name, style));
+
+		if(props.lfWidth != 0) {
+			final float stretch = (float)((props.lfWidth / 10.0) + 0.5);
+			skijaFont.setScaleX(stretch);
+		}
+
 
 		// System.out.println("Canvas native zoom: " + canvas.nativeZoom);
 		// System.out.println("Height: " + fontData.getHeight());

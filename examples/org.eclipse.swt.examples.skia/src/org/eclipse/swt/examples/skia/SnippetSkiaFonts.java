@@ -38,6 +38,7 @@ public class SnippetSkiaFonts {
 			int y = 10 - shell.getVerticalBar().getSelection()   ;
 			for (final FontData fd : fontDataArrayScalable) {
 
+				fd.setHeight(20);
 				if( y < -stepSize || y > canvas.getSize().y ) {
 					y += stepSize;
 					continue;
@@ -58,6 +59,7 @@ public class SnippetSkiaFonts {
 					continue;
 				}
 
+				fd.setHeight(20);
 				final Font font = new Font(display, fd);
 				gc.setFont(font);
 				final String fontName = fd.getName();

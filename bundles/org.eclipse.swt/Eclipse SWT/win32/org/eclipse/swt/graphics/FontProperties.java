@@ -47,7 +47,7 @@ public class FontProperties {
 
 	}
 
-	public static FontProperties getFontProperties(FontData fd) {
+	private static FontProperties getFontProperties(FontData fd) {
 		var fp = new FontProperties();
 		var d = fd.data;
 
@@ -88,7 +88,7 @@ public class FontProperties {
 				"Expanded" };
 
 		String baseName = fullDescription;
-		String detectedStretch = "Normal";
+		String detectedStretch = null;
 
 		for (String keyword : stretchKeywords) {
 			if (fullDescription.contains(keyword)) {
@@ -99,7 +99,6 @@ public class FontProperties {
 		}
 
 		return new FontName(baseName, detectedStretch);
-
 	}
 
 	private record FontName(String baseName, String detectedStretch) {

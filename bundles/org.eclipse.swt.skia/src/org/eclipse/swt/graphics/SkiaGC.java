@@ -135,11 +135,8 @@ public class SkiaGC implements IExternalGC {
 	public void dispose() {
 
 		resources.resetBaseColors();
+		surface.getCanvas().restore();
 
-		if (hasAlphaLayer) {
-			surface.getCanvas().restore();
-			hasAlphaLayer = false;
-		}
 	}
 
 	private void performDraw(Consumer<Paint> operations) {

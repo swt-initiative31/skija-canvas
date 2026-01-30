@@ -24,16 +24,6 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.SkiaConfiguration;
 
 public class SnippetCanvasAdvanced {
-
-	
-	
-	
-	
-	
-	
-	
-	
-	
 	
 	private static boolean skiaEnabled = false;
 

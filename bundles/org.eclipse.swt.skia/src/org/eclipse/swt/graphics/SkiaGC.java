@@ -793,22 +793,54 @@ public class SkiaGC implements IExternalGC {
 		return this.resources.getSkiaFont();
 	}
 
-	private void drawTextBlob(String text, int flags, int x, int y) {
+	static String withCrLf(String string) {
+		/* Create a new string with the CR/LF line terminator. */
+		int i = 0;
+		final int length = string.length();
+		final StringBuilder result = new StringBuilder(length);
+		while (i < length) {
+			int j = string.indexOf('\n', i);
+			if (j > 0 && string.charAt(j - 1) == '\r') {
+				result.append(string.substring(i, j + 1));
+				i = j + 1;
+			} else {
+				if (j == -1) {
+					j = length;
+				}
+				result.append(string.substring(i, j));
+				i = j;
+				if (i < length) {
+					result.append("\r\n"); //$NON-NLS-1$
+					i++;
+				}
+			}
+		}
+
+		/* Avoid creating a copy of the string if it has not changed */
+		if (string.length() == result.length()) {
+			return string;
+		}
+		return result.toString();
+	}
+
+	private void drawTextBlob(String inputText, int flags, int x, int y) {
 
 		if (this.surface.getWidth() < x || this.surface.getHeight() < y) {
 			return;
 		}
 
-		//		final var i = this.resources.getTextImage(text, flags);
-		//		if (i != null) {
-		//			if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
-		//				final var r = resources.getScaler().scaleSize(x, y);
-		//				surface.getCanvas().drawImage(i, r.x, r.y);
-		//			}
-		//			return;
-		//		}
+		// final var i = this.resources.getTextImage(text, flags);
+		// if (i != null) {
+		// if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
+		// final var r = resources.getScaler().scaleSize(x, y);
+		// surface.getCanvas().drawImage(i, r.x, r.y);
+		// }
+		// return;
+		// }
 
-		text = replaceMnemonics(text);
+		inputText = withCrLf(inputText);
+
+		final var fullText = replaceMnemonics(inputText);
 
 		final var f = getSkiaFont();
 
@@ -817,39 +849,47 @@ public class SkiaGC implements IExternalGC {
 		fgp.setAntiAlias(false);
 		fgp.setMode(PaintMode.FILL);
 
-		final var textWidth = f.measureTextWidth(text, fgp);
 
-		final var metric = f.getMetrics();
-		final var asc = metric.getAscent();
-		final var des = metric.getDescent();
+		final var splits = fullText.split("\\r\\n"); //$NON-NLS-1$
 
-		final var ascI = (int) Math.ceil(Math.abs(asc));
-		final var desI = (int) Math.ceil(Math.abs(des));
-		final var heightI = ascI + desI;
+		int heightDiff = 0;
+		for (final var text : splits) { //$NON-NLS-1$
 
-		final int width = 1;
+			final var textWidth = f.measureTextWidth(text, fgp);
 
-		io.github.humbleui.skija.Image img;
-		try (var subSurface = skiaExtension.createSupportSurface((int) Math.ceil(textWidth) + width, heightI)) {
+			final var metric = f.getMetrics();
+			final var asc = metric.getAscent();
+			final var des = metric.getDescent();
 
-			if (isTransparent(flags)) {
-				subSurface.getCanvas().clear(0x00000000);
-			} else {
-				subSurface.getCanvas().clear(getBackgroundPaint().getColor());
+			final var ascI = (int) Math.ceil(Math.abs(asc));
+			final var desI = (int) Math.ceil(Math.abs(des));
+			final var heightI = ascI + desI;
+
+			final int width = 1;
+
+			io.github.humbleui.skija.Image img;
+			try (var subSurface = skiaExtension.createSupportSurface((int) Math.ceil(textWidth) + width, heightI)) {
+
+				if (isTransparent(flags)) {
+					subSurface.getCanvas().clear(0x00000000);
+				} else {
+					subSurface.getCanvas().clear(getBackgroundPaint().getColor());
+				}
+
+				subSurface.getCanvas().drawString(text, 0, Math.abs(asc), getSkiaFont(), fgp);
+
+				img = subSurface.makeImageSnapshot();
+				this.resources.setTextImage(text, flags, img);
+
 			}
+			if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
 
-			subSurface.getCanvas().drawString(text, 0, Math.abs(asc), getSkiaFont(), fgp);
-
-			fgp.setMode(PaintMode.STROKE);
-			img = subSurface.makeImageSnapshot();
-			this.resources.setTextImage(text, flags, img);
-
+				final var r = resources.getScaler().scaleSize(x, y);
+				surface.getCanvas().drawImage(img, r.x, r.y + heightDiff);
+				heightDiff += heightI + 1;
+			}
 		}
-		if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
-
-			final var r = resources.getScaler().scaleSize(x, y);
-			surface.getCanvas().drawImage(img, r.x, r.y);
-		}
+		fgp.setMode(PaintMode.STROKE);
 
 	}
 
@@ -1183,17 +1223,17 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void fillRectangle(int x, int y, int width, int height) {
 
-		//		final Paint p = new Paint();
-		//		p.setAlpha(255);
+		// final Paint p = new Paint();
+		// p.setAlpha(255);
 
 		// final Shader s = Shader.makeLinearGradient(0,0, 100 , 100 , new int[] {
 		// 0xFF00FFFF, 0x00FF00FF} );
 		// p.setShader(s);
 		//
 
-		//		final var s = convertSWTPatternToSkijaShader(backgroundPattern);
+		// final var s = convertSWTPatternToSkijaShader(backgroundPattern);
 		//
-		//		p.setShader(s);
+		// p.setShader(s);
 		// surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p);
 		performDrawFilled(paint -> surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), paint));
 

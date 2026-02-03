@@ -1,5 +1,6 @@
 package org.eclipse.swt.examples.skia;
 
+import org.eclipse.swt.custom.ScrolledComposite;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
@@ -32,9 +33,13 @@ public class SnippetCanvasAdvanced {
 		final Shell s = new Shell(display);
 		s.setLayout(new FillLayout());
 
-		final Composite shell = new Composite(s, SWT.FILL | SWT.V_SCROLL);
+		final ScrolledComposite sc = new ScrolledComposite(s, SWT.V_SCROLL | SWT.H_SCROLL);
+		sc.setExpandHorizontal(true);
+		sc.setExpandVertical(true);
 
-		shell.setSize(1000, 2000); // Erhöhte Höhe für mehr Canvas
+		final Composite shell = new Composite(sc, SWT.NONE);
+		sc.setContent(shell);
+
 		shell.setLayout(new GridLayout(2, true));
 
 		text(shell, "Zeichne Text mit verschiedenen Farben");
@@ -133,16 +138,7 @@ public class SnippetCanvasAdvanced {
 		resetCanvasConfiguration();
 
 		final var size = shell.computeSize(SWT.DEFAULT, SWT.DEFAULT);
-
-		shell.getVerticalBar().setMaximum(size.y / 5);
-
-		shell.getVerticalBar().addListener(SWT.Selection, e -> {
-
-			final var b = shell.getBounds();
-
-			shell.setBounds(b.x, -shell.getVerticalBar().getSelection() * 5, s.getClientArea().width, size.y);
-
-		});
+		sc.setMinSize(size);
 
 		s.open();
 		while (!s.isDisposed()) {

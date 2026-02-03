@@ -41,6 +41,11 @@ public final class GCExtension extends GC {
 	}
 
 	@Override
+	public void drawImage(Image image, int destX, int destY, int destWidth, int destHeight) {
+		e.drawImage(image, destX, destY, destWidth, destHeight);
+	}
+
+	@Override
 	public void copyArea(Image image, int x, int y) {
 		e.copyArea(image, x, y);
 	}
@@ -466,6 +471,11 @@ public final class GCExtension extends GC {
 		if (isDisposed())
 			return "GCExtension {*DISPOSED*}";
 		return "GCExtension {" + e + "}";
+	}
+
+	@Override
+	public Device getDevice() {
+		return e.getDevice();
 	}
 
 }

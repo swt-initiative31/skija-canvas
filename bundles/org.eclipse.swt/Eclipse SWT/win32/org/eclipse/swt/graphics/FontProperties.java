@@ -70,7 +70,10 @@ public class FontProperties {
 		fp.lfOrientation = d.lfOrientation;
 		fp.lfStrikeOut = d.lfStrikeOut;
 		fp.lfUnderline = d.lfUnderline;
-		fp.lfWeight = d.lfWeight;
+		if(d.lfWeight == 0)
+			fp.lfWeight = 400; // Normal weight
+		else
+			fp.lfWeight = d.lfWeight;
 		var stretch = STRETCH_MAP.get(fontName.detectedStretch);
 		if(stretch != null)
 			fp.lfWidth = stretch;

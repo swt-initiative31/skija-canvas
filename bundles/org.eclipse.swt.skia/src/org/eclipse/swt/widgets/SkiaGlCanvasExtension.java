@@ -185,6 +185,7 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 		// critical for drawing without clearing
 		final SkiaGC gc = new SkiaGC(canvas, this, SWT.None);
 		event.gc = new GCExtension(gc);
+		event.display = this.canvas.getDisplay();
 		e.sendPaintEvent(event);
 		gc.dispose();
 		event.gc = null;

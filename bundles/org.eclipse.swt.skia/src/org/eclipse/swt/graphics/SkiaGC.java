@@ -384,6 +384,13 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	@Override
+	public void drawImage(Image image, int destX, int destY, int destWidth, int destHeight) {
+		drawImage(image, 0, 0, image.getBounds().width, image.getBounds().height, destX, destY, destWidth,
+				destHeight);
+
+	}
+
+	@Override
 	public void drawImage(Image image, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY,
 			int destWidth, int destHeight) {
 		if (image == null) {
@@ -398,6 +405,7 @@ public class SkiaGC implements IExternalGC {
 		}
 
 		final Canvas canvas = surface.getCanvas();
+		// TODO create an image cache, instead of recreating the skija image every time
 		canvas.drawImageRect(convertSWTImageToSkijaImage(image, 100 * factor),
 				createScaledRectangle(srcX * factor, srcY * factor, srcWidth * factor, srcHeight * factor),
 				createScaledRectangle(destX, destY, destWidth, destHeight), SamplingMode.MITCHELL, getForegroundPaint(),
@@ -1294,6 +1302,8 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setAlpha(int alpha) {
+		alpha = alpha & 0xFF;
+
 		if (alpha < 0 || alpha > 255) {
 			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 		}

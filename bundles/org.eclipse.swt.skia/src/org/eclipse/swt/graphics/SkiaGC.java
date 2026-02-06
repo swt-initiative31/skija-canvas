@@ -135,7 +135,9 @@ public class SkiaGC implements IExternalGC {
 	public void dispose() {
 
 		resources.resetBaseColors();
-		surface.getCanvas().restore();
+
+		surface.getCanvas().restoreToCount(0);
+		surface.getCanvas().resetMatrix();
 
 	}
 

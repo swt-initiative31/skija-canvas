@@ -15,7 +15,7 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
 public class SnippetPattern2 {
-	private static boolean skiaEnabled = false;
+	
 
 	public static void main(String[] args) {
 		final Display display = new Display();
@@ -42,6 +42,7 @@ public class SnippetPattern2 {
 		display.dispose();
 	}
 
+	private static boolean skiaEnabled = false;
 	private static void resetCanvasConfiguration() {
 		skiaEnabled = false;
 	}

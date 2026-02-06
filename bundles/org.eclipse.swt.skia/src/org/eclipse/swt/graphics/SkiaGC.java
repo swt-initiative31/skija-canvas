@@ -378,15 +378,13 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawImage(Image image, int x, int y) {
-		final Canvas canvas = surface.getCanvas();
-		canvas.drawImage(convertSWTImageToSkijaImage(image, DPIScaler.getDeviceZoom()), DPIScaler.autoScaleUp(x),
-				DPIScaler.autoScaleUp(y));
+		final var imgBounds = image.getBounds();
+		drawImage(image, 0, 0, imgBounds.width, imgBounds.height, x,y,  imgBounds.width, imgBounds.height);
 	}
 
 	@Override
 	public void drawImage(Image image, int destX, int destY, int destWidth, int destHeight) {
-		drawImage(image, 0, 0, image.getBounds().width, image.getBounds().height, destX, destY, destWidth,
-				destHeight);
+		drawImage(image, 0, 0, image.getBounds().width, image.getBounds().height, destX, destY, destWidth, destHeight);
 
 	}
 
@@ -408,7 +406,7 @@ public class SkiaGC implements IExternalGC {
 		// TODO create an image cache, instead of recreating the skija image every time
 		canvas.drawImageRect(convertSWTImageToSkijaImage(image, 100 * factor),
 				createScaledRectangle(srcX * factor, srcY * factor, srcWidth * factor, srcHeight * factor),
-				createScaledRectangle(destX, destY, destWidth, destHeight), SamplingMode.MITCHELL, getForegroundPaint(),
+				createScaledRectangle(destX, destY, destWidth, destHeight), this.interpolationMode, getForegroundPaint(),
 				false);
 	}
 
@@ -495,7 +493,8 @@ public class SkiaGC implements IExternalGC {
 		ColorType colType = getColorType(imageData);
 
 		// always prefer the alphaData. If these are set, the bytes data are empty!!
-		if (colType.equals(ColorType.UNKNOWN) || imageData.alphaData != null) {
+		// it seems ColorType.ALPHA_8 does not work with the direct data conversion.
+		if (colType.equals(ColorType.UNKNOWN) || imageData.alphaData != null || colType.equals(ColorType.ALPHA_8)) {
 			byte[] bytes = null;
 			bytes = convertToRGBA(imageData);
 			colType = ColorType.RGBA_8888;
@@ -508,6 +507,8 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	public static byte[] convertToRGBA(ImageData imageData) {
+
+
 		final ImageData transparencyData = imageData.getTransparencyMask();
 		final byte[] convertedData = new byte[imageData.width * imageData.height * 4];
 		byte defaultAlpha = (byte) 255;
@@ -846,8 +847,6 @@ public class SkiaGC implements IExternalGC {
 		// return;
 		// }
 
-		inputText = withCrLf(inputText);
-
 		final var fullText = replaceMnemonics(inputText);
 
 		final var f = getSkiaFont();
@@ -857,11 +856,10 @@ public class SkiaGC implements IExternalGC {
 		fgp.setAntiAlias(false);
 		fgp.setMode(PaintMode.FILL);
 
-
-		final var splits = fullText.split("\\r\\n"); //$NON-NLS-1$
+		final var splits = splitString(fullText); //$NON-NLS-1$
 
 		int heightDiff = 0;
-		for (final var text : splits) { //$NON-NLS-1$
+		for (final var text : splits) { // $NON-NLS-1$
 
 			final var textWidth = f.measureTextWidth(text, fgp);
 
@@ -1717,18 +1715,31 @@ public class SkiaGC implements IExternalGC {
 		this.foregroundPattern = pattern;
 	}
 
+
+
 	@Override
 	public void setInterpolation(int interpolation) {
+
+
+		//		GDI            | 	Skia                 |  description
+		//		NearestNeighbor	SKFilterMode.Nearest	    hart pixels
+		//		Low / Bilinear	SKFilterMode.Linear	        simple linear
+		//		High / Bicubic	SKCubicResampler.Mitchell	high quality
+		//		HighQualityBicubic	SKCubicResampler.CatmullRom	   maximum sharp, cubic interpolation
+
+
 		switch (interpolation) {
 		case SWT.NONE:
 			this.interpolationMode = SamplingMode.DEFAULT; // Nearest neighbor
 			break;
 		case SWT.LOW:
-			this.interpolationMode = new FilterMipmap(FilterMode.LINEAR, MipmapMode.LINEAR);
-			break;
-		case SWT.HIGH, SWT.DEFAULT:
 			this.interpolationMode = SamplingMode.LINEAR;
-		break;
+			break;
+		case SWT.DEFAULT:
+			this.interpolationMode = SamplingMode.MITCHELL;
+		case SWT.HIGH:
+			this.interpolationMode = SamplingMode.CATMULL_ROM;
+			break;
 		default:
 			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 		}

@@ -94,7 +94,6 @@ public class SnippetCanvasText {
 		}
 
 		s.redraw();
-		;
 
 	}
 

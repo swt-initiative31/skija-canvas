@@ -10,7 +10,7 @@
  *******************************************************************************/
 package org.eclipse.swt.opengl;
 
-import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.widgets.*;
 
 public abstract class OpenGLCanvasExtension extends GLCanvasExtension  {

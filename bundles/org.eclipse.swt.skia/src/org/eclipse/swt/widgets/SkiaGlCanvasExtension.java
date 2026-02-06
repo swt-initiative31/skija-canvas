@@ -137,6 +137,7 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 	@Override
 	public void redrawTriggered() {
 		this.redrawRectangle = null;
+		super.redrawTriggered();
 	}
 
 	@Override

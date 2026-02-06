@@ -379,7 +379,7 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void drawImage(Image image, int x, int y) {
 		final var imgBounds = image.getBounds();
-		drawImage(image, 0, 0, imgBounds.width, imgBounds.height, x,y,  imgBounds.width, imgBounds.height);
+		drawImage(image, 0, 0, imgBounds.width, imgBounds.height, x, y, imgBounds.width, imgBounds.height);
 	}
 
 	@Override
@@ -406,8 +406,8 @@ public class SkiaGC implements IExternalGC {
 		// TODO create an image cache, instead of recreating the skija image every time
 		canvas.drawImageRect(convertSWTImageToSkijaImage(image, 100 * factor),
 				createScaledRectangle(srcX * factor, srcY * factor, srcWidth * factor, srcHeight * factor),
-				createScaledRectangle(destX, destY, destWidth, destHeight), this.interpolationMode, getForegroundPaint(),
-				false);
+				createScaledRectangle(destX, destY, destWidth, destHeight), this.interpolationMode,
+				getForegroundPaint(), false);
 	}
 
 	private static ColorType getColorType(ImageData imageData) {
@@ -507,7 +507,6 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	public static byte[] convertToRGBA(ImageData imageData) {
-
 
 		final ImageData transparencyData = imageData.getTransparencyMask();
 		final byte[] convertedData = new byte[imageData.width * imageData.height * 4];
@@ -856,7 +855,7 @@ public class SkiaGC implements IExternalGC {
 		fgp.setAntiAlias(false);
 		fgp.setMode(PaintMode.FILL);
 
-		final var splits = splitString(fullText); //$NON-NLS-1$
+		final var splits = splitString(fullText); // $NON-NLS-1$
 
 		int heightDiff = 0;
 		for (final var text : splits) { // $NON-NLS-1$
@@ -1173,19 +1172,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void fillOval(int x, int y, int width, int height) {
-
-		try (Paint p = new Paint()) {
-			p.setAlpha(255);
-			p.setColor(0xFF00FFFF);
-
-			if (backgroundPattern != null) {
-				final var s = convertSWTPatternToSkijaShader(backgroundPattern);
-				p.setShader(s);
-			}
-
-			performDrawFilled(paint -> surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p));
-
-		}
+		performDrawFilled(paint -> surface.getCanvas().drawOval(createScaledRectangle(x, y, width, height), paint));
 	}
 
 	@Override
@@ -1715,18 +1702,15 @@ public class SkiaGC implements IExternalGC {
 		this.foregroundPattern = pattern;
 	}
 
-
-
 	@Override
 	public void setInterpolation(int interpolation) {
 
-
-		//		GDI            | 	Skia                 |  description
-		//		NearestNeighbor	SKFilterMode.Nearest	    hart pixels
-		//		Low / Bilinear	SKFilterMode.Linear	        simple linear
-		//		High / Bicubic	SKCubicResampler.Mitchell	high quality
-		//		HighQualityBicubic	SKCubicResampler.CatmullRom	   maximum sharp, cubic interpolation
-
+		// GDI | Skia | description
+		// NearestNeighbor SKFilterMode.Nearest hart pixels
+		// Low / Bilinear SKFilterMode.Linear simple linear
+		// High / Bicubic SKCubicResampler.Mitchell high quality
+		// HighQualityBicubic SKCubicResampler.CatmullRom maximum sharp, cubic
+		// interpolation
 
 		switch (interpolation) {
 		case SWT.NONE:

@@ -1261,6 +1261,9 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setTransform(Transform transform) {
+
+		surface.getCanvas().restoreToCount(0);
+
 		if (transform == null) {
 			currentTransform = Matrix33.IDENTITY;
 			surface.getCanvas().setMatrix(currentTransform);
@@ -1285,6 +1288,9 @@ public class SkiaGC implements IExternalGC {
 			currentTransform = new Matrix33(skijaMat);
 			surface.getCanvas().setMatrix(currentTransform);
 		}
+
+		surface.getCanvas().save();
+
 	}
 
 	@Override

@@ -44,6 +44,7 @@ import io.github.humbleui.skija.Matrix33;
 import io.github.humbleui.skija.MipmapMode;
 import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.PaintMode;
+import io.github.humbleui.skija.PaintStrokeCap;
 import io.github.humbleui.skija.PathEffect;
 import io.github.humbleui.skija.PathFillMode;
 import io.github.humbleui.skija.SamplingMode;
@@ -150,6 +151,39 @@ public class SkiaGC implements IExternalGC {
 
 	private void performDrawLine(Consumer<Paint> operations) {
 		performForegroundDraw(paint -> {
+
+			paint.setStrokeWidth(lineWidth);
+
+			final PaintStrokeCap cap = getSkijaLineCap();
+			paint.setStrokeCap(cap); // e
+
+			// if (lineStyle != SWT.LINE_SOLID && lineStyle != SWT.LINE_DASH && lineStyle !=
+			// SWT.LINE_DOT
+			// && lineStyle != SWT.LINE_DASHDOT && lineStyle != SWT.LINE_DASHDOTDOT
+			// && lineStyle != SWT.LINE_CUSTOM) {
+			// SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+			// }
+
+			switch (this.lineStyle) {
+			case SWT.LINE_DOT:
+				paint.setPathEffect(PathEffect.makeDash(new float[] { 1f * lineWidth, 1f * lineWidth }, 0.0f));
+				break;
+			case SWT.LINE_DASH:
+				paint.setPathEffect(PathEffect.makeDash(new float[] { 3f * lineWidth, 1f * lineWidth }, 0.0f));
+				break;
+			case SWT.LINE_DASHDOT:
+				paint.setPathEffect(PathEffect.makeDash(
+						new float[] { 3f * lineWidth, 1f * lineWidth, 1f * lineWidth, 1f * lineWidth }, 0.0f));
+				break;
+			case SWT.LINE_DASHDOTDOT:
+				paint.setPathEffect(PathEffect.makeDash(new float[] { 3f * lineWidth, 1f * lineWidth, 1f * lineWidth,
+						1f * lineWidth, 1f * lineWidth, 1f * lineWidth }, 0.0f));
+				break;
+			default:
+				paint.setPathEffect(null);
+				break;
+			}
+
 			// applyForegroundPattern(paint);
 			// paint.setMode(PaintMode.STROKE);
 			// paint.setStrokeWidth(lineWidth > 0 ? Math.max(lineWidth, 1) : 1);
@@ -178,7 +212,18 @@ public class SkiaGC implements IExternalGC {
 			// paint.setPathEffect(pathEffect);
 			// }
 			operations.accept(paint);
+
 		});
+	}
+
+	private PaintStrokeCap getSkijaLineCap() {
+		if ((this.lineCap == SWT.CAP_SQUARE)) {
+			return PaintStrokeCap.SQUARE;
+		}
+		if (this.lineCap == SWT.CAP_ROUND) {
+			return PaintStrokeCap.ROUND;
+		}
+		return PaintStrokeCap.BUTT;
 	}
 
 	/**
@@ -289,9 +334,9 @@ public class SkiaGC implements IExternalGC {
 			}
 		}
 		// Fallback to backGround color if no pattern or pattern conversion failed
-		if(this.alpha < 255) {
-			paint.setColor(convertSWTColorToSkijaColor(getBackground() ,this.alpha));
-		}else {
+		if (this.alpha < 255) {
+			paint.setColor(convertSWTColorToSkijaColor(getBackground(), this.alpha));
+		} else {
 			paint.setColor(convertSWTColorToSkijaColor(getBackground()));
 		}
 
@@ -860,6 +905,10 @@ public class SkiaGC implements IExternalGC {
 		fgp.setAntiAlias(false);
 		fgp.setMode(PaintMode.FILL);
 
+		fgp.setStrokeWidth(1);
+		fgp.setStrokeCap(PaintStrokeCap.BUTT);
+		fgp.setPathEffect(null);
+
 		final var splits = splitString(fullText); // $NON-NLS-1$
 
 		int heightDiff = 0;
@@ -1109,15 +1158,7 @@ public class SkiaGC implements IExternalGC {
 		if (string == null) {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
-		if (!isTransparent) {
-			final int width = (int) DPIScaler.autoScaleDown(getSkiaFont().measureTextWidth(string));
-			final int height = (int) DPIScaler.autoScaleDown(getSkiaFont().getMetrics().getHeight());
-			fillRectangle(x, y, width, height);
-		}
-		final Point point = calculateSymbolCenterPoint(x, y);
-		performDrawText(paint -> {
-			surface.getCanvas().drawString(string, point.x, point.y, getSkiaFont(), paint);
-		});
+		drawText(string, x, y, isTransparent);
 	}
 
 	@Override

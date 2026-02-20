@@ -3,7 +3,6 @@ package org.eclipse.swt.examples.skia;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.RGBA;
-import org.eclipse.swt.graphics.Region;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -36,16 +35,29 @@ public class SnippetAlpha {
 
     private static void onPaint(Event e) {
     	
-    	e.gc.setAdvanced(true);
-    	
+    	e.gc.setAdvanced(false);
     	e.gc.setBackground(e.display.getSystemColor(SWT.COLOR_RED));
     	e.gc.fillRectangle(0, 0, 100, 100);
 
-    	// on windows alpha in colors is not supported, what about linux??
+    	// on windows and linux alpha in colors is not supported at all
     	Color c = new Color(e.display, new RGBA(0, 0, 255, 50));
     	e.gc.setBackground(c);
     	e.gc.fillRectangle(200, 0, 100, 100);
+    	c.dispose();
+    	
+    	// on windows and linux alpha colors is not supported at all
+    	
+    	e.gc.setAlpha(100);
+    	e.gc.setBackground(e.display.getSystemColor(SWT.COLOR_GREEN));
+    	e.gc.fillRectangle(0, 200, 100, 100);
+    	c.dispose();
+    	
+    	
+    	e.gc.setLineWidth(10);
+     	e.gc.setForeground(e.display.getSystemColor(SWT.COLOR_YELLOW));
+    	e.gc.drawLine(0, 0, 500, 500);
+    	
+    	
     	
     }
-	
 }

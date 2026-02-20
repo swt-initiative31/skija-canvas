@@ -1,9 +1,7 @@
 package org.eclipse.swt.examples.skia;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.GC;
-import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.graphics.Path;
 import org.eclipse.swt.graphics.Region;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
@@ -43,6 +41,14 @@ public class SnippetClippingRectangle {
 		clipCanvasRegion(shell);
 		resetCanvasConfiguration();
 		
+		text(shell, "Clipping Path");
+		
+		clipCanvasPath(shell);
+		activateSkiaRaster();
+		clipCanvasPath(shell);
+		resetCanvasConfiguration();
+		
+		
 		s.open();
 		while (!s.isDisposed()) {
 			if (!display.readAndDispatch()) {
@@ -51,6 +57,28 @@ public class SnippetClippingRectangle {
 		}
 
 		display.dispose();
+	}
+
+	private static void clipCanvasPath(Composite shell) {
+		final Canvas c = createCanvas(shell);
+		final var display = shell.getDisplay();
+
+		c.addPaintListener(e -> {
+			final var p = c.getSize();
+			final int width = p.x;
+			final int height = p.y;
+
+			final Path r = new Path(display);
+			
+			r.addArc(width / 4, height / 4, width / 2, height / 2, 0, 360);
+			
+			e.gc.setClipping(r);
+			e.gc.setBackground(display.getSystemColor(SWT.COLOR_CYAN));
+
+			e.gc.fillRectangle(0, 0, width, height);
+		});
+
+		setGridData(c, 200);
 	}
 
 	private static void resetCanvasConfiguration() {
@@ -89,7 +117,7 @@ public class SnippetClippingRectangle {
 			final var p = c.getSize();
 			final int width = p.x;
 			final int height = p.y;
-			e.gc.setClipping(20, 20, width - 40, height - 40);
+			e.gc.setClipping(20, 20, width /2, height /2 );
 			e.gc.setBackground(display.getSystemColor(SWT.COLOR_CYAN));
 
 			e.gc.fillPolygon(new int[] { 0, 0, width, 0, width / 2, height });

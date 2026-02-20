@@ -76,7 +76,7 @@ public class SkiaGC implements IExternalGC {
 	private int fillRule = SWT.FILL_EVEN_ODD;
 	private int antialias;
 	private int alpha = 255;
-	private boolean hasAlphaLayer = false;
+	// private final boolean hasAlphaLayer = false;
 	private Pattern foregroundPattern;
 	private Pattern backgroundPattern;
 
@@ -143,9 +143,7 @@ public class SkiaGC implements IExternalGC {
 
 	private void performDraw(Consumer<Paint> operations) {
 		try (final Paint paint = new Paint()) {
-			if (!hasAlphaLayer) {
-				paint.setAlphaf(alpha / 255.0f);
-			}
+			paint.setAlphaf(alpha / 255.0f);
 			operations.accept(paint);
 		}
 	}
@@ -291,7 +289,12 @@ public class SkiaGC implements IExternalGC {
 			}
 		}
 		// Fallback to backGround color if no pattern or pattern conversion failed
-		paint.setColor(convertSWTColorToSkijaColor(getBackground()));
+		if(this.alpha < 255) {
+			paint.setColor(convertSWTColorToSkijaColor(getBackground() ,this.alpha));
+		}else {
+			paint.setColor(convertSWTColorToSkijaColor(getBackground()));
+		}
+
 	}
 
 	/**
@@ -1300,20 +1303,22 @@ public class SkiaGC implements IExternalGC {
 		if (alpha < 0 || alpha > 255) {
 			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 		}
-		if (this.alpha != alpha) {
-			if (hasAlphaLayer) {
-				surface.getCanvas().restore();
-				hasAlphaLayer = false;
-			}
-			this.alpha = alpha;
-			if (alpha < 255) {
-				try (Paint layerPaint = new Paint()) {
-					layerPaint.setAlphaf(alpha / 255.0f);
-					surface.getCanvas().saveLayer(null, layerPaint);
-				}
-				hasAlphaLayer = true;
-			}
-		}
+		this.alpha = alpha;
+		// if (this.alpha != alpha) {
+		// if (hasAlphaLayer) {
+		// surface.getCanvas().restore();
+		// hasAlphaLayer = false;
+		// }
+		// this.alpha = alpha;
+		// if (alpha < 255) {
+		// try (Paint layerPaint = new Paint()) {
+		// layerPaint.setAlphaf(alpha / 255.0f);
+		// surface.getCanvas().saveLayer(null, layerPaint);
+		// layerPaint.close();
+		// }
+		// hasAlphaLayer = true;
+		// }
+		// }
 	}
 
 	@Override

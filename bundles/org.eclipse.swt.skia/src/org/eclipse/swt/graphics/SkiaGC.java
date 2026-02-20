@@ -453,11 +453,15 @@ public class SkiaGC implements IExternalGC {
 		}
 
 		final Canvas canvas = surface.getCanvas();
+
+		final var fgp = getForegroundPaint();
+		fgp.setAlpha(alpha);
+
 		// TODO create an image cache, instead of recreating the skija image every time
 		canvas.drawImageRect(convertSWTImageToSkijaImage(image, 100 * factor),
 				createScaledRectangle(srcX * factor, srcY * factor, srcWidth * factor, srcHeight * factor),
 				createScaledRectangle(destX, destY, destWidth, destHeight), this.interpolationMode,
-				getForegroundPaint(), false);
+				fgp, false);
 	}
 
 	private static ColorType getColorType(ImageData imageData) {
@@ -597,6 +601,8 @@ public class SkiaGC implements IExternalGC {
 						a = (byte) 0;
 					}
 				}
+
+				a = (byte) imageData.getAlpha(x, y);
 
 				final var index = arrayPos * 4;
 

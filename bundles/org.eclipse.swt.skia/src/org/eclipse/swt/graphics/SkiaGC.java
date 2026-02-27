@@ -46,6 +46,7 @@ import io.github.humbleui.skija.MipmapMode;
 import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.PaintMode;
 import io.github.humbleui.skija.PaintStrokeCap;
+import io.github.humbleui.skija.PaintStrokeJoin;
 import io.github.humbleui.skija.PathEffect;
 import io.github.humbleui.skija.PathFillMode;
 import io.github.humbleui.skija.SamplingMode;
@@ -76,7 +77,7 @@ public class SkiaGC implements IExternalGC {
 	private float dashOffset = 0;
 	private float miterLimit = 10;
 	private int fillRule = SWT.FILL_EVEN_ODD;
-	private int antialias;
+	private int antialias ;
 	private int alpha = 255;
 	// private final boolean hasAlphaLayer = false;
 	private Pattern foregroundPattern;
@@ -99,7 +100,7 @@ public class SkiaGC implements IExternalGC {
 	private final SkiaResources resources;
 	private boolean XORModeActive;
 	private final int style;
-	private int textAntiAlias;
+	private int textAntiAlias = SWT.ON;
 
 	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvas exst, int style) {
 		this.drawable = canvas;
@@ -363,6 +364,7 @@ public class SkiaGC implements IExternalGC {
 
 		performDraw(paint -> {
 			paint.setMode(PaintMode.FILL);
+
 			operations.accept(paint);
 		});
 
@@ -960,15 +962,15 @@ public class SkiaGC implements IExternalGC {
 		final var fullText = replaceMnemonics(inputText);
 
 		final var f = getSkiaFont();
-
 		final var splits = splitString(fullText); // $NON-NLS-1$
+		performDraw(fgp -> {
 
-		performDrawText(fgp -> {
-			fgp.setAntiAlias(false);
+			final boolean antiAlias = this.textAntiAlias == SWT.ON	|| this.textAntiAlias == SWT.DEFAULT;
+			fgp.setAntiAlias(antiAlias);
 			fgp.setMode(PaintMode.FILL);
 
-			f.setSubpixel(false);
-			f.setEdging(FontEdging.ALIAS);
+			f.setSubpixel(antiAlias);
+			f.setEdging( antiAlias ? FontEdging.SUBPIXEL_ANTI_ALIAS : FontEdging.ALIAS);
 
 			fgp.setStrokeWidth(1);
 			fgp.setStrokeCap(PaintStrokeCap.BUTT);
@@ -1000,23 +1002,24 @@ public class SkiaGC implements IExternalGC {
 				final var r = resources.getScaler().scaleSize(x, y);
 				surface.getCanvas().drawString(text, r.x, r.y + ascI + heightDiff, f, fgp);
 
-				//				try (var subSurface = skiaExtension.createSupportSurface((int) Math.ceil(textWidth) + width, heightI)) {
+				// try (var subSurface = skiaExtension.createSupportSurface((int)
+				// Math.ceil(textWidth) + width, heightI)) {
 				//
-				//					if (isTransparent(flags)) {
-				//						subSurface.getCanvas().clear(0x00000000);
-				//					} else {
-				//						subSurface.getCanvas().clear(getBackgroundPaint().getColor());
-				//					}
+				// if (isTransparent(flags)) {
+				// subSurface.getCanvas().clear(0x00000000);
+				// } else {
+				// subSurface.getCanvas().clear(getBackgroundPaint().getColor());
+				// }
 				//
-				//					final var skiaFM = getFontMetrics();
+				// final var skiaFM = getFontMetrics();
 				//
-				//					index++;
-				//					heightDiff += heightI + 1;
+				// index++;
+				// heightDiff += heightI + 1;
 				//
-				//					img = subSurface.makeImageSnapshot();
-				//					this.resources.setTextImage(text, flags, img);
+				// img = subSurface.makeImageSnapshot();
+				// this.resources.setTextImage(text, flags, img);
 				//
-				//				}
+				// }
 				// if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
 				//
 				// surface.getCanvas().drawImage(img, r.x, r.y + heightDiff);
@@ -1066,7 +1069,16 @@ public class SkiaGC implements IExternalGC {
 			if (skijaPath == null) {
 				return;
 			}
-			performDraw(paint -> surface.getCanvas().drawPath(skijaPath, paint));
+			performDraw(paint -> {
+
+				paint.setStrokeJoin(PaintStrokeJoin.MITER);
+				paint.setStrokeMiter(100000);
+				paint.setAntiAlias(false);
+				paint.setStrokeCap(PaintStrokeCap.BUTT);
+
+				surface.getCanvas().drawPath(skijaPath, paint);
+			});
+
 		}
 	}
 
@@ -1304,7 +1316,10 @@ public class SkiaGC implements IExternalGC {
 				return;
 			}
 			skijaPath.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
-			performDrawFilled(paint -> surface.getCanvas().drawPath(skijaPath, paint));
+			performDrawFilled(paint -> {
+				paint.setAntiAlias(this.antialias == SWT.ON);
+				surface.getCanvas().drawPath(skijaPath, paint);
+			});
 		}
 	}
 

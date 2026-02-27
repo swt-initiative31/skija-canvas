@@ -15,38 +15,51 @@ package org.eclipse.swt.graphics;
 
 import java.util.Objects;
 
-public class SkiaFontMetrics {
+public class SkiaFontMetrics implements IExternalFontMetrics {
 
-	private final io.github.humbleui.skija.FontMetrics metrics;
+	private final io.github.humbleui.skija.FontMetrics m;
+	private final float internalLeading;
+
 
 	SkiaFontMetrics(io.github.humbleui.skija.FontMetrics metrics) {
-		this.metrics = metrics;
+		this.m = metrics;
+		// on windows this is right for internal leading, to test on linux
+		internalLeading = m.getTop() - m.getAscent();
 	}
 
+	@Override
 	public int getAscent() {
-		// in skija, these are negative usually.
-		return Math.abs(DPIScaler.autoScaleDownToInt(metrics.getAscent()));
+		return  ((int) Math.ceil(Math.abs(m.getAscent()) + internalLeading));
 	}
 
-	public int getDescent() {
-		return DPIScaler.autoScaleDownToInt(metrics.getDescent());
+	@Override
+	public double getAverageCharacterWidth() {
+		return m.getAvgCharWidth();
 	}
 
-	public int getHeight() {
-		return DPIScaler.autoScaleDownToInt(metrics.getHeight());
-	}
-
-	public int getLeading() {
-		return DPIScaler.autoScaleDownToInt(metrics.getLeading());
-	}
-
+	@Override
 	public int getAverageCharWidth() {
-		return DPIScaler.autoScaleDownToInt(metrics.getAvgCharWidth());
+		return (int) Math.ceil(m.getAvgCharWidth());
+	}
+
+	@Override
+	public int getDescent() {
+		return (int) Math.ceil(m.getDescent());
+	}
+
+	@Override
+	public int getHeight() {
+		return (int) Math.ceil(m.getHeight());
+	}
+
+	@Override
+	public int getLeading() {
+		return getHeight() - getAscent() - getDescent();
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(metrics);
+		return Objects.hash(m);
 	}
 
 	@Override
@@ -61,10 +74,7 @@ public class SkiaFontMetrics {
 			return false;
 		}
 		final SkiaFontMetrics other = (SkiaFontMetrics) obj;
-		return Objects.equals(metrics, other.metrics);
+		return Objects.equals(m, other.m);
 	}
 
-	public double getAverageCharacterWidth() {
-		return metrics.getAvgCharWidth();
-	}
 }

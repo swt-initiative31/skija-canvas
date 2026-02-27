@@ -173,4 +173,6 @@ public interface IExternalGC {
 
 	void drawImage(Image image, int destX, int destY, int destWidth, int destHeight);
 
+	FontMetrics getFontMetrics();
+
 }

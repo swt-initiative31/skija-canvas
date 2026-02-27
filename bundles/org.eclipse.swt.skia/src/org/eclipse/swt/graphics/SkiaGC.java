@@ -974,8 +974,8 @@ public class SkiaGC implements IExternalGC {
 			fgp.setStrokeCap(PaintStrokeCap.BUTT);
 			fgp.setPathEffect(null);
 
-			int heightDiff = 0;
-			int index = 0;
+			final int heightDiff = 0;
+			final int index = 0;
 			for (final var text : splits) { // $NON-NLS-1$
 
 				final var rect = f.measureText(text, fgp);
@@ -994,29 +994,29 @@ public class SkiaGC implements IExternalGC {
 
 				final int width = 1;
 
-				io.github.humbleui.skija.Image img;
+				final io.github.humbleui.skija.Image img;
 
-				//				heightDiff = -(int) Math.ceil(heightI - textHeight);
+				// heightDiff = -(int) Math.ceil(heightI - textHeight);
+				final var r = resources.getScaler().scaleSize(x, y);
+				surface.getCanvas().drawString(text, r.x, r.y + ascI + heightDiff, f, fgp);
 
-				try (var subSurface = skiaExtension.createSupportSurface((int) Math.ceil(textWidth) + width, heightI)) {
-
-					if (isTransparent(flags)) {
-						subSurface.getCanvas().clear(0x00000000);
-					} else {
-						subSurface.getCanvas().clear(getBackgroundPaint().getColor());
-					}
-
-					float lead = index == 0 ? lead = leading : 0;
-					index++;
-					final var r = resources.getScaler().scaleSize(x, y);
-					surface.getCanvas().drawString(text, r.x, r.y - (int) Math.ceil(asc) + heightDiff, f,
-							fgp);
-					heightDiff += heightI + 1;
-
-					img = subSurface.makeImageSnapshot();
-					this.resources.setTextImage(text, flags, img);
-
-				}
+				//				try (var subSurface = skiaExtension.createSupportSurface((int) Math.ceil(textWidth) + width, heightI)) {
+				//
+				//					if (isTransparent(flags)) {
+				//						subSurface.getCanvas().clear(0x00000000);
+				//					} else {
+				//						subSurface.getCanvas().clear(getBackgroundPaint().getColor());
+				//					}
+				//
+				//					final var skiaFM = getFontMetrics();
+				//
+				//					index++;
+				//					heightDiff += heightI + 1;
+				//
+				//					img = subSurface.makeImageSnapshot();
+				//					this.resources.setTextImage(text, flags, img);
+				//
+				//				}
 				// if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
 				//
 				// surface.getCanvas().drawImage(img, r.x, r.y + heightDiff);
@@ -1365,45 +1365,9 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public Point textExtent(String text, int flags) {
 
-		if(true){
-			final float height = getSkiaFont().getMetrics().getHeight();
-			final float width = getSkiaFont().measureTextWidth(replaceMnemonics(text));
-			return new Point((int) width, (int) height);
-		}
-
-
-		final var f = getSkiaFont();
-		final int[] size = new int[2];
-
-		performDrawText(fgp -> {
-			fgp.setAntiAlias(false);
-			fgp.setMode(PaintMode.FILL);
-
-			f.setSubpixel(false);
-			f.setEdging(FontEdging.ALIAS);
-
-			final var m = f.getMetrics();
-			final var height = m.getHeight();
-
-			final var rect = f.measureText(replaceMnemonics(text), fgp);
-
-			size[0] = (int) Math.ceil(rect.getWidth());
-			size[1] = (int) Math.ceil(rect.getHeight());
-
-			final var metric = f.getMetrics();
-			final var asc = metric.getAscent();
-			final var des = metric.getDescent();
-
-			final var ascI = (int) Math.ceil(Math.abs(asc));
-			final var desI = (int) Math.ceil(Math.abs(des));
-			final var heightI = ascI + desI;
-
-			System.out.println("HeightCompare: " + heightI + " vs " + size[1]);
-
-		});
-
-		return new Point(size[0], size[1]);
-
+		final float height = getSkiaFont().getMetrics().getHeight();
+		final float width = getSkiaFont().measureTextWidth(replaceMnemonics(text));
+		return new Point((int) width, (int) height);
 	}
 
 	@Override
@@ -2209,5 +2173,14 @@ public class SkiaGC implements IExternalGC {
 
 	}
 
-}
+	@Override
+	public FontMetrics getFontMetrics() {
 
+		final var font = getSkiaFont();
+		final var m = font.getMetrics();
+
+		final var fe = new FontMetricsExtension(new SkiaFontMetrics(m));
+		return fe;
+	}
+
+}

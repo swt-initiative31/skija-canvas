@@ -38,6 +38,7 @@ import io.github.humbleui.skija.EncoderPNG;
 import io.github.humbleui.skija.FilterMipmap;
 import io.github.humbleui.skija.FilterMode;
 import io.github.humbleui.skija.FilterTileMode;
+import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.GradientStyle;
 import io.github.humbleui.skija.ImageInfo;
 import io.github.humbleui.skija.Matrix33;
@@ -67,7 +68,7 @@ public class SkiaGC implements IExternalGC {
 
 	private final float baseSymbolHeight = 0; // Height of symbol with "usual" height, like "T", to be vertically
 	// centered
-	private int lineWidth;
+	private int lineWidth = 1;
 	private int lineStyle;
 	private int lineCap = SWT.CAP_FLAT;
 	private int lineJoin = SWT.JOIN_MITER;
@@ -144,25 +145,28 @@ public class SkiaGC implements IExternalGC {
 
 	private void performDraw(Consumer<Paint> operations) {
 		try (final Paint paint = new Paint()) {
-			paint.setAlphaf(alpha / 255.0f);
-			operations.accept(paint);
-		}
-	}
+			paint.setAlpha(alpha);
+			paint.setColor(convertSWTColorToSkijaColor(getForeground(), this.alpha));
 
-	private void performDrawLine(Consumer<Paint> operations) {
-		performForegroundDraw(paint -> {
+			paint.setAntiAlias(this.antialias == SWT.OFF);
+			if (this.XORModeActive) {
+				paint.setBlendMode(BlendMode.DIFFERENCE);
+			} else {
+				paint.setBlendMode(BlendMode.SRC_OVER);
+			}
+			paint.setMode(PaintMode.STROKE);
+
+			if (this.foregroundPattern != null && !this.foregroundPattern.isDisposed()) {
+				final Shader shader = convertSWTPatternToSkijaShader(this.foregroundPattern);
+				if (shader != null) {
+					paint.setShader(shader);
+				}
+			}
 
 			paint.setStrokeWidth(lineWidth);
 
 			final PaintStrokeCap cap = getSkijaLineCap();
-			paint.setStrokeCap(cap); // e
-
-			// if (lineStyle != SWT.LINE_SOLID && lineStyle != SWT.LINE_DASH && lineStyle !=
-			// SWT.LINE_DOT
-			// && lineStyle != SWT.LINE_DASHDOT && lineStyle != SWT.LINE_DASHDOTDOT
-			// && lineStyle != SWT.LINE_CUSTOM) {
-			// SWT.error(SWT.ERROR_INVALID_ARGUMENT);
-			// }
+			paint.setStrokeCap(cap);
 
 			switch (this.lineStyle) {
 			case SWT.LINE_DOT:
@@ -184,37 +188,88 @@ public class SkiaGC implements IExternalGC {
 				break;
 			}
 
-			// applyForegroundPattern(paint);
-			// paint.setMode(PaintMode.STROKE);
-			// paint.setStrokeWidth(lineWidth > 0 ? Math.max(lineWidth, 1) : 1);
-			// paint.setAntiAlias(true);
-			//
-			// // Apply line cap setting
-			// final PaintStrokeCap skijaLineCap = switch (lineCap) {
-			// case SWT.CAP_ROUND -> PaintStrokeCap.ROUND;
-			// case SWT.CAP_SQUARE -> PaintStrokeCap.SQUARE;
-			// case SWT.CAP_FLAT -> PaintStrokeCap.BUTT;
-			// default -> PaintStrokeCap.BUTT;
-			// };
-			// paint.setStrokeCap(skijaLineCap);
-			//
-			// // Apply line join setting
-			// final PaintStrokeJoin skijaLineJoin = switch (lineJoin) {
-			// case SWT.JOIN_MITER -> PaintStrokeJoin.MITER;
-			// case SWT.JOIN_ROUND -> PaintStrokeJoin.ROUND;
-			// case SWT.JOIN_BEVEL -> PaintStrokeJoin.BEVEL;
-			// default -> PaintStrokeJoin.BEVEL;
-			// };
-			// paint.setStrokeJoin(skijaLineJoin);
-			// // Apply line dash pattern based on line style
-			// final PathEffect pathEffect = createPathEffectForLineStyle();
-			// if (pathEffect != null) {
-			// paint.setPathEffect(pathEffect);
-			// }
 			operations.accept(paint);
-
-		});
+		}
 	}
+
+	// private void performDraw(Consumer<Paint> operations) {
+	//
+	// performDraw(operations);
+	//
+	// if(true) {
+	// return;
+	// }
+	//
+	// performForegroundDraw(paint -> {
+	//
+	// paint.setStrokeWidth(lineWidth);
+	//
+	// final PaintStrokeCap cap = getSkijaLineCap();
+	// paint.setStrokeCap(cap); // e
+	//
+	// // if (lineStyle != SWT.LINE_SOLID && lineStyle != SWT.LINE_DASH && lineStyle
+	// !=
+	// // SWT.LINE_DOT
+	// // && lineStyle != SWT.LINE_DASHDOT && lineStyle != SWT.LINE_DASHDOTDOT
+	// // && lineStyle != SWT.LINE_CUSTOM) {
+	// // SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+	// // }
+	//
+	// switch (this.lineStyle) {
+	// case SWT.LINE_DOT:
+	// paint.setPathEffect(PathEffect.makeDash(new float[] { 1f * lineWidth, 1f *
+	// lineWidth }, 0.0f));
+	// break;
+	// case SWT.LINE_DASH:
+	// paint.setPathEffect(PathEffect.makeDash(new float[] { 3f * lineWidth, 1f *
+	// lineWidth }, 0.0f));
+	// break;
+	// case SWT.LINE_DASHDOT:
+	// paint.setPathEffect(PathEffect.makeDash(
+	// new float[] { 3f * lineWidth, 1f * lineWidth, 1f * lineWidth, 1f * lineWidth
+	// }, 0.0f));
+	// break;
+	// case SWT.LINE_DASHDOTDOT:
+	// paint.setPathEffect(PathEffect.makeDash(new float[] { 3f * lineWidth, 1f *
+	// lineWidth, 1f * lineWidth,
+	// 1f * lineWidth, 1f * lineWidth, 1f * lineWidth }, 0.0f));
+	// break;
+	// default:
+	// paint.setPathEffect(null);
+	// break;
+	// }
+	//
+	// // applyForegroundPattern(paint);
+	// // paint.setMode(PaintMode.STROKE);
+	// // paint.setStrokeWidth(lineWidth > 0 ? Math.max(lineWidth, 1) : 1);
+	// // paint.setAntiAlias(true);
+	// //
+	// // // Apply line cap setting
+	// // final PaintStrokeCap skijaLineCap = switch (lineCap) {
+	// // case SWT.CAP_ROUND -> PaintStrokeCap.ROUND;
+	// // case SWT.CAP_SQUARE -> PaintStrokeCap.SQUARE;
+	// // case SWT.CAP_FLAT -> PaintStrokeCap.BUTT;
+	// // default -> PaintStrokeCap.BUTT;
+	// // };
+	// // paint.setStrokeCap(skijaLineCap);
+	// //
+	// // // Apply line join setting
+	// // final PaintStrokeJoin skijaLineJoin = switch (lineJoin) {
+	// // case SWT.JOIN_MITER -> PaintStrokeJoin.MITER;
+	// // case SWT.JOIN_ROUND -> PaintStrokeJoin.ROUND;
+	// // case SWT.JOIN_BEVEL -> PaintStrokeJoin.BEVEL;
+	// // default -> PaintStrokeJoin.BEVEL;
+	// // };
+	// // paint.setStrokeJoin(skijaLineJoin);
+	// // // Apply line dash pattern based on line style
+	// // final PathEffect pathEffect = createPathEffectForLineStyle();
+	// // if (pathEffect != null) {
+	// // paint.setPathEffect(pathEffect);
+	// // }
+	// operations.accept(paint);
+	//
+	// });
+	// }
 
 	private PaintStrokeCap getSkijaLineCap() {
 		if ((this.lineCap == SWT.CAP_SQUARE)) {
@@ -305,15 +360,16 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private void performDrawText(Consumer<Paint> operations) {
-		performForegroundDraw(paint -> {
-			applyForegroundPattern(paint);
+
+		performDraw(paint -> {
+			paint.setMode(PaintMode.FILL);
 			operations.accept(paint);
 		});
-	}
 
-	private void performForegroundDraw(Consumer<Paint> operations) {
-		final var paint = getForegroundPaint();
-		operations.accept(paint);
+		// performForegroundDraw(paint -> {
+		// applyForegroundPattern(paint);
+		// operations.accept(paint);
+		// });
 	}
 
 	private void performDrawFilled(Consumer<Paint> operations) {
@@ -360,14 +416,14 @@ public class SkiaGC implements IExternalGC {
 		paint.setColor(convertSWTColorToSkijaColor(getForeground()));
 	}
 
-	private void performDrawPoint(Consumer<Paint> operations) {
-		performDraw(paint -> {
-			paint.setColor(convertSWTColorToSkijaColor(getForeground()));
-			paint.setMode(PaintMode.FILL);
-			paint.setAntiAlias(false);
-			operations.accept(paint);
-		});
-	}
+	// private void performDrawPoint(Consumer<Paint> operations) {
+	// performDraw(paint -> {
+	//// paint.setColor(convertSWTColorToSkijaColor(getForeground()));
+	// paint.setMode(PaintMode.FILL);
+	//// paint.setAntiAlias(false);
+	// operations.accept(paint);
+	// });
+	// }
 
 	private String[] splitString(String text) {
 		String[] lines = new String[1];
@@ -460,8 +516,7 @@ public class SkiaGC implements IExternalGC {
 		// TODO create an image cache, instead of recreating the skija image every time
 		canvas.drawImageRect(convertSWTImageToSkijaImage(image, 100 * factor),
 				createScaledRectangle(srcX * factor, srcY * factor, srcWidth * factor, srcHeight * factor),
-				createScaledRectangle(destX, destY, destWidth, destHeight), this.interpolationMode,
-				fgp, false);
+				createScaledRectangle(destX, destY, destWidth, destHeight), this.interpolationMode, fgp, false);
 	}
 
 	private static ColorType getColorType(ImageData imageData) {
@@ -764,7 +819,7 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void drawLine(int x1, int y1, int x2, int y2) {
 		final float scaledOffsetValue = getScaledOffsetValue();
-		performDrawLine(paint -> surface.getCanvas().drawLine(DPIScaler.autoScaleUp(x1) + scaledOffsetValue,
+		performDraw(paint -> surface.getCanvas().drawLine(DPIScaler.autoScaleUp(x1) + scaledOffsetValue,
 				DPIScaler.autoScaleUp(y1) + scaledOffsetValue, DPIScaler.autoScaleUp(x2) + scaledOffsetValue,
 				DPIScaler.autoScaleUp(y2) + scaledOffsetValue, paint));
 	}
@@ -906,63 +961,76 @@ public class SkiaGC implements IExternalGC {
 
 		final var f = getSkiaFont();
 
-		final var fgp = getForegroundPaint();
-
-		fgp.setAntiAlias(false);
-		fgp.setMode(PaintMode.FILL);
-
-		fgp.setStrokeWidth(1);
-		fgp.setStrokeCap(PaintStrokeCap.BUTT);
-		fgp.setPathEffect(null);
-
 		final var splits = splitString(fullText); // $NON-NLS-1$
 
-		int heightDiff = 0;
-		for (final var text : splits) { // $NON-NLS-1$
+		performDrawText(fgp -> {
+			fgp.setAntiAlias(false);
+			fgp.setMode(PaintMode.FILL);
 
-			final var textWidth = f.measureTextWidth(text, fgp);
+			f.setSubpixel(false);
+			f.setEdging(FontEdging.ALIAS);
 
-			final var metric = f.getMetrics();
-			final var asc = metric.getAscent();
-			final var des = metric.getDescent();
+			fgp.setStrokeWidth(1);
+			fgp.setStrokeCap(PaintStrokeCap.BUTT);
+			fgp.setPathEffect(null);
 
-			final var ascI = (int) Math.ceil(Math.abs(asc));
-			final var desI = (int) Math.ceil(Math.abs(des));
-			final var heightI = ascI + desI;
+			int heightDiff = 0;
+			int index = 0;
+			for (final var text : splits) { // $NON-NLS-1$
 
-			final int width = 1;
+				final var rect = f.measureText(text, fgp);
 
-			io.github.humbleui.skija.Image img;
-			try (var subSurface = skiaExtension.createSupportSurface((int) Math.ceil(textWidth) + width, heightI)) {
+				final var textWidth = rect.getWidth();
+				final var textHeight = rect.getHeight();
 
-				if (isTransparent(flags)) {
-					subSurface.getCanvas().clear(0x00000000);
-				} else {
-					subSurface.getCanvas().clear(getBackgroundPaint().getColor());
+				final var metric = f.getMetrics();
+				final var asc = metric.getAscent();
+				final var des = metric.getDescent();
+				final var leading = metric.getLeading();
+
+				final var ascI = (int) Math.ceil(Math.abs(asc));
+				final var desI = (int) Math.ceil(Math.abs(des));
+				final var heightI = ascI + desI;
+
+				final int width = 1;
+
+				io.github.humbleui.skija.Image img;
+
+				//				heightDiff = -(int) Math.ceil(heightI - textHeight);
+
+				try (var subSurface = skiaExtension.createSupportSurface((int) Math.ceil(textWidth) + width, heightI)) {
+
+					if (isTransparent(flags)) {
+						subSurface.getCanvas().clear(0x00000000);
+					} else {
+						subSurface.getCanvas().clear(getBackgroundPaint().getColor());
+					}
+
+					float lead = index == 0 ? lead = leading : 0;
+					index++;
+					final var r = resources.getScaler().scaleSize(x, y);
+					surface.getCanvas().drawString(text, r.x, r.y - (int) Math.ceil(asc) + heightDiff, f,
+							fgp);
+					heightDiff += heightI + 1;
+
+					img = subSurface.makeImageSnapshot();
+					this.resources.setTextImage(text, flags, img);
+
 				}
-
-				subSurface.getCanvas().drawString(text, 0, Math.abs(asc), getSkiaFont(), fgp);
-
-				img = subSurface.makeImageSnapshot();
-				this.resources.setTextImage(text, flags, img);
-
+				// if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
+				//
+				// surface.getCanvas().drawImage(img, r.x, r.y + heightDiff);
+				// }
 			}
-			if (x < this.surface.getWidth() && y < this.surface.getHeight()) {
-
-				final var r = resources.getScaler().scaleSize(x, y);
-				surface.getCanvas().drawImage(img, r.x, r.y + heightDiff);
-				heightDiff += heightI + 1;
-			}
-		}
-		fgp.setMode(PaintMode.STROKE);
+		});
 
 	}
 
-	private boolean isTransparent(int flags) {
+	private static boolean isTransparent(int flags) {
 		return (SWT.TRANSPARENT & flags) != 0;
 	}
 
-	private String replaceMnemonics(String text) {
+	private static String replaceMnemonics(String text) {
 		final int mnemonicIndex = text.lastIndexOf('&');
 		if (mnemonicIndex != -1) {
 			text = text.replaceAll("&", "");
@@ -973,14 +1041,14 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
-		performDrawLine(paint -> surface.getCanvas().drawArc(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y),
+		performDraw(paint -> surface.getCanvas().drawArc(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y),
 				DPIScaler.autoScaleUp(x + width), DPIScaler.autoScaleUp(y + height), -startAngle, -arcAngle, false,
 				paint));
 	}
 
 	@Override
 	public void drawFocus(int x, int y, int width, int height) {
-		performDrawLine(paint -> {
+		performDraw(paint -> {
 			paint.setPathEffect(PathEffect.makeDash(new float[] { 1.5f, 1.5f }, 0.0f));
 			surface.getCanvas().drawRect(offsetRectangle(createScaledRectangle(x, y, width, height)), paint);
 		});
@@ -988,8 +1056,8 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawOval(int x, int y, int width, int height) {
-		performDrawLine(paint -> surface.getCanvas()
-				.drawOval(offsetRectangle(createScaledRectangle(x, y, width, height)), paint));
+		performDraw(paint -> surface.getCanvas().drawOval(offsetRectangle(createScaledRectangle(x, y, width, height)),
+				paint));
 	}
 
 	@Override
@@ -998,13 +1066,13 @@ public class SkiaGC implements IExternalGC {
 			if (skijaPath == null) {
 				return;
 			}
-			performDrawLine(paint -> surface.getCanvas().drawPath(skijaPath, paint));
+			performDraw(paint -> surface.getCanvas().drawPath(skijaPath, paint));
 		}
 	}
 
 	@Override
 	public void drawPoint(int x, int y) {
-		performDrawPoint(paint -> surface.getCanvas().drawRect(createScaledRectangle(x, y, 1, 1), paint));
+		performDraw(paint -> surface.getCanvas().drawRect(createScaledRectangle(x, y, 1, 1), paint));
 	}
 
 	@Override
@@ -1039,7 +1107,7 @@ public class SkiaGC implements IExternalGC {
 			}
 			path.closePath();
 			// Draw the polygon outline
-			performDrawLine(paint -> surface.getCanvas().drawPath(path, paint));
+			performDraw(paint -> surface.getCanvas().drawPath(path, paint));
 		}
 		// Restore x-coordinates if mirrored
 		if (adjustX) {
@@ -1086,7 +1154,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawPolyline(int[] pointArray) {
-		performDrawLine(paint -> surface.getCanvas().drawPolygon(convertToFloat(pointArray), paint));
+		performDraw(paint -> surface.getCanvas().drawPolygon(convertToFloat(pointArray), paint));
 	}
 
 	private static int[] createLinesArray(int[] array) {
@@ -1130,15 +1198,17 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void drawRectangle(int x, int y, int width, int height) {
 
-		final var p = getForegroundPaint();
-		final var bmode = p.getBlendMode();
-		if (XORModeActive) {
-			p.setBlendMode(BlendMode.DIFFERENCE);
-		}
+		// final var p = getForegroundPaint();
+		// final var bmode = p.getBlendMode();
+		// if (XORModeActive) {
+		// p.setBlendMode(BlendMode.DIFFERENCE);
+		// }
+		//
+		// p.setBlendMode(bmode);
 
-		surface.getCanvas().drawRect(offsetRectangle(createScaledRectangle(x, y, width, height)), p);
-
-		p.setBlendMode(bmode);
+		performDraw(paint -> {
+			surface.getCanvas().drawRect(offsetRectangle(createScaledRectangle(x, y, width, height)), paint);
+		});
 
 	}
 
@@ -1149,7 +1219,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawRoundRectangle(int x, int y, int width, int height, int arcWidth, int arcHeight) {
-		performDrawLine(paint -> surface.getCanvas().drawRRect(
+		performDraw(paint -> surface.getCanvas().drawRRect(
 				offsetRectangle(createScaledRoundRectangle(x, y, width, height, arcWidth / 2.0f, arcHeight / 2.0f)),
 				paint));
 	}
@@ -1293,10 +1363,47 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	@Override
-	public Point textExtent(String string, int flags) {
-		final float height = getSkiaFont().getMetrics().getHeight();
-		final float width = getSkiaFont().measureTextWidth(replaceMnemonics(string));
-		return new Point(DPIScaler.autoScaleDown((int) width), DPIScaler.autoScaleDown((int) height));
+	public Point textExtent(String text, int flags) {
+
+		if(true){
+			final float height = getSkiaFont().getMetrics().getHeight();
+			final float width = getSkiaFont().measureTextWidth(replaceMnemonics(text));
+			return new Point((int) width, (int) height);
+		}
+
+
+		final var f = getSkiaFont();
+		final int[] size = new int[2];
+
+		performDrawText(fgp -> {
+			fgp.setAntiAlias(false);
+			fgp.setMode(PaintMode.FILL);
+
+			f.setSubpixel(false);
+			f.setEdging(FontEdging.ALIAS);
+
+			final var m = f.getMetrics();
+			final var height = m.getHeight();
+
+			final var rect = f.measureText(replaceMnemonics(text), fgp);
+
+			size[0] = (int) Math.ceil(rect.getWidth());
+			size[1] = (int) Math.ceil(rect.getHeight());
+
+			final var metric = f.getMetrics();
+			final var asc = metric.getAscent();
+			final var des = metric.getDescent();
+
+			final var ascI = (int) Math.ceil(Math.abs(asc));
+			final var desI = (int) Math.ceil(Math.abs(des));
+			final var heightI = ascI + desI;
+
+			System.out.println("HeightCompare: " + heightI + " vs " + size[1]);
+
+		});
+
+		return new Point(size[0], size[1]);
+
 	}
 
 	@Override
@@ -1894,7 +2001,7 @@ public class SkiaGC implements IExternalGC {
 			this.dashOffset = dashOffset;
 			changed = true;
 		}
-		// Handle miter limit - store for use in performDrawLine()
+		// Handle miter limit - store for use in performDraw()
 		final float miterLimit = attributes.miterLimit;
 		if (this.miterLimit != miterLimit) {
 			this.miterLimit = miterLimit;
@@ -2055,15 +2162,6 @@ public class SkiaGC implements IExternalGC {
 		return colorTypeMap.get(colorType);
 	}
 
-	void drawRectangleInPixels(int x, int y, int width, int height) {
-
-		try (Paint p = new Paint()) {
-			p.setColor(convertSWTColorToSkijaColor(getForeground()));
-			surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p);
-		}
-
-	}
-
 	@Override
 	public Color getBackground() {
 		return resources.getBackground();
@@ -2112,3 +2210,4 @@ public class SkiaGC implements IExternalGC {
 	}
 
 }
+

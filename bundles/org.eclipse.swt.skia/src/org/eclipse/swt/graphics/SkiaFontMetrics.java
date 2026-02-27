@@ -18,18 +18,14 @@ import java.util.Objects;
 public class SkiaFontMetrics implements IExternalFontMetrics {
 
 	private final io.github.humbleui.skija.FontMetrics m;
-	private final float internalLeading;
-
 
 	SkiaFontMetrics(io.github.humbleui.skija.FontMetrics metrics) {
 		this.m = metrics;
-		// on windows this is right for internal leading, to test on linux
-		internalLeading = m.getTop() - m.getAscent();
 	}
 
 	@Override
 	public int getAscent() {
-		return  ((int) Math.ceil(Math.abs(m.getAscent()) + internalLeading));
+		return ((int) Math.ceil(Math.abs(m.getAscent()  ) - Math.abs(m.getLeading())  ));
 	}
 
 	@Override

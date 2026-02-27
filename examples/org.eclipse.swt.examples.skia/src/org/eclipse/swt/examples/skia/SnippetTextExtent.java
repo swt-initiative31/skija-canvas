@@ -30,7 +30,7 @@ public class SnippetTextExtent {
 				public void handleEvent(Event event) {
 					GC gc = event.gc;
 					Rectangle rect = canvas.getClientArea();
-					Font font = new Font(display, "Courier New", 398, SWT.BOLD);
+					Font font = new Font(display, "Arial", 398, SWT.BOLD);
 					gc.setFont(font);
 					String text = "a";
 					// Use textExtent to get size

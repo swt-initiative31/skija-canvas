@@ -32,6 +32,11 @@ public final class GCExtension extends GC {
 		throw new IllegalStateException("Invalid Constructor call");
 	}
 
+	@Override
+	public FontMetrics getFontMetrics() {
+		return e.getFontMetrics();
+	}
+
 	public static GCExtension gtk_new(long handle, GCData data) {
 		throw new IllegalStateException("Invalid gtk_new call");
 	}

@@ -14,7 +14,7 @@ public class SnippetCanvasText {
 
 	final static int LETTERS_PER_LINE = 800;
 	final static int LINES = 60;
-	final static int SHIFT_LEFT = 2000;
+	final static int SHIFT_LEFT = 1000;
 
 	static String[] text = new String[LINES];
 
@@ -23,7 +23,7 @@ public class SnippetCanvasText {
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas");
 		// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
-		final Canvas c = new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED);
+		final Canvas c = new Canvas(shell, SWT.DOUBLE_BUFFERED| SWT.SKIA );
 
 		final StringBuilder b = new StringBuilder();
 

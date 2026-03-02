@@ -16,7 +16,6 @@ import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.FontHinting;
 import io.github.humbleui.skija.FontSlant;
 import io.github.humbleui.skija.FontStyle;
-import io.github.humbleui.skija.Image;
 import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.PaintMode;
 import io.github.humbleui.skija.Typeface;
@@ -25,7 +24,6 @@ public class SkiaResources {
 
 	private Paint foregroundPaint;
 	private Paint backgroundPaint;
-	private final Map<TextProperties, io.github.humbleui.skija.Image> textBlobs = new HashMap<>();
 	private final Map<PaintProperties, io.github.humbleui.skija.Paint> paintCache = new HashMap<>();
 	private Color background;
 	private Color foreground;
@@ -229,24 +227,6 @@ public class SkiaResources {
 		return skiaFont;
 	}
 
-	public io.github.humbleui.skija.Image getTextImage(String text, int flags) {
-
-		final TextProperties tp = new TextProperties(text, getSkiaFont().getSize(),
-				getSkiaFont().getTypeface().getFamilyName(), (flags & SWT.TRANSPARENT) != 0,
-				getBackgroundPaint().getColor(), getForegroundPaint().getColor());
-
-		return this.textBlobs.get(tp);
-
-	}
-
-	public void setTextImage(String text, int flags, Image img) {
-
-		this.textBlobs.put(new TextProperties(text, getSkiaFont().getSize(),
-				getSkiaFont().getTypeface().getFamilyName(), (flags & SWT.TRANSPARENT) != 0,
-				getBackgroundPaint().getColor(), getForegroundPaint().getColor()), img);
-
-	}
-
 	public DPIScaler getScaler() {
 		return skiaExtension.getScaler();
 	}
@@ -256,20 +236,8 @@ public class SkiaResources {
 		skiaFont.close();
 		foregroundPaint.close();
 		backgroundPaint.close();
-		textBlobs.forEach((t, u) -> {
-			if (u != null && !u.isClosed()) {
-				u.close();
-			}
-		});
-
-		textBlobs.forEach((t, u) -> {
-			if (u != null && !u.isClosed()) {
-				u.close();
-			}
-		});
 
 		fontCache.clear();
-		textBlobs.clear();
 
 		skiaFont = null;
 		foregroundPaint = null;

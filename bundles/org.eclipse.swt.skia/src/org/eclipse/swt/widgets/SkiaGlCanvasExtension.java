@@ -152,7 +152,7 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 		boolean redrawWithClipping = false;
 		final var size = getSize();
 		Rectangle bounds = null;
-
+		this.redrawRectangle = null;
 		if (this.redrawRectangle != null) {
 			if (this.lastImage != null) {
 				surface.getCanvas().drawImage(lastImage, 0, 0);

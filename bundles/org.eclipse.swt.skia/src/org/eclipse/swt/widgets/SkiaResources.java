@@ -103,7 +103,7 @@ public class SkiaResources {
 	}
 
 	public Color getForeground() {
-		if (foreground != null) {
+		if (foreground != null && !foreground.isDisposed()) {
 			return foreground;
 		}
 		return canvas.getForeground();
@@ -247,13 +247,10 @@ public class SkiaResources {
 
 	public Font getFont() {
 
-		if (swtFont != null) {
-			if (swtFont.isDisposed()) {
-				SWT.error(SWT.ERROR_INVALID_ARGUMENT);
-			}
-		} else {
-			swtFont = getDefaultFont();
+		if (swtFont != null && !swtFont.isDisposed()) {
+			return swtFont;
 		}
+		swtFont = getDefaultFont();
 
 		return swtFont;
 	}

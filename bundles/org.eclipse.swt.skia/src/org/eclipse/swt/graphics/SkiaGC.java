@@ -170,24 +170,15 @@ public class SkiaGC implements IExternalGC {
 			paint.setStrokeCap(cap);
 
 			switch (this.lineStyle) {
-			case SWT.LINE_DOT:
-				paint.setPathEffect(PathEffect.makeDash(new float[] { 1f * lineWidth, 1f * lineWidth }, 0.0f));
-				break;
-			case SWT.LINE_DASH:
-				paint.setPathEffect(PathEffect.makeDash(new float[] { 3f * lineWidth, 1f * lineWidth }, 0.0f));
-				break;
-			case SWT.LINE_DASHDOT:
-				paint.setPathEffect(PathEffect.makeDash(
-						new float[] { 3f * lineWidth, 1f * lineWidth, 1f * lineWidth, 1f * lineWidth }, 0.0f));
-				break;
-			case SWT.LINE_DASHDOTDOT:
-				paint.setPathEffect(PathEffect.makeDash(new float[] { 3f * lineWidth, 1f * lineWidth, 1f * lineWidth,
-						1f * lineWidth, 1f * lineWidth, 1f * lineWidth }, 0.0f));
-				break;
-			default:
-				paint.setPathEffect(null);
-				break;
+			case SWT.LINE_DOT -> paint.setPathEffect(PathEffect.makeDash(new float[] { 1f * lineWidth, 1f * lineWidth }, 0.0f));
+			case SWT.LINE_DASH -> paint.setPathEffect(PathEffect.makeDash(new float[] { 3f * lineWidth, 1f * lineWidth }, 0.0f));
+			case SWT.LINE_DASHDOT -> paint.setPathEffect(PathEffect.makeDash(
+					new float[] { 3f * lineWidth, 1f * lineWidth, 1f * lineWidth, 1f * lineWidth }, 0.0f));
+			case SWT.LINE_DASHDOTDOT -> paint.setPathEffect(PathEffect.makeDash(new float[] { 3f * lineWidth, 1f * lineWidth, 1f * lineWidth,
+					1f * lineWidth, 1f * lineWidth, 1f * lineWidth }, 0.0f));
+			default -> paint.setPathEffect(null);
 			}
+			;
 
 			operations.accept(paint);
 		}
@@ -1291,14 +1282,28 @@ public class SkiaGC implements IExternalGC {
 		performDrawGradientFilled(paint -> surface.getCanvas().drawRect(rect, paint), x, y, x2, y2, fromColor, toColor);
 	}
 
+
+	private Shader convertGradientRectangleToSkijaShader(int x, int y, int width, int height, boolean vertical) {
+
+		final int col1 = convertSWTColorToSkijaColor(getForeground());
+		final int col2 = convertSWTColorToSkijaColor(getBackground());
+
+		final var gs = new GradientStyle(FilterTileMode.REPEAT, true, null);
+		final Shader s = Shader.makeLinearGradient(x, y, x+width, y+height, new int[] { col1, col2 },null,gs);
+
+		return s;
+	}
+
+
+
 	private void performDrawGradientFilled(Consumer<Paint> operations, int x, int y, int x2, int y2, int fromColor,
 			int toColor) {
 		performDraw(paint -> {
-			try (Shader gradient = Shader.makeLinearGradient(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y),
-					DPIScaler.autoScaleUp(x2), DPIScaler.autoScaleUp(y2), new int[] { fromColor, toColor }, null,
-					GradientStyle.DEFAULT)) {
+
+			try (Shader gradient = convertGradientRectangleToSkijaShader(x, y, x2 - x, y2 - y, false)) {
 				paint.setShader(gradient);
 				paint.setAntiAlias(true);
+				paint.setMode(PaintMode.FILL);
 				operations.accept(paint);
 			}
 		});

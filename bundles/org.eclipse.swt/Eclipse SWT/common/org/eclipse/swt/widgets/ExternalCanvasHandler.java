@@ -12,13 +12,17 @@ package org.eclipse.swt.widgets;
 
 import java.util.*;
 
+import org.eclipse.swt.*;
+
 public class ExternalCanvasHandler {
 
 	private static IExternalCanvasFactory externalFactory = ServiceLoader.load(IExternalCanvasFactory.class).findFirst().orElse(null);
 
-	public static boolean isActive() {
+	public static boolean isActive(Canvas canvas, int style) {
 
-		return externalFactory != null;
+		if((style & SWT.SKIA) != 0 && externalFactory != null)
+			return true;
+		return false;
 	}
 
 	public static IExternalCanvasHandler createHandler(Canvas c) {

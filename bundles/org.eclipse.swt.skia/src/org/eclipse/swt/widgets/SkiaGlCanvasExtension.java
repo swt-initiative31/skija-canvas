@@ -196,7 +196,11 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 			this.lastImage.close();
 		}
 		this.redrawRectangle = null;
-		this.lastImage = surface.makeImageSnapshot();
+		if(surface != null && surface.getCanvas() != null && !surface.getCanvas().isClosed()) {
+			this.lastImage = surface.makeImageSnapshot();
+		}else {
+			this.lastImage = null;
+		}
 		if (redrawWithClipping) {
 			surface.getCanvas().restore();
 		}

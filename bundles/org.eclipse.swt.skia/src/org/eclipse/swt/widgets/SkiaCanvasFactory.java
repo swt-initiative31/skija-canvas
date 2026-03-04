@@ -12,17 +12,31 @@ package org.eclipse.swt.widgets;
 
 public class SkiaCanvasFactory implements IExternalCanvasFactory {
 
+	static boolean skiaFailedWithErrors = false;
+
 	@Override
 	public IExternalCanvasHandler createCanvasExtension(Canvas c) {
 
-		//		final var prop = System.getProperty(SkiaConfiguration.SKIA_PROPERTY);
-		//		if(SkiaConfiguration.RASTER.equals(prop)) {
-		//			return new SkiaRasterCanvasExtension(c);
-		//		}
-		//		if(SkiaConfiguration.OPENGL.equals(prop)) {
-		return new SkiaGlCanvasExtension(c);
-		//		}
-		//		return null;
+		if (skiaFailedWithErrors) {
+			return null;
+		}
+
+		try {
+			return new SkiaGlCanvasExtension(c);
+		} catch (final Throwable t) {
+			// TODO use logger instead of printStackTrace
+			t.printStackTrace();
+			skiaFailedWithErrors = true;
+			return null;
+		}
+
+		// final var prop = System.getProperty(SkiaConfiguration.SKIA_PROPERTY);
+		// if(SkiaConfiguration.RASTER.equals(prop)) {
+		// return new SkiaRasterCanvasExtension(c);
+		// }
+		// if(SkiaConfiguration.OPENGL.equals(prop)) {
+		// }
+		// return null;
 	}
 
 }

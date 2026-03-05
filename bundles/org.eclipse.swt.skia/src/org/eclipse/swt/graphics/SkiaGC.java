@@ -90,7 +90,7 @@ public class SkiaGC implements IExternalGC {
 	private static Map<ColorType, int[]> colorTypeMap = null;
 	private Matrix33 currentTransform = Matrix33.IDENTITY;
 
-	private SamplingMode interpolationMode = SamplingMode.DEFAULT;
+	private SamplingMode interpolationMode = SamplingMode.CATMULL_ROM;
 
 	private boolean isClipSet;
 	private Rectangle currentClipBounds;
@@ -500,11 +500,13 @@ public class SkiaGC implements IExternalGC {
 		if (factor == 0) {
 			factor = 1;
 		}
+		factor *= 2;
 
 		final Canvas canvas = surface.getCanvas();
 
 		final var fgp = getForegroundPaint();
 		fgp.setAlpha(alpha);
+		fgp.setAntiAlias(true);
 
 		// TODO create an image cache, instead of recreating the skija image every time
 		canvas.drawImageRect(convertSWTImageToSkijaImage(image, 100 * factor),
@@ -960,6 +962,8 @@ public class SkiaGC implements IExternalGC {
 		final var splits = splitString(fullText); // $NON-NLS-1$
 		performDraw(fgp -> {
 
+			int yPos = y;
+
 			final boolean antiAlias = this.textAntiAlias == SWT.ON	|| this.textAntiAlias == SWT.DEFAULT;
 			fgp.setAntiAlias(antiAlias);
 			fgp.setMode(PaintMode.FILL);
@@ -994,8 +998,9 @@ public class SkiaGC implements IExternalGC {
 				final io.github.humbleui.skija.Image img;
 
 				// heightDiff = -(int) Math.ceil(heightI - textHeight);
-				final var r = resources.getScaler().scaleSize(x, y);
+				final var r = resources.getScaler().scaleSize(x, yPos);
 				surface.getCanvas().drawString(text, r.x, r.y + ascI + heightDiff, f, fgp);
+				yPos += heightI + leading;
 
 				// try (var subSurface = skiaExtension.createSupportSurface((int)
 				// Math.ceil(textWidth) + width, heightI)) {

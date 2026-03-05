@@ -30,8 +30,8 @@ import org.eclipse.swt.widgets.*;
 public class SnippetPattern {
 	
 	final static boolean USE_SKIA = true;
-	static int skiaStyle = USE_SKIA ? SWT.SKIA : SWT.NONE;
 	
+	static int style = USE_SKIA ? SWT.SKIA : SWT.NONE;
 	final static int WIDTH = 100;
 	final static int HEIGHT = 100;
 	
@@ -69,7 +69,7 @@ public static void main(String[] args) {
 	Shell shell = new Shell(display);
 	shell.setText("SnippetPattern");
 	shell.setLayout(new FillLayout());
-	Canvas c = new Canvas(shell, SWT.DOUBLE_BUFFERED | skiaStyle);
+	Canvas c = new Canvas(shell, SWT.DOUBLE_BUFFERED | style);
 	c.addListener(SWT.Paint, event -> {
 		Rectangle r = ((Composite)event.widget).getClientArea();
 		GC gc1 = event.gc;

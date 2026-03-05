@@ -8,7 +8,6 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.SkiaConfiguration;
 
 public class SnippetRegion {
 
@@ -35,8 +34,7 @@ public class SnippetRegion {
 	shell.setText("Snippet Canvas");
 	// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
 
-	SkiaConfiguration.activateSkiaRaster();
-	setupCanvas(shell, SWT.DOUBLE_BUFFERED | SkiaConfiguration.SKIA, new Point(0, 0));
+	setupCanvas(shell, SWT.DOUBLE_BUFFERED | SWT.SKIA, new Point(0, 0));
 	setupCanvas(shell, SWT.DOUBLE_BUFFERED, new Point(100, 100));
 
 	shell.setSize(1000, 1000);

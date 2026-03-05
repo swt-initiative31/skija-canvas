@@ -11,7 +11,10 @@ import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.SkiaGlCanvas;
 
 public class SnippetCanvasText {
-
+	final static boolean useSkia = false;
+	
+	
+	final static int style = SWT.DOUBLE_BUFFERED | (useSkia ? SWT.SKIA : SWT.NONE);
 	final static int LETTERS_PER_LINE = 800;
 	final static int LINES = 60;
 	final static int SHIFT_LEFT = 1000;
@@ -23,7 +26,7 @@ public class SnippetCanvasText {
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas");
 		// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
-		final Canvas c = new Canvas(shell, SWT.DOUBLE_BUFFERED| SWT.SKIA );
+		final Canvas c = new Canvas(shell, style );
 
 		final StringBuilder b = new StringBuilder();
 

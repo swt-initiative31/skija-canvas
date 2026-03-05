@@ -10,7 +10,7 @@ import org.eclipse.swt.widgets.Shell;
 
 public class SnippetAlpha {
 
-	final static boolean USE_SKIA = false; // Set to true to use Skia rendering, false for default SWT rendering
+	final static boolean USE_SKIA = true; // Set to true to use Skia rendering, false for default SWT rendering
 	
     public static void main(String[] args) {
         final Display display = new Display();

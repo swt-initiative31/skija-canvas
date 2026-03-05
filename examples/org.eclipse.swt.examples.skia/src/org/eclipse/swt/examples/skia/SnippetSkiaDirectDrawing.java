@@ -18,7 +18,7 @@ public class SnippetSkiaDirectDrawing {
 		final Shell s = new Shell(d);
 		s.setLayout(new FillLayout());
 
-		final Canvas c = new SkiaGlCanvas(s, SWT.DOUBLE_BUFFERED | SWT.FILL );
+		final Canvas c = new Canvas(s, SWT.DOUBLE_BUFFERED | SWT.FILL | SWT.SKIA );
 
 		c.setBackground(d.getSystemColor(SWT.COLOR_RED));
 		

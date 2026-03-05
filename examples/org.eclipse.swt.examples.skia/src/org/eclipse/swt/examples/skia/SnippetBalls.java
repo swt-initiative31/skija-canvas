@@ -17,11 +17,10 @@ import org.eclipse.swt.widgets.*;
 
 public class SnippetBalls {
 
+	final static boolean USE_SKIA = true;
 	final static int BALL_COUNT = 3;
 	
-	final static boolean USE_SKIA = true;
 	static int skiaStyle = USE_SKIA ? SWT.SKIA : SWT.NONE;
-
 	final static int WIDTH = 100;
 	final static int HEIGHT = 100;
 	static final int TIMER = 30;

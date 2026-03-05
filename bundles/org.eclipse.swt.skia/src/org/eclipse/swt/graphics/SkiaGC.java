@@ -610,6 +610,10 @@ public class SkiaGC implements IExternalGC {
 
 	public static byte[] convertToRGBA(ImageData imageData) {
 
+		if(true) {
+			return RGBAEncoder.encode(imageData);
+		}
+
 		final ImageData transparencyData = imageData.getTransparencyMask();
 		final byte[] convertedData = new byte[imageData.width * imageData.height * 4];
 		byte defaultAlpha = (byte) 255;

@@ -90,7 +90,7 @@ public class SkiaGC implements IExternalGC {
 	private static Map<ColorType, int[]> colorTypeMap = null;
 	private Matrix33 currentTransform = Matrix33.IDENTITY;
 
-	private SamplingMode interpolationMode = SamplingMode.CATMULL_ROM;
+	private SamplingMode interpolationMode = SamplingMode.DEFAULT;
 
 	private boolean isClipSet;
 	private Rectangle currentClipBounds;
@@ -500,8 +500,6 @@ public class SkiaGC implements IExternalGC {
 		if (factor == 0) {
 			factor = 1;
 		}
-		factor *= 2;
-
 		final Canvas canvas = surface.getCanvas();
 
 		final var fgp = getForegroundPaint();

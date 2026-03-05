@@ -77,7 +77,7 @@ Canvas () {}
  */
 public Canvas (Composite parent, int style) {
 	super (parent, checkStyle (style));
-	if((style & SWT.SKIA) != 0 && ExternalCanvasHandler.isActive())
+	if( ExternalCanvasHandler.isActive(this,style))
 		externalCanvasHandler = ExternalCanvasHandler.createHandler(this);
 }
 

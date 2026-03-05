@@ -11,6 +11,8 @@ import org.eclipse.swt.widgets.SkiaGlCanvas;
 
 public class SnippetRasterSkiaCanvas {
 
+	final static boolean useSkia = true;
+	
 	final static int RECTANGLES_PER_LINE = 200;
 
 	static class RecDraw{
@@ -27,6 +29,7 @@ public class SnippetRasterSkiaCanvas {
 	}
 
 	static RecDraw[][] recDraws = new RecDraw[RECTANGLES_PER_LINE][RECTANGLES_PER_LINE];
+	private static int style = useSkia ? SWT.SKIA : SWT.NONE;
 	int width = 2;
 
 	public static void main(String[] args) {
@@ -35,7 +38,7 @@ public class SnippetRasterSkiaCanvas {
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas");
 		// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
-		final Canvas c = new SkiaGlCanvas(shell,  SWT.DOUBLE_BUFFERED);
+		final Canvas c = new Canvas(shell,  SWT.DOUBLE_BUFFERED | style);
 
 		for( int x = 0 ; x < RECTANGLES_PER_LINE ; x++ ) {
 			for(int y = 0 ; y < RECTANGLES_PER_LINE ; y++) {

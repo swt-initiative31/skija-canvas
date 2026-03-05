@@ -15,8 +15,8 @@ import org.eclipse.swt.widgets.Shell;
 
 public class SnippetClippingRectangle {
 
-	private static boolean skiaEnabled = false;
-
+	
+	private static boolean skiaEnabled = true;
 	public static void main(String[] args) {
 		final Display display = new Display();
 		final Shell s = new Shell(display);
@@ -29,6 +29,7 @@ public class SnippetClippingRectangle {
 
 		text(shell, "Clipping Rectangle");
 
+		resetCanvasConfiguration();
 		clipRectangleCanvas(shell);
 		activateSkiaRaster();
 		clipRectangleCanvas(shell);

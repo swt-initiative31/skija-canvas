@@ -1,6 +1,5 @@
 package org.eclipse.swt.examples.skia;
 
-
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Path;
@@ -18,13 +17,11 @@ public class SnippetTwoGlCanvasDrawing {
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Two Gl Canvas");
 
-		final Canvas c1 = new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED | SWT.H_SCROLL);
-		final Canvas c2 = new SkiaGlCanvas(shell, SWT.DOUBLE_BUFFERED | SWT.H_SCROLL);
-
+		final Canvas c1 = new Canvas(shell, SWT.DOUBLE_BUFFERED | SWT.H_SCROLL | SWT.SKIA);
+		final Canvas c2 = new Canvas(shell, SWT.DOUBLE_BUFFERED | SWT.H_SCROLL | SWT.SKIA);
 
 		configureCanvas(shell, c1, 1, "SkiaGlCanvas");
 		configureCanvas(shell, c2, 2, "SkiaGlCanvas2");
-
 
 		shell.setSize(1500, 1000);
 
@@ -87,28 +84,24 @@ public class SnippetTwoGlCanvasDrawing {
 		gc.drawPoint(5, 600);
 
 		final var bo = img.getBounds();
-		gc.drawImage(img, 0, 0, bo.width /2 , bo.height /2 ,    20 , 600, bo.width * 2, bo.height *2 );
+		gc.drawImage(img, 0, 0, bo.width / 2, bo.height / 2, 20, 600, bo.width * 2, bo.height * 2);
 
 		gc.setForeground(d.getSystemColor(SWT.COLOR_DARK_MAGENTA));
 		gc.drawText("Test\nTest2", 300, 0);
 		gc.drawText("Test2\nTest3", 300, 100, false);
-		gc.drawText("Transparent Text", 300,200, true);
-
+		gc.drawText("Transparent Text", 300, 200, true);
 
 		gc.setForeground(d.getSystemColor(SWT.COLOR_DARK_GRAY));
-		gc.drawPolygon(new int[] {
-				400,2, //
-				500,100, //
-				400,100, //
-				500,2 //
+		gc.drawPolygon(new int[] { 400, 2, //
+				500, 100, //
+				400, 100, //
+				500, 2 //
 		});
 
-
 		gc.setForeground(d.getSystemColor(SWT.COLOR_DARK_YELLOW));
-		gc.drawPolyline(new int[] {
-				400,50, //
-				500,100, //
-				600,200
+		gc.drawPolyline(new int[] { 400, 50, //
+				500, 100, //
+				600, 200
 
 		});
 
@@ -120,16 +113,14 @@ public class SnippetTwoGlCanvasDrawing {
 
 		gc.fillOval(100, 500, 100, 50);
 
-
 		final Path p2 = new Path(d);
 		p2.addRectangle(100, 600, 100, 100);
 		gc.fillPath(p2);
 
-		gc.fillPolygon(new int[] {
-				100,700, //
-				200,800, //
-				100,800, //
-				200,700 //
+		gc.fillPolygon(new int[] { 100, 700, //
+				200, 800, //
+				100, 800, //
+				200, 700 //
 		});
 
 		gc.fillRectangle(new Rectangle(100, 800, 100, 100));
@@ -137,12 +128,13 @@ public class SnippetTwoGlCanvasDrawing {
 		gc.fillRoundRectangle(200, 800, 100, 100, 20, 20);
 	}
 
-	private static void onResize(Canvas c,  int index) {
+	private static void onResize(Canvas c, int index) {
 		final var ca = c.getShell().getClientArea();
-		switch(index) {
+		switch (index) {
 		case 1 -> c.setBounds(new Rectangle(0, 0, ca.width / 2, ca.height));
 		case 2 -> c.setBounds(new Rectangle(ca.width / 2, 0, ca.width / 3, ca.height));
-		default -> { /* nothing to do */ }
+		default -> {
+			/* nothing to do */ }
 		}
 	}
 

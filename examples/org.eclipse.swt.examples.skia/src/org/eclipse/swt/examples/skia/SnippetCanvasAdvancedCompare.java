@@ -22,11 +22,10 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.SkiaConfiguration;
 
-public class SnippetCanvasAdvanced {
-	
-	private static boolean skiaEnabled = false;
+public class SnippetCanvasAdvancedCompare {
+
+	private static boolean skiaEnabled;
 
 	public static void main(String[] args) {
 		final Display display = new Display();
@@ -45,6 +44,8 @@ public class SnippetCanvasAdvanced {
 		text(shell, "Zeichne Text mit verschiedenen Farben");
 
 		coloredTextCanvas(shell);
+
+		resetCanvasConfiguration();
 
 		activateSkiaRaster();
 		coloredTextCanvas(shell);

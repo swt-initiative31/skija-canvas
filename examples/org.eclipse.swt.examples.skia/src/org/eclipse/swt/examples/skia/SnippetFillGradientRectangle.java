@@ -9,13 +9,16 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
 public class SnippetFillGradientRectangle {
+	
+	final static boolean USE_SKIA = true;
+	
     public static void main(String[] args) {
         Display display = new Display();
         Shell shell = new Shell(display);
         shell.setText("Skia FillGradientRectangle Example");
         shell.setSize(400, 300);
 
-        Canvas canvas = new Canvas(shell, SWT.NONE);
+        Canvas canvas = new Canvas(shell, USE_SKIA ? SWT.SKIA : SWT.NONE);
         canvas.setBounds(20, 20, 360, 240);
 
         canvas.addListener(SWT.Paint, event -> {

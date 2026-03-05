@@ -8,15 +8,17 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.SkiaConfiguration;
 
 public class SnippetSkijaCanvas {
+	final static boolean useSkia = true;
 
 	static final int RECTANGLES_PER_LINE = 200;
+	
 
 	static record RecDraw(int xPos, int yPos, Color c) {
 	}
 
+	static int style = SWT.FILL | SWT.DOUBLE_BUFFERED | (useSkia ? SWT.SKIA : SWT.NONE);
 	private static final RecDraw[][] recDraws = new RecDraw[RECTANGLES_PER_LINE][RECTANGLES_PER_LINE];
 	private static long minFrameRate = Long.MAX_VALUE;
 	private static long maxFrameRate = 0;
@@ -30,9 +32,7 @@ public class SnippetSkijaCanvas {
 		shell.setText("Snippet 1");
 
 		shell.setLayout(new FillLayout());
-		SkiaConfiguration.activateSkiaGl();
-		final Canvas c = new Canvas(shell, SWT.FILL | SWT.DOUBLE_BUFFERED);
-		SkiaConfiguration.resetCanvasConfiguration();
+		final Canvas c = new Canvas(shell,style);
 
 
 		for (int x = 0; x < RECTANGLES_PER_LINE; x++) {

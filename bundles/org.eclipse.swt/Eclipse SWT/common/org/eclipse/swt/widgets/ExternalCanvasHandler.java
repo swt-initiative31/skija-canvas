@@ -17,16 +17,31 @@ import org.eclipse.swt.custom.*;
 
 public class ExternalCanvasHandler {
 
+	private final static String DISABLE_EXTERNAL_CANVAS = "org.eclipse.swt.external.canvas:disabled";
+	
+	// this is only for test cases in order to check whether the software works with the canvas extension.
+	// NEVER USE THIS IN PRODUCTIVE CODE!!
+	private final static String FORCE_ENABLE_EXTERNAL_CANVAS = "org.eclipse.swt.external.canvas:forceEnabled";
+
 	private static IExternalCanvasFactory externalFactory = ServiceLoader.load(IExternalCanvasFactory.class).findFirst()
 			.orElse(null);
 
 	public static boolean isActive(Canvas canvas, int style) {
+
+		var disable = System.getProperty(DISABLE_EXTERNAL_CANVAS);
+		if(disable != null)
+			return false;
 
 		if (canvas instanceof StyledText || canvas instanceof Decorations)
 			return false;
 
 		if ((style & SWT.SKIA) != 0 && externalFactory != null)
 			return true;
+
+		var forceEnable = System.getProperty(FORCE_ENABLE_EXTERNAL_CANVAS);
+		if(forceEnable != null)
+			return true;
+
 		return false;
 	}
 

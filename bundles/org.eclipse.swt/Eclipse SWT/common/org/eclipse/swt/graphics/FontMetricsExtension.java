@@ -1,5 +1,7 @@
 package org.eclipse.swt.graphics;
 
+import org.eclipse.swt.internal.canvasext.*;
+
 public final class FontMetricsExtension extends FontMetrics {
 	IExternalFontMetrics externalMetrics;
 

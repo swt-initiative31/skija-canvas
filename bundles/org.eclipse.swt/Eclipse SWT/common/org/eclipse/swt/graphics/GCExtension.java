@@ -13,6 +13,8 @@ package org.eclipse.swt.graphics;
 
 import java.util.*;
 
+import org.eclipse.swt.internal.canvasext.*;
+
 /**
  * Internal usage only!!.
  */

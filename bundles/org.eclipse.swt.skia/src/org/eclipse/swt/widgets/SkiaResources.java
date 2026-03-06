@@ -5,9 +5,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
-import org.eclipse.swt.graphics.DPIScaler;
 import org.eclipse.swt.graphics.Font;
-import org.eclipse.swt.graphics.FontProperties;
+import org.eclipse.swt.internal.canvasext.DPIScaler;
+import org.eclipse.swt.internal.canvasext.FontProperties;
 
 import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.FontHinting;

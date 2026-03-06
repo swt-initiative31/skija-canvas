@@ -1,8 +1,8 @@
 package org.eclipse.swt.widgets;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.DPIScaler;
 import org.eclipse.swt.graphics.SkiaGC;
+import org.eclipse.swt.internal.canvasext.DPIScaler;
 
 import io.github.humbleui.skija.BlendMode;
 import io.github.humbleui.skija.Paint;

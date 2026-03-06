@@ -23,6 +23,8 @@ import java.util.function.Consumer;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.internal.DPIUtil;
+import org.eclipse.swt.internal.canvasext.DPIScaler;
+import org.eclipse.swt.internal.canvasext.IExternalGC;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.ISkiaCanvasExtension;

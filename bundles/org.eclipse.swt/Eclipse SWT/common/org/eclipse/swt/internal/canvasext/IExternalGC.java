@@ -1,4 +1,6 @@
-package org.eclipse.swt.graphics;
+package org.eclipse.swt.internal.canvasext;
+
+import org.eclipse.swt.graphics.*;
 
 public interface IExternalGC {
 

@@ -1,6 +1,6 @@
 package org.eclipse.swt.widgets;
 
-import org.eclipse.swt.graphics.DPIScaler;
+import org.eclipse.swt.internal.canvasext.DPIScaler;
 
 import io.github.humbleui.skija.Matrix33;
 import io.github.humbleui.skija.Surface;

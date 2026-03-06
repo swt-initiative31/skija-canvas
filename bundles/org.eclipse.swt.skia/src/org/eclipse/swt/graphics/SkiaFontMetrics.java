@@ -15,6 +15,8 @@ package org.eclipse.swt.graphics;
 
 import java.util.Objects;
 
+import org.eclipse.swt.internal.canvasext.IExternalFontMetrics;
+
 public class SkiaFontMetrics implements IExternalFontMetrics {
 
 	private final io.github.humbleui.skija.FontMetrics m;

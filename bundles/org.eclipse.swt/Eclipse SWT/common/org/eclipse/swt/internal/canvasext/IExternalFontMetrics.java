@@ -1,4 +1,4 @@
-package org.eclipse.swt.graphics;
+package org.eclipse.swt.internal.canvasext;
 
 public interface IExternalFontMetrics {
 

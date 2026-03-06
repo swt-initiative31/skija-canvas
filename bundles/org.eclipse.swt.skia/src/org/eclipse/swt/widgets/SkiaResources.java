@@ -1,6 +1,5 @@
 package org.eclipse.swt.widgets;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -9,22 +8,15 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.DPIScaler;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontProperties;
-import org.eclipse.swt.graphics.SkiaGC;
 
-import io.github.humbleui.skija.BlendMode;
 import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.FontHinting;
 import io.github.humbleui.skija.FontSlant;
 import io.github.humbleui.skija.FontStyle;
-import io.github.humbleui.skija.Paint;
-import io.github.humbleui.skija.PaintMode;
 import io.github.humbleui.skija.Typeface;
 
 public class SkiaResources {
 
-	private Paint foregroundPaint;
-	private Paint backgroundPaint;
-	private final Map<PaintProperties, io.github.humbleui.skija.Paint> paintCache = new HashMap<>();
 	private Color background;
 	private Color foreground;
 	private final Canvas canvas;
@@ -45,61 +37,16 @@ public class SkiaResources {
 		if (color == null) {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
-
-		if (this.backgroundPaint != null) {
-			this.backgroundPaint.close();
-			this.backgroundPaint = null;
-		}
-
 		this.background = color;
-
 	}
 
 	public void setForeground(Color color) {
 		if (color == null) {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
-		if (this.foregroundPaint != null) {
-			this.foregroundPaint = null;
-		}
 
 		this.foreground = color;
 
-	}
-
-	public Paint getForegroundPaint() {
-		if (this.foregroundPaint == null) {
-
-			final var prop = new PaintProperties(SkiaGC.convertSWTColorToSkijaColor(getForeground()), true, 255);
-
-			paintCache.get(prop);
-
-			this.foregroundPaint = paintCache.computeIfAbsent(prop, p -> {
-
-				final var pa = new Paint();
-				pa.setColor(p.color());
-				pa.setAntiAlias(p.antialias());
-				pa.setAlpha(p.alpha());
-				pa.setBlendMode(BlendMode.SRC_OVER);
-				pa.setMode(PaintMode.STROKE);
-				return pa;
-
-			});
-
-		}
-		return this.foregroundPaint;
-	}
-
-	public Paint getBackgroundPaint() {
-		if (this.backgroundPaint == null) {
-
-			this.backgroundPaint = new Paint();
-			this.backgroundPaint.setColor(SkiaGC.convertSWTColorToSkijaColor(getBackground()));
-			this.backgroundPaint.setAntiAlias(false);
-			this.backgroundPaint.setMode(PaintMode.FILL);
-
-		}
-		return this.backgroundPaint;
 	}
 
 	public Color getForeground() {
@@ -213,24 +160,13 @@ public class SkiaResources {
 			this.skiaFont.close();
 		}
 
-		if (this.foregroundPaint != null && !this.foregroundPaint.isClosed()) {
-			this.foregroundPaint.close();
-		}
-
-		if (this.backgroundPaint != null && !this.backgroundPaint.isClosed()) {
-			this.backgroundPaint.close();
-		}
-
 		fontCache.values().forEach(f -> {
 			if (!f.isClosed()) {
 				f.close();
 			}
 		});
 		fontCache.clear();
-
 		skiaFont = null;
-		foregroundPaint = null;
-		backgroundPaint = null;
 
 	}
 
@@ -247,17 +183,6 @@ public class SkiaResources {
 	public void resetBaseColors() {
 		foreground = null;
 		background = null;
-
-		if (foregroundPaint != null && !foregroundPaint.isClosed()) {
-			foregroundPaint.close();
-		}
-		foregroundPaint = null;
-
-		if (backgroundPaint != null && !backgroundPaint.isClosed()) {
-			backgroundPaint.close();
-		}
-
-		backgroundPaint = null;
 
 	}
 }

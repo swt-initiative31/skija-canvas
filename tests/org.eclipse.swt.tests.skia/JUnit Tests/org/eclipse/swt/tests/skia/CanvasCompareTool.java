@@ -56,7 +56,7 @@ public class CanvasCompareTool {
 
 		if (twoSkiaCanvas) {
 			SkiaConfiguration.activateSkiaGl();
-			classicalCanvas = new Canvas(shell, SWT.SKIA);
+			classicalCanvas = new Canvas(shell, SkiaConfiguration.SKIA);
 		} else {
 			classicalCanvas = new Canvas(shell, SWT.NONE);
 		}

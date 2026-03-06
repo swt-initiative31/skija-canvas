@@ -14,9 +14,7 @@ public interface ISkiaCanvasExtension {
 	Surface createSupportSurface(int width, int height);
 
 	default Matrix33 getTransformation() {
-
 		return null;
-
 	}
 
 	DPIScaler getScaler();

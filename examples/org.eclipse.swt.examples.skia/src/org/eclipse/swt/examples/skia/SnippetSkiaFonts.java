@@ -11,7 +11,7 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.SkiaGlCanvas;
+import org.eclipse.swt.widgets.SkiaCanvas;
 
 public class SnippetSkiaFonts {
 
@@ -25,7 +25,7 @@ public class SnippetSkiaFonts {
 		shell.setLayout(new GridLayout(2,true));
 
 		final Canvas canvas = new Canvas(shell,  SWT.BORDER);
-		final Canvas skiaCanvas = new SkiaGlCanvas(shell, SWT.BORDER);
+		final Canvas skiaCanvas = new SkiaCanvas(shell, SWT.BORDER);
 
 		setGridData(canvas, 300);
 		setGridData(skiaCanvas, 300);

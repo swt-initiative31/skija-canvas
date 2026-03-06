@@ -29,10 +29,6 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Two {
 	static void fillRectangles(PaintEvent e, Color col1, Color col2) {
 
 		Canvas c = (Canvas) e.widget;
-		boolean classic = true;
-		if (c.externalCanvasHandler != null) {
-			classic = false;
-		}
 
 		var s = c.getSize();
 		e.gc.setBackground(col1);

@@ -47,7 +47,6 @@ public class Canvas extends Composite {
 	IME ime;
 	NSOpenGLContext glcontext;
 	NSBezierPath visiblePath;
-	private IExternalCanvasHandler externalCanvasHandler;
 
 	static NSMutableArray supportedPboardTypes;
 
@@ -110,17 +109,7 @@ void sendFocusEvent(int type) {
  */
 public Canvas (Composite parent, int style) {
 	super (parent, style);
-	if((style & SWT.SKIA) != 0 && ExternalCanvasHandler.isActive())
-		externalCanvasHandler = ExternalCanvasHandler.createHandler(this);
 }
-
-@Override
-public void redraw() {
-	if(externalCanvasHandler != null)
-    	externalCanvasHandler.redrawTriggered();
-	super.redraw();
-}
-
 
 @Override
 long characterIndexForPoint (long id, long sel, long point) {
@@ -176,13 +165,9 @@ void drawBackground (long id, NSGraphicsContext context, NSRect rect) {
 }
 
 @Override
-void drawRect(long id, long sel, NSRect rect) {
-    if (this.externalCanvasHandler != null) {
-    	externalCanvasHandler.paint( ( e )->{  sendEvent(SWT.Paint, e);  },  id, sel);
-    	return;
-    }
-    if (glcontext != null && glcontext.view() == null)glcontext.setView(view);
-    super.drawRect(id, sel, rect);
+void drawRect (long id, long sel, NSRect rect) {
+	if (glcontext != null && glcontext.view() == null) glcontext.setView(view);
+	super.drawRect(id, sel, rect);
 }
 
 @Override

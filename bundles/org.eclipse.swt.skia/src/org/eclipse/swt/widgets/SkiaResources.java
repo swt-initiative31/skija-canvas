@@ -44,9 +44,7 @@ public class SkiaResources {
 		if (color == null) {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
-
 		this.foreground = color;
-
 	}
 
 	public Color getForeground() {

@@ -20,8 +20,34 @@ public final class GCExtension extends GC {
 
 	private final IExternalGC e;
 
-	public GCExtension(final IExternalGC ext) {
-		this.e = ext;
+	/**
+	 * Blocks access to the public GC field 'handle'.
+	 */
+	public long handle = 0;
+
+	/**
+	 * Blocks access to the public GC method 'handle()'.
+	 */
+	public long handle() {
+		throw new IllegalStateException("GCExtension does not support handle access");
+	}
+
+	/**
+	 * Blocks access to the static factory methods from GC.
+	 */
+	public static GCExtension gtk_new(long handle, GCData data) {
+		throw new IllegalStateException("GCExtension does not support gtk_new");
+	}
+
+	public static GCExtension gtk_new(Drawable drawable, GCData data) {
+		throw new IllegalStateException("GCExtension does not support gtk_new");
+	}
+
+	/**
+	 * Blocks access to the protected GC constructor.
+	 */
+	protected GCExtension() {
+		throw new IllegalStateException("GCExtension does not supported protected constructor");
 	}
 
 	public GCExtension(Drawable drawable) {
@@ -32,17 +58,18 @@ public final class GCExtension extends GC {
 		throw new IllegalStateException("Invalid Constructor call");
 	}
 
+	public GCExtension(final IExternalGC ext) {
+		this.e = ext;
+	}
+
 	@Override
 	public FontMetrics getFontMetrics() {
 		return e.getFontMetrics();
 	}
 
-	public static GCExtension gtk_new(long handle, GCData data) {
-		throw new IllegalStateException("Invalid gtk_new call");
-	}
-
-	public static GCExtension gtk_new(Drawable drawable, GCData data) {
-		throw new IllegalStateException("Invalid gtk_new call");
+	@Override
+	public void dispose() {
+		e.dispose();
 	}
 
 	@Override

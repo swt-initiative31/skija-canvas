@@ -16,15 +16,16 @@ import org.eclipse.swt.*;
 import org.eclipse.swt.custom.*;
 
 public class ExternalCanvasHandler {
-	
-	private static IExternalCanvasFactory externalFactory = ServiceLoader.load(IExternalCanvasFactory.class).findFirst().orElse(null);
+
+	private static IExternalCanvasFactory externalFactory = ServiceLoader.load(IExternalCanvasFactory.class).findFirst()
+			.orElse(null);
 
 	public static boolean isActive(Canvas canvas, int style) {
 
-		if(canvas instanceof StyledText || canvas instanceof Decorations )
+		if (canvas instanceof StyledText || canvas instanceof Decorations)
 			return false;
 
-		if((style & SWT.SKIA) != 0 && externalFactory != null)
+		if ((style & SWT.SKIA) != 0 && externalFactory != null)
 			return true;
 		return false;
 	}

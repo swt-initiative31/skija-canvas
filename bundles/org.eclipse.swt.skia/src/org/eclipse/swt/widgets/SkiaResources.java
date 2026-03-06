@@ -30,14 +30,14 @@ public class SkiaResources {
 	private final Canvas canvas;
 	private Font swtFont;
 	private io.github.humbleui.skija.Font skiaFont;
-	private float baseSymbolHeight;
 
 	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
 	private final ISkiaCanvasExtension skiaExtension;
 
-	public SkiaResources(Canvas canvas, ISkiaCanvasExtension skiaExtension ) {
+	public SkiaResources(Canvas canvas, ISkiaCanvasExtension skiaExtension) {
 		this.canvas = canvas;
 		this.skiaExtension = skiaExtension;
+		this.canvas.addListener(SWT.Dispose, e -> resetResources());
 	}
 
 	public void setBackground(Color color) {
@@ -129,7 +129,6 @@ public class SkiaResources {
 		}
 		this.swtFont = font;
 		this.skiaFont = getSkijaFont(font);
-		this.baseSymbolHeight = this.skiaFont.measureText("T").getHeight(); //$NON-NLS-1$
 
 	}
 
@@ -154,37 +153,27 @@ public class SkiaResources {
 
 	private io.github.humbleui.skija.Font createSkijaFont(FontProperties props) {
 
-
 		FontSlant slant = FontSlant.UPRIGHT;
-		if(props.lfItalic != 0) {
+		if (props.lfItalic != 0) {
 			slant = FontSlant.ITALIC;
 		}
 
-		final FontStyle style = new FontStyle(props.lfWeight,5, slant);
+		final FontStyle style = new FontStyle(props.lfWeight, 5, slant);
 		final io.github.humbleui.skija.Font skijaFont = new io.github.humbleui.skija.Font(
 				Typeface.makeFromName(props.name, style));
 
-		if(props.lfWidth != 0) {
-			final float stretch = (float)((props.lfWidth / 10.0) + 0.5);
+		if (props.lfWidth != 0) {
+			final float stretch = (float) ((props.lfWidth / 10.0) + 0.5);
 			skijaFont.setScaleX(stretch);
 		}
-
-
-		// System.out.println("Canvas native zoom: " + canvas.nativeZoom);
-		// System.out.println("Height: " + fontData.getHeight());
-		// System.out.println("DeviceZoom: " + scaler.getDeviceZoom());
-		// System.out.println("NativeDeviceZoom: " + scaler.getNativeDeviceZoom());
-		//
-		// System.out.println("Util: DeviceZoom: " + DPIUtil.getDeviceZoom());
-		// System.out.println("Util: NativeDeviceZoom: " +
-		// DPIUtil.getNativeDeviceZoom());
 
 		int fontSize = (props.lfHeight);
 		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
 			fontSize = skiaExtension.getScaler().getZoomedFontSize(fontSize);
 		}
 		if (SWT.getPlatform().equals("gtk") || true) { //$NON-NLS-1$
-			// SWT's font size is in points, 1pt = 1/72 inch, adjust skija font size to this
+			// TODO move this to the local font size calculation in gtk
+			// this should be done in the scaler.
 			fontSize = (fontSize * Display.getDefault().getDPI().y) / 72;
 		}
 		skijaFont.setSize(fontSize);
@@ -195,19 +184,6 @@ public class SkiaResources {
 		skijaFont.setHinting(FontHinting.NORMAL);
 		skijaFont.setAutoHintingForced(true);
 
-		final var m = skijaFont.getMetrics();
-
-		final var asc = m.getAscent();
-		final var des = m.getDescent();
-
-		final var ascI = (int) Math.ceil(Math.abs(asc));
-		final var desI = (int) Math.ceil(Math.abs(des));
-		final var heightI = ascI + desI;
-
-		//		System.out.println("Fontsize: AscF:" + m.getAscent() + "  DescF:" + m.getDescent() + " HeightF:" + m.getHeight()
-		//		+ "AscI:" + ascI + "  DescI:" + desI + " HeightI:" + heightI);
-
-		// --------------------------------------------------
 		return skijaFont;
 	}
 
@@ -233,10 +209,23 @@ public class SkiaResources {
 
 	private void resetResources() {
 
-		skiaFont.close();
-		foregroundPaint.close();
-		backgroundPaint.close();
+		if (this.skiaFont != null && !this.skiaFont.isClosed()) {
+			this.skiaFont.close();
+		}
 
+		if (this.foregroundPaint != null && !this.foregroundPaint.isClosed()) {
+			this.foregroundPaint.close();
+		}
+
+		if (this.backgroundPaint != null && !this.backgroundPaint.isClosed()) {
+			this.backgroundPaint.close();
+		}
+
+		fontCache.values().forEach(f -> {
+			if (!f.isClosed()) {
+				f.close();
+			}
+		});
 		fontCache.clear();
 
 		skiaFont = null;
@@ -258,9 +247,17 @@ public class SkiaResources {
 	public void resetBaseColors() {
 		foreground = null;
 		background = null;
+
+		if (foregroundPaint != null && !foregroundPaint.isClosed()) {
+			foregroundPaint.close();
+		}
 		foregroundPaint = null;
+
+		if (backgroundPaint != null && !backgroundPaint.isClosed()) {
+			backgroundPaint.close();
+		}
+
 		backgroundPaint = null;
 
 	}
-
 }

@@ -1,5 +1,6 @@
-package org.eclipse.swt.graphics;
+package org.eclipse.swt.internal.canvasext;
 
+import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.internal.*;
 import org.eclipse.swt.widgets.*;
 

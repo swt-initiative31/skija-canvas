@@ -7,7 +7,7 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Caret;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.SkiaGlCanvas;
+import org.eclipse.swt.widgets.SkiaCanvas;
 
 public class SnippetCanvasCaret {
 
@@ -20,11 +20,11 @@ public class SnippetCanvasCaret {
 		final Canvas c1 = new Canvas(shell, SWT.FILL);
 		c1.setBackground(display.getSystemColor(SWT.COLOR_GREEN));
 
-		final Canvas c2 = new SkiaGlCanvas(shell, SWT.FILL);
+		final Canvas c2 = new SkiaCanvas(shell, SWT.FILL);
 		c2.setBackground(display.getSystemColor(SWT.COLOR_GREEN));
 		//		c2.setForeground(display.getSystemColor(SWT.COLOR_BLACK));
 
-		final Canvas c3 = new SkiaGlCanvas(shell, SWT.FILL);
+		final Canvas c3 = new SkiaCanvas(shell, SWT.FILL);
 		c3.setBackground(display.getSystemColor(SWT.COLOR_CYAN));
 
 		setGridLayout(c1, c2, c3);

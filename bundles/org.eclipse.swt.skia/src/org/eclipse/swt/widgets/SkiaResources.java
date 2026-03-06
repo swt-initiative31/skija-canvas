@@ -33,9 +33,9 @@ public class SkiaResources {
 	private float baseSymbolHeight;
 
 	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
-	private final ISkiaCanvas skiaExtension;
+	private final ISkiaCanvasExtension skiaExtension;
 
-	public SkiaResources(Canvas canvas, ISkiaCanvas skiaExtension ) {
+	public SkiaResources(Canvas canvas, ISkiaCanvasExtension skiaExtension ) {
 		this.canvas = canvas;
 		this.skiaExtension = skiaExtension;
 	}

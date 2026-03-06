@@ -25,7 +25,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.internal.DPIUtil;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.ISkiaCanvas;
+import org.eclipse.swt.widgets.ISkiaCanvasExtension;
 import org.eclipse.swt.widgets.SkiaResources;
 
 import io.github.humbleui.skija.Bitmap;
@@ -96,13 +96,13 @@ public class SkiaGC implements IExternalGC {
 	private Rectangle currentClipBounds;
 	private Region currentClipRegion;
 
-	private final ISkiaCanvas skiaExtension;
+	private final ISkiaCanvasExtension skiaExtension;
 	private final SkiaResources resources;
 	private boolean XORModeActive;
 	private final int style;
 	private int textAntiAlias = SWT.ON;
 
-	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvas exst, int style) {
+	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvasExtension exst, int style) {
 		this.drawable = canvas;
 		final org.eclipse.swt.widgets.Canvas c = (org.eclipse.swt.widgets.Canvas) drawable;
 		device = c.getDisplay();

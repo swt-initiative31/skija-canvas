@@ -4,7 +4,7 @@ import java.util.HashMap;
 
 import org.eclipse.swt.graphics.RegionLog.OpType;
 import org.eclipse.swt.graphics.RegionLog.Operation;
-import org.eclipse.swt.widgets.ISkiaCanvas;
+import org.eclipse.swt.widgets.ISkiaCanvasExtension;
 
 import io.github.humbleui.skija.Region.Op;
 import io.github.humbleui.types.IRect;
@@ -21,9 +21,9 @@ public class SkiaRegionCalculator {
 
     private final org.eclipse.swt.graphics.Region region;
     private io.github.humbleui.skija.Region calculatedRegion;
-    private final ISkiaCanvas skiaExtension;
+    private final ISkiaCanvasExtension skiaExtension;
 
-    public SkiaRegionCalculator(org.eclipse.swt.graphics.Region r, ISkiaCanvas skiaExtension) {
+    public SkiaRegionCalculator(org.eclipse.swt.graphics.Region r, ISkiaCanvasExtension skiaExtension) {
 	this.region = r;
 	this.skiaExtension = skiaExtension;
     }

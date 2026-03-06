@@ -37,7 +37,7 @@ import io.github.humbleui.skija.SurfaceOrigin;
 import io.github.humbleui.skija.SurfaceProps;
 import io.github.humbleui.types.Rect;
 
-public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISkiaCanvas, Listener {
+public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISkiaCanvasExtension, Listener {
 
 	private final DirectContext skijaContext;
 	private BackendRenderTarget renderTarget;

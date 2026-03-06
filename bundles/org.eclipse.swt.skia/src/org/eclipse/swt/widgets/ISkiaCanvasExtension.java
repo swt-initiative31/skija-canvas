@@ -5,7 +5,7 @@ import org.eclipse.swt.graphics.DPIScaler;
 import io.github.humbleui.skija.Matrix33;
 import io.github.humbleui.skija.Surface;
 
-public interface ISkiaCanvas {
+public interface ISkiaCanvasExtension {
 
 	Surface getSurface();
 

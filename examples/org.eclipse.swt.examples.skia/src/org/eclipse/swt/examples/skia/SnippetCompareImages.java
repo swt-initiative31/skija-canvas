@@ -27,8 +27,6 @@ public class SnippetCompareImages {
 
 	private static final String IMAGES_PATH = "images";
 	private static final int IMAGE_SPACING = 10;
-	private static final int CANVAS_WIDTH = 300;
-	private static final int CANVAS_HEIGHT = 600;
 	private final static ArrayList<ImageInfo> swtImages = new ArrayList<ImageInfo>();
 
 	public static void main(String[] args) {
@@ -52,10 +50,9 @@ public class SnippetCompareImages {
 		ScrollBar skiaScrollBar = skiaCanvas.getVerticalBar();
 		// Load images
 
-		
-		swtImages.add(new ImageInfo("Question Icon",  Display.getDefault().getSystemImage(SWT.ICON_QUESTION) ));
-		swtImages.add(new ImageInfo("Error Icon",  Display.getDefault().getSystemImage(SWT.ICON_ERROR) ));
-		swtImages.add(new ImageInfo("Info Icon",  Display.getDefault().getSystemImage(SWT.ICON_INFORMATION) ));
+		swtImages.add(new ImageInfo("Question Icon", Display.getDefault().getSystemImage(SWT.ICON_QUESTION)));
+		swtImages.add(new ImageInfo("Error Icon", Display.getDefault().getSystemImage(SWT.ICON_ERROR)));
+		swtImages.add(new ImageInfo("Info Icon", Display.getDefault().getSystemImage(SWT.ICON_INFORMATION)));
 
 		List<File> imageFiles = new ArrayList<>();
 		// Use working directory reliably
@@ -65,8 +62,7 @@ public class SnippetCompareImages {
 				String name = f.getName().toLowerCase();
 				if (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".gif")
 						|| name.endsWith(".bmp") || name.endsWith(".ico")) {
-					
-					
+
 					try {
 						Image img = new Image(display, f.getAbsolutePath());
 						swtImages.add(new ImageInfo(f.getAbsolutePath(), img));
@@ -92,7 +88,7 @@ public class SnippetCompareImages {
 				}
 			}
 		}
-		
+
 		// Calculate total height
 		int totalHeight = IMAGE_SPACING;
 		for (ImageInfo img : swtImages) {
@@ -153,7 +149,7 @@ public class SnippetCompareImages {
 			try {
 				gc.drawImage(img.image(), 10, y);
 			} catch (Exception ex) {
-				System.out.println("  Exception drawing image: " + ex);
+				System.err.println("  Exception drawing image: " + ex);
 			}
 			gc.drawText(img.name(), 10 + bounds.width + 30, y);
 			y += bounds.height + IMAGE_SPACING;

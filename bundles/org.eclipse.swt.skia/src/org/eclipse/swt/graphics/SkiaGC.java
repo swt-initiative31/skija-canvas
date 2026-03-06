@@ -18,6 +18,7 @@ import java.io.FileOutputStream;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.eclipse.swt.SWT;
@@ -284,14 +285,18 @@ public class SkiaGC implements IExternalGC {
 		}
 		final Canvas canvas = surface.getCanvas();
 
-		final var fgp = getForegroundPaint();
-		fgp.setAlpha(alpha);
-		fgp.setAntiAlias(true);
+		final int fac = factor;
 
-		// TODO create an image cache, instead of recreating the skija image every time
-		canvas.drawImageRect(convertSWTImageToSkijaImage(image, 100 * factor),
-				createScaledRectangle(srcX * factor, srcY * factor, srcWidth * factor, srcHeight * factor),
-				createScaledRectangle(destX, destY, destWidth, destHeight), this.interpolationMode, fgp, false);
+		performDraw(paint -> {
+			paint.setAlpha(alpha);
+			paint.setAntiAlias(true);
+			// TODO create an image cache, instead of recreating the skija image every time
+			canvas.drawImageRect(convertSWTImageToSkijaImage(image, 100 * fac),
+					createScaledRectangle(srcX * fac, srcY * fac, srcWidth * fac, srcHeight * fac),
+					createScaledRectangle(destX, destY, destWidth, destHeight), this.interpolationMode, paint, false);
+
+		});
+
 	}
 
 	private static ColorType getColorType(ImageData imageData) {
@@ -517,10 +522,6 @@ public class SkiaGC implements IExternalGC {
 		return this.resources.getForeground();
 	}
 
-	private Paint getForegroundPaint() {
-		return this.resources.getForegroundPaint();
-	}
-
 	@Override
 	public void drawText(String string, int x, int y) {
 		drawText(string, x, y, SWT.DRAW_DELIMITER | SWT.DRAW_TAB);
@@ -669,7 +670,7 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private static String removeDelimiter(String inputText) {
-		return inputText.replaceAll("\r\n|\r|\n", "");  //$NON-NLS-1$//$NON-NLS-2$
+		return inputText.replaceAll("\r\n|\r|\n", ""); //$NON-NLS-1$//$NON-NLS-2$
 	}
 
 	private static boolean isTransparent(int flags) {
@@ -1282,21 +1283,26 @@ public class SkiaGC implements IExternalGC {
 			region.add(this.currentClipRegion);
 			return;
 		}
-		// TODO test and compare
 	}
 
 	@Override
 	public int getAdvanceWidth(char ch) {
 
 		final var f = getSkiaFont();
-		final var fgp = getForegroundPaint();
+		final AtomicInteger result = new AtomicInteger();
+		result.set(-1);
 
-		// TODO: why antialias false??
-		fgp.setAntiAlias(false);
-		fgp.setMode(PaintMode.FILL);
+		performDraw(paint -> {
+			paint.setAntiAlias(false);
+			paint.setMode(PaintMode.FILL);
 
-		final var textWidth = f.measureTextWidth(String.valueOf(ch), fgp);
-		return (int) Math.ceil(textWidth);
+			final var textWidth = f.measureTextWidth(String.valueOf(ch), paint);
+			result.set((int) Math.ceil(textWidth));
+
+		});
+
+		return result.get();
+
 	}
 
 	@Override

@@ -1,13 +1,16 @@
 package org.eclipse.swt.widgets;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.internal.canvasext.DPIScaler;
 import org.eclipse.swt.internal.canvasext.FontProperties;
+import org.eclipse.swt.skia.cache.ImageKey;
 
 import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.FontHinting;
@@ -16,6 +19,7 @@ import io.github.humbleui.skija.FontStyle;
 import io.github.humbleui.skija.Typeface;
 
 public class SkiaResources {
+	private final static boolean USE_IMAGE_CACHE = true;
 
 	private Color background;
 	private Color foreground;
@@ -24,6 +28,7 @@ public class SkiaResources {
 	private io.github.humbleui.skija.Font skiaFont;
 
 	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
+	private final Map<ImageKey, io.github.humbleui.skija.Image> imageCache = new HashMap<>();
 	private final ISkiaCanvasExtension skiaExtension;
 
 	public SkiaResources(Canvas canvas, ISkiaCanvasExtension skiaExtension) {
@@ -157,6 +162,7 @@ public class SkiaResources {
 		if (this.skiaFont != null && !this.skiaFont.isClosed()) {
 			this.skiaFont.close();
 		}
+		skiaFont = null;
 
 		fontCache.values().forEach(f -> {
 			if (!f.isClosed()) {
@@ -164,7 +170,14 @@ public class SkiaResources {
 			}
 		});
 		fontCache.clear();
-		skiaFont = null;
+
+		imageCache.values().forEach(i -> {
+			if (!i.isClosed()) {
+				i.close();
+			}
+		});
+
+		imageCache.clear();
 
 	}
 
@@ -183,4 +196,20 @@ public class SkiaResources {
 		background = null;
 
 	}
+
+	public void cacheImage(Image swtImage, int zoom, io.github.humbleui.skija.Image skijaImage) {
+		if (USE_IMAGE_CACHE ) {
+			final var key = new ImageKey(swtImage, swtImage.getImageVersion(), zoom);
+			final var old = imageCache.get(key);
+			if (old != null && !old.isClosed()) {
+				old.close();
+			}
+			this.imageCache.put(key, skijaImage);
+		}
+	}
+
+	public io.github.humbleui.skija.Image getCachedImage(Image swtImage, int zoom) {
+		return this.imageCache.get(new ImageKey(swtImage, swtImage.getImageVersion(), zoom));
+	}
+
 }

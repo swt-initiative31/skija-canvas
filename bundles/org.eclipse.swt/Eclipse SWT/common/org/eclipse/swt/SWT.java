@@ -2588,7 +2588,7 @@ public class SWT {
 	 * <li><code>Canvas</code></li>
 	 * </ul>
 	 *
-	 * @since 3.133
+	 * @noreference Still in test mode: this field is not yet to be referenced by clients.
 	 */
 	public static final int SKIA = 1 << 23;
 

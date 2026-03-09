@@ -17,7 +17,7 @@ import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.internal.canvasext.DPIScaler;
+import org.eclipse.swt.internal.canvasext.SkiaDpiScaler;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.junit.jupiter.api.Test;
@@ -41,14 +41,14 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Rectangle {
 	@Test
 	public void test_org_eclipse_swt_skia_fillRectangle() {
 
-		for (var zoom : DPIScaler.getSupportedZooms()) {
+		for (var zoom : SkiaDpiScaler.getSupportedZooms()) {
 
 			CanvasCompareTool t = new CanvasCompareTool();
 			try{
 			t.init(null);
 
-			DPIScaler.setNativeZoom(t.classicalCanvas, zoom);
-			DPIScaler.setNativeZoom(t.skiaCanvas, zoom);
+			SkiaDpiScaler.setNativeZoom(t.classicalCanvas, zoom);
+			SkiaDpiScaler.setNativeZoom(t.skiaCanvas, zoom);
 
 			Display d = t.display;
 

@@ -373,9 +373,21 @@ public class SkiaGC implements IExternalGC {
 		// Integer.toBinaryString(palette.blueMask));
 	}
 
-	private static io.github.humbleui.skija.Image convertSWTImageToSkijaImage(Image swtImage, int zoom) {
+	private io.github.humbleui.skija.Image convertSWTImageToSkijaImage(Image swtImage, int zoom) {
+
+		var img = resources.getCachedImage(swtImage, zoom);
+
+		if(img != null  && !img.isClosed()) {
+			return img;
+		}
+
 		final ImageData imageData = swtImage.getImageData(zoom);
-		return convertSWTImageToSkijaImage(imageData);
+		img =  convertSWTImageToSkijaImage(imageData);
+
+		resources.cacheImage(swtImage, zoom, img);
+
+		return img;
+
 	}
 
 	static io.github.humbleui.skija.Image convertSWTImageToSkijaImage(ImageData imageData) {
@@ -1813,7 +1825,7 @@ public class SkiaGC implements IExternalGC {
 	 * @param pattern the SWT Pattern to convert
 	 * @return the Skija Shader or null if conversion fails
 	 */
-	private static Shader convertSWTPatternToSkijaShader(Pattern pattern) {
+	private Shader convertSWTPatternToSkijaShader(Pattern pattern) {
 
 		final var props = PatternProperties.get(pattern);
 

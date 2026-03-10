@@ -3,6 +3,9 @@ package org.eclipse.swt.graphics;
 import org.eclipse.swt.*;
 import org.eclipse.swt.internal.gtk.*;
 
+/**
+ * @noreference This class is not intended to be referenced by clients.
+ */
 public class FontProperties {
 
 	public int lfHeight;
@@ -19,6 +22,9 @@ public class FontProperties {
 
 	}
 
+	/**
+	 * @noreference This class is not intended to be referenced by clients.
+	 */
 	public static FontProperties getFontProperties(Font font) {
 		var fd = font.getFontData()[0];
 

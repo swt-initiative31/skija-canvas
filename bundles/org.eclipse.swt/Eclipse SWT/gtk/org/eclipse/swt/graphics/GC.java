@@ -2723,6 +2723,10 @@ void init(Drawable drawable, GCData data, long gdkGC) {
 	if (cairoTransformationMatrix == null) cairoTransformationMatrix = new double[6];
 	Cairo.cairo_get_matrix(data.cairo, cairoTransformationMatrix);
 	clipping = getClipping();
+	if(this.drawable instanceof Image i) {
+		// it is likely that the GC modifies the image, so we increase the verion
+		i.increaseVersion();
+	}
 }
 
 void initCairo() {

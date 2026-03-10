@@ -7,10 +7,10 @@ import org.eclipse.swt.widgets.*;
 /**
  * internal use only
  */
-public class DPIScaler {
+public class DpiScaler {
 
 
-	public DPIScaler(Canvas canvas) {
+	public DpiScaler(Canvas canvas) {
 	}
 
 	/**

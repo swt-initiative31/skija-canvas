@@ -17,7 +17,8 @@ public class SnippetAnimatedProgress {
 	final static boolean USE_SKIA = true; // Set to true to use Skia rendering, false for default SWT rendering
 
 	
-    public static void main(String[] args) {
+    @SuppressWarnings("deprecation")
+	public static void main(String[] args) {
         Display display = new Display();
         Shell shell = new Shell(display);
         shell.setText("AnimatedProgress Example");
@@ -27,7 +28,7 @@ public class SnippetAnimatedProgress {
         composite.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
         composite.setLayout(new GridLayout(1, false));
 
-        AnimatedProgress progress = new AnimatedProgress(composite, SWT.HORIZONTAL | SWT.BORDER | (USE_SKIA ? SWT.SKIA : SWT.NONE));
+		AnimatedProgress progress = new AnimatedProgress(composite, SWT.HORIZONTAL | SWT.BORDER | (USE_SKIA ? SWT.SKIA : SWT.NONE));
         progress.setLayoutData(new GridData(SWT.FILL, SWT.CENTER, true, false));
 
         Button startButton = new Button(composite, SWT.PUSH);

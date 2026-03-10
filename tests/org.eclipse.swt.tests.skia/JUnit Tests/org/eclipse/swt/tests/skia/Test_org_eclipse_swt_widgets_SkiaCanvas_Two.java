@@ -17,7 +17,7 @@ import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.internal.canvasext.DPIScaler;
+import org.eclipse.swt.internal.canvasext.SkiaDpiScalerUtil;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.junit.jupiter.api.Test;
@@ -49,8 +49,8 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Two {
 			t.twoSkiaCanvas = true;
 			t.init(null);
 
-			DPIScaler.setNativeZoom(t.classicalCanvas, zoom);
-			DPIScaler.setNativeZoom(t.skiaCanvas, zoom);
+			SkiaDpiScalerUtil.setNativeZoom(t.classicalCanvas, zoom);
+			SkiaDpiScalerUtil.setNativeZoom(t.skiaCanvas, zoom);
 
 			Display d = t.display;
 

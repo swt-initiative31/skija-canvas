@@ -1,4 +1,4 @@
-package org.eclipse.swt.skia.cache;
+package org.eclipse.swt.internal.skia.cache;
 
 import org.eclipse.swt.internal.canvasext.ImageVersion;
 

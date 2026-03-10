@@ -8,18 +8,23 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.internal.skia;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.GCData;
 import org.eclipse.swt.graphics.GCExtension;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.graphics.SkiaGC;
 import org.eclipse.swt.internal.DPIUtil;
-import org.eclipse.swt.internal.canvasext.DPIScaler;
+import org.eclipse.swt.internal.canvasext.DpiScaler;
+import org.eclipse.swt.internal.canvasext.IExternalCanvasHandler;
+import org.eclipse.swt.internal.canvasext.PaintEventSender;
+import org.eclipse.swt.internal.graphics.SkiaGC;
 import org.eclipse.swt.opengl.GLData;
 import org.eclipse.swt.opengl.OpenGLCanvasExtension;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Event;
+import org.eclipse.swt.widgets.RasterImageInfo;
 
 import io.github.humbleui.skija.BackendRenderTarget;
 import io.github.humbleui.skija.ColorAlphaType;
@@ -37,7 +42,7 @@ import io.github.humbleui.skija.SurfaceOrigin;
 import io.github.humbleui.skija.SurfaceProps;
 import io.github.humbleui.types.Rect;
 
-public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISkiaCanvasExtension, Listener {
+public final class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISkiaCanvasExtension, IExternalCanvasHandler  {
 
 	private final DirectContext skijaContext;
 	private BackendRenderTarget renderTarget;
@@ -45,7 +50,7 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 	private final Canvas canvas;
 	private SkiaResources resources;
 	private Rectangle redrawRectangle;
-	private DPIScaler scaler;
+	private DpiScaler scaler;
 	private Image lastImage;
 
 	private static final int SAMPLES = 0;
@@ -53,7 +58,7 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 	public SkiaGlCanvasExtension(Canvas canvas) {
 		this(canvas, createGLData());
 		this.resources = new SkiaResources(canvas, this);
-		this.scaler = new DPIScaler(canvas);
+		this.scaler = new DpiScaler(canvas);
 	}
 
 	private static GLData createGLData() {
@@ -91,7 +96,7 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 
 		renderTarget = BackendRenderTarget.makeGL(scaled.x, scaled.y, /* samples */SAMPLES, /* stencil */0, /* fbid */0,
 				FramebufferFormat.GR_GL_RGBA8);
-		surface = Surface.makeFromBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT,
+		surface = Surface.wrapBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT,
 				SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB(),
 				new SurfaceProps(PixelGeometry.RGB_H).withDeviceIndependentFonts(false));
 		surface.getCanvas().clear(getBackroundForSkia());
@@ -235,12 +240,8 @@ public class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISki
 	}
 
 	@Override
-	public DPIScaler getScaler() {
+	public DpiScaler getScaler() {
 		return scaler;
-	}
-
-	@Override
-	public void handleEvent(Event event) {
 	}
 
 	@Override

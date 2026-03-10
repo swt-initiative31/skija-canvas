@@ -1,6 +1,6 @@
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.internal.skia;
 
-import org.eclipse.swt.internal.canvasext.DPIScaler;
+import org.eclipse.swt.internal.canvasext.DpiScaler;
 
 import io.github.humbleui.skija.Matrix33;
 import io.github.humbleui.skija.Surface;
@@ -17,6 +17,6 @@ public interface ISkiaCanvasExtension {
 		return null;
 	}
 
-	DPIScaler getScaler();
+	DpiScaler getScaler();
 
 }

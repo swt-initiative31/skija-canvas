@@ -1,4 +1,4 @@
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.internal.skia;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -8,9 +8,11 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.internal.canvasext.DPIScaler;
+import org.eclipse.swt.internal.canvasext.DpiScaler;
 import org.eclipse.swt.internal.canvasext.FontProperties;
-import org.eclipse.swt.skia.cache.ImageKey;
+import org.eclipse.swt.internal.skia.cache.ImageKey;
+import org.eclipse.swt.widgets.Canvas;
+import org.eclipse.swt.widgets.Display;
 
 import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.FontHinting;
@@ -153,7 +155,7 @@ public class SkiaResources {
 		return skiaFont;
 	}
 
-	public DPIScaler getScaler() {
+	public DpiScaler getScaler() {
 		return skiaExtension.getScaler();
 	}
 

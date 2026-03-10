@@ -1,15 +1,17 @@
 package org.eclipse.swt.internal.canvasext;
 
 import org.eclipse.swt.widgets.Canvas;
-
-public class SkiaDpiScaler {
+/**
+ * Scaling utility for canvases.
+ */
+public class SkiaDpiScalerUtil {
 
 	public static int[] getSupportedZooms() {
-		return DPIScaler.getSupportedZooms();
+		return DpiScaler.getSupportedZooms();
 	}
 
 	public static void setNativeZoom(Canvas classicalCanvas, int zoom) {
-		DPIScaler.setNativeZoom(classicalCanvas, zoom);
+		DpiScaler.setNativeZoom(classicalCanvas, zoom);
 	}
 
 }

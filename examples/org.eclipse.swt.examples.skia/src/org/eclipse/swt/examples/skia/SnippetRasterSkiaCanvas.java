@@ -7,7 +7,6 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.SkiaCanvas;
 
 public class SnippetRasterSkiaCanvas {
 
@@ -113,8 +112,6 @@ public class SnippetRasterSkiaCanvas {
 	}
 
 	private static void onPaint2(Event e) {
-
-		final var s = ((Canvas) e.widget);
 
 		if (printFrameRate) {
 

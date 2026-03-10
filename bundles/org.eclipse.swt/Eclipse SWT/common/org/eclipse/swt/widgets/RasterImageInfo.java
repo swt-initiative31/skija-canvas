@@ -1,5 +1,9 @@
 package org.eclipse.swt.widgets;
 
+/**
+ * @noreference This class is not intended to be referenced by clients.
+ * @noinstantiate This class is not intended to be instantiated by clients.
+ */
 public class RasterImageInfo {
 
 	public RasterImageInfo(boolean premule, RasterColorType colorType) {

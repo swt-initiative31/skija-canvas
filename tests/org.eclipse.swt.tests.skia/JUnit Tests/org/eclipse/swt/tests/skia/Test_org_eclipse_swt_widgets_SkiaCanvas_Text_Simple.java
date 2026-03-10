@@ -21,7 +21,7 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.internal.canvasext.DPIScaler;
+import org.eclipse.swt.internal.canvasext.SkiaDpiScalerUtil;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
 import org.junit.jupiter.api.AfterEach;
@@ -65,8 +65,8 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Text_Simple {
 		try {
 			t.init(new FillLayout(SWT.HORIZONTAL));
 			var d = t.display;
-			DPIScaler.setNativeZoom(t.classicalCanvas, zoom);
-			DPIScaler.setNativeZoom(t.skiaCanvas, zoom);
+			SkiaDpiScalerUtil.setNativeZoom(t.classicalCanvas, zoom);
+			SkiaDpiScalerUtil.setNativeZoom(t.skiaCanvas, zoom);
 
 			Color col1 = d.getSystemColor(SWT.COLOR_RED);
 			Color col2 = d.getSystemColor(SWT.COLOR_GREEN);

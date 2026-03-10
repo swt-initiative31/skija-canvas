@@ -20,6 +20,7 @@ import java.util.stream.*;
 
 import org.eclipse.swt.*;
 import org.eclipse.swt.internal.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.internal.win32.*;
 
 /**
@@ -192,9 +193,10 @@ private void adoptTemporaryHandleZoomHint(Region region) {
 }
 
 /**
+* @noreference This method is not intended to be referenced by clients.
 * @return a log characterizing the region
 */
-RegionLog getLog() {
+public RegionLog getLog() {
 	return log;
 }
 

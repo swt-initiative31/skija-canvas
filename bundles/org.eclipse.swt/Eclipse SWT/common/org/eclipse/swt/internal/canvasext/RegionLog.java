@@ -1,14 +1,19 @@
-package org.eclipse.swt.graphics;
+package org.eclipse.swt.internal.canvasext;
 
 import java.util.*;
 
+import org.eclipse.swt.graphics.*;
+
+/**
+ * @noreference This class is not intended to be referenced by clients.
+ */
 public final class RegionLog {
 
-	enum OpType {
+	public enum OpType {
 		ADD, INTERSECT, SUBTRACT, TRANSLATE
 	}
 
-	record Operation(OpType type, Object executionObject) {
+	public record Operation(OpType type, Object executionObject) {
 	}
 
 	private final List<Operation> op = new LinkedList<>();
@@ -30,7 +35,13 @@ public final class RegionLog {
 		op.add(new Operation(OpType.SUBTRACT, ob));
 	}
 
-	List<Operation> getOperations(){
+	public List<Operation> getOperations(){
 		return op;
 	}
+
+	public int getNumberOfOperations() {
+		return op.size();
+	}
+
+
 }

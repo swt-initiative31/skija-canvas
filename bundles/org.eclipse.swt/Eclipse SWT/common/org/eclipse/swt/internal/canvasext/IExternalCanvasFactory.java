@@ -8,8 +8,16 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.internal.canvasext;
 
+import org.eclipse.swt.widgets.*;
+
+/**
+ * Defines a factory interface for creating external canvas handlers.
+ * Implementations of this interface can be provided to enable support for
+ * different types of canvas extensions based on the style of the canvas and the
+ * availability of an extension factory.
+ */
 public interface IExternalCanvasFactory {
 
 	IExternalCanvasHandler createCanvasExtension(Canvas c);

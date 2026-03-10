@@ -4,6 +4,9 @@ import java.util.*;
 
 import org.eclipse.swt.graphics.*;
 
+/**
+ * Provides extended information about a font, including its stretch factor and other properties.
+ */
 public class FontProperties {
 
 	// Standard OpenType stretch values

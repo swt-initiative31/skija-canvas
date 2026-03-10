@@ -10,6 +10,7 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.internal.canvasext.DpiScaler;
 import org.eclipse.swt.internal.canvasext.FontProperties;
+import org.eclipse.swt.internal.canvasext.ImageVersion;
 import org.eclipse.swt.internal.skia.cache.ImageKey;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
@@ -201,7 +202,7 @@ public class SkiaResources {
 
 	public void cacheImage(Image swtImage, int zoom, io.github.humbleui.skija.Image skijaImage) {
 		if (USE_IMAGE_CACHE ) {
-			final var key = new ImageKey(swtImage, swtImage.getImageVersion(), zoom);
+			final var key = new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom);
 			final var old = imageCache.get(key);
 			if (old != null && !old.isClosed()) {
 				old.close();
@@ -211,7 +212,7 @@ public class SkiaResources {
 	}
 
 	public io.github.humbleui.skija.Image getCachedImage(Image swtImage, int zoom) {
-		return this.imageCache.get(new ImageKey(swtImage, swtImage.getImageVersion(), zoom));
+		return this.imageCache.get(new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom));
 	}
 
 }

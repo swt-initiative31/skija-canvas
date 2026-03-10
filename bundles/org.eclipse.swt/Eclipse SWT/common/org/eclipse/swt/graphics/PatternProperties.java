@@ -52,7 +52,7 @@ public class PatternProperties {
     public Color getColor2() { return color2; }
     public int getAlpha1() { return alpha1; }
     public int getAlpha2() { return alpha2; }
-    
+
     /**
      * @noreference This class is not intended to be referenced by clients.
      */

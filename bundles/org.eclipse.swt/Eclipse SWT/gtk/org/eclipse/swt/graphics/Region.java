@@ -16,6 +16,7 @@ package org.eclipse.swt.graphics;
 
 import org.eclipse.swt.*;
 import org.eclipse.swt.internal.cairo.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.internal.gtk.*;
 
 /**
@@ -96,10 +97,10 @@ Region(Device device, long handle) {
 }
 
 /**
-*
+* @noreference This method is not intended to be referenced by clients.
 * @return a log characterizing the region
 */
-RegionLog getLog() {
+public RegionLog getLog() {
 	return log;
 }
 

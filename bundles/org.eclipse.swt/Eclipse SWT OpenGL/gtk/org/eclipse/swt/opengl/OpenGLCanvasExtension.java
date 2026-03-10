@@ -10,18 +10,20 @@
  *******************************************************************************/
 package org.eclipse.swt.opengl;
 
-import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.widgets.*;
-
-public abstract class OpenGLCanvasExtension extends GLCanvasExtension implements IExternalCanvasHandler {
-
-	private boolean redrawTriggered;
-
+/**
+ * @noreference This class is not intended to be referenced by clients.
+ */
+public abstract class OpenGLCanvasExtension extends GLCanvasExtension {
+	/**
+	 * @noreference This class is not intended to be referenced by clients.
+	 */
 	public OpenGLCanvasExtension(Canvas canvas, GLData data) {
 		super(canvas, data);
 	}
 
-	@Override
 	public Object paint(PaintEventSender e,long arg1, long arg2) {
 
 		if (canvas.isDisposed())
@@ -43,9 +45,7 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension implements
 
 	public abstract void doPaint(PaintEventSender e);
 
-	@Override
 	public void redrawTriggered() {
-		this.redrawTriggered = true;
 	}
 
 }

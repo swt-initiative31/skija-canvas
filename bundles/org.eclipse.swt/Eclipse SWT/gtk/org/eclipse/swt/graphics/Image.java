@@ -24,6 +24,7 @@ import org.eclipse.swt.*;
 import org.eclipse.swt.internal.*;
 import org.eclipse.swt.internal.DPIUtil.*;
 import org.eclipse.swt.internal.cairo.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.internal.gtk.*;
 import org.eclipse.swt.internal.image.*;
 
@@ -172,6 +173,11 @@ public final class Image extends Resource implements Drawable {
 	 * Attribute to cache current device zoom level
 	 */
 	private int currentDeviceZoom = 100;
+
+	/**
+	 * versions for an image cache
+	 */
+	private int version;
 
 Image(Device device) {
 	super(device);
@@ -1664,6 +1670,22 @@ public static void drawAtSize(GC gc, ImageData imageData, int width, int height)
 				0, 0, width, height);
 		imageToDraw.dispose();
 	});
+}
+
+void increaseVersion() {
+	if(this.version == Integer.MAX_VALUE) {
+		this.version = 0;
+	} else {
+		this.version++;
+	}
+}
+
+/**
+ * @noreference This field is not intended to be referenced by clients.
+ * @return The current version of the image, which is incremented each time the image data changes.
+ */
+public ImageVersion getImageVersion() {
+	return new ImageVersion(this.version);
 }
 
 }

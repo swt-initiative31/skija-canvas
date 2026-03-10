@@ -17,6 +17,7 @@ package org.eclipse.swt.widgets;
 import org.eclipse.swt.*;
 import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.internal.cairo.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.internal.gtk.*;
 
 /**
@@ -45,7 +46,7 @@ public class Canvas extends Composite {
 	Caret caret;
 	IME ime;
 	boolean blink, drawFlag;
-	public IExternalCanvasHandler externalCanvasHandler;
+	private IExternalCanvasHandler externalCanvasHandler;
 
 Canvas () {}
 

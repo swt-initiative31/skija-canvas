@@ -11,7 +11,7 @@
  *     SAP SE and others - initial API and implementation
  *******************************************************************************/
 
-package org.eclipse.swt.graphics;
+package org.eclipse.swt.internal.graphics;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -22,13 +22,33 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Color;
+import org.eclipse.swt.graphics.Device;
+import org.eclipse.swt.graphics.Drawable;
+import org.eclipse.swt.graphics.FontMetrics;
+import org.eclipse.swt.graphics.FontMetricsExtension;
+import org.eclipse.swt.graphics.GC;
+import org.eclipse.swt.graphics.GCData;
+import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.LineAttributes;
+import org.eclipse.swt.graphics.PaletteData;
+import org.eclipse.swt.graphics.Path;
+import org.eclipse.swt.graphics.PathData;
+import org.eclipse.swt.graphics.Pattern;
+import org.eclipse.swt.graphics.PatternProperties;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.graphics.Region;
+import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.internal.DPIUtil;
-import org.eclipse.swt.internal.canvasext.DPIScaler;
+import org.eclipse.swt.internal.canvasext.DpiScaler;
 import org.eclipse.swt.internal.canvasext.IExternalGC;
+import org.eclipse.swt.internal.skia.ISkiaCanvasExtension;
+import org.eclipse.swt.internal.skia.SkiaResources;
 import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
-import org.eclipse.swt.widgets.ISkiaCanvasExtension;
-import org.eclipse.swt.widgets.SkiaResources;
 
 import io.github.humbleui.skija.Bitmap;
 import io.github.humbleui.skija.BlendMode;
@@ -526,9 +546,9 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void drawLine(int x1, int y1, int x2, int y2) {
 		final float scaledOffsetValue = getScaledOffsetValue();
-		performDraw(paint -> surface.getCanvas().drawLine(DPIScaler.autoScaleUp(x1) + scaledOffsetValue,
-				DPIScaler.autoScaleUp(y1) + scaledOffsetValue, DPIScaler.autoScaleUp(x2) + scaledOffsetValue,
-				DPIScaler.autoScaleUp(y2) + scaledOffsetValue, paint));
+		performDraw(paint -> surface.getCanvas().drawLine(DpiScaler.autoScaleUp(x1) + scaledOffsetValue,
+				DpiScaler.autoScaleUp(y1) + scaledOffsetValue, DpiScaler.autoScaleUp(x2) + scaledOffsetValue,
+				DpiScaler.autoScaleUp(y2) + scaledOffsetValue, paint));
 	}
 
 	@Override
@@ -703,8 +723,8 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
-		performDraw(paint -> surface.getCanvas().drawArc(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y),
-				DPIScaler.autoScaleUp(x + width), DPIScaler.autoScaleUp(y + height), -startAngle, -arcAngle, false,
+		performDraw(paint -> surface.getCanvas().drawArc(DpiScaler.autoScaleUp(x), DpiScaler.autoScaleUp(y),
+				DpiScaler.autoScaleUp(x + width), DpiScaler.autoScaleUp(y + height), -startAngle, -arcAngle, false,
 				paint));
 	}
 
@@ -771,10 +791,10 @@ public class SkiaGC implements IExternalGC {
 		// Create Skija path for the polygon
 		try (io.github.humbleui.skija.Path path = new io.github.humbleui.skija.Path()) {
 			// Move to first point
-			path.moveTo(DPIScaler.autoScaleUp(pointArray[0]), DPIScaler.autoScaleUp(pointArray[1]));
+			path.moveTo(DpiScaler.autoScaleUp(pointArray[0]), DpiScaler.autoScaleUp(pointArray[1]));
 			// Add lines to subsequent points
 			for (int i = 2; i < pointArray.length; i += 2) {
-				path.lineTo(DPIScaler.autoScaleUp(pointArray[i]), DPIScaler.autoScaleUp(pointArray[i + 1]));
+				path.lineTo(DpiScaler.autoScaleUp(pointArray[i]), DpiScaler.autoScaleUp(pointArray[i + 1]));
 			}
 			path.closePath();
 			// Draw the polygon outline
@@ -800,19 +820,19 @@ public class SkiaGC implements IExternalGC {
 		for (final byte type : types) {
 			switch (type) {
 			case SWT.PATH_MOVE_TO:
-				skijaPath.moveTo(DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]));
+				skijaPath.moveTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
 				break;
 			case SWT.PATH_LINE_TO:
-				skijaPath.lineTo(DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]));
+				skijaPath.lineTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
 				break;
 			case SWT.PATH_CUBIC_TO:
-				skijaPath.cubicTo(DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]),
-						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]),
-						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]));
+				skijaPath.cubicTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
+						DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
+						DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
 				break;
 			case SWT.PATH_QUAD_TO:
-				skijaPath.quadTo(DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]),
-						DPIScaler.autoScaleUp(pts[pi++]), DPIScaler.autoScaleUp(pts[pi++]));
+				skijaPath.quadTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
+						DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
 				break;
 			case SWT.PATH_CLOSE:
 				skijaPath.closePath();
@@ -831,7 +851,7 @@ public class SkiaGC implements IExternalGC {
 	private static float[] convertToFloat(int[] array) {
 		final float[] arrayAsFloat = new float[array.length];
 		for (int i = 0; i < array.length; i++) {
-			arrayAsFloat[i] = DPIScaler.autoScaleUp(array[i]);
+			arrayAsFloat[i] = DpiScaler.autoScaleUp(array[i]);
 		}
 		return arrayAsFloat;
 	}
@@ -872,8 +892,8 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void fillArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
-		performDrawFilled(paint -> surface.getCanvas().drawArc(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y),
-				DPIScaler.autoScaleUp(x + width), DPIScaler.autoScaleUp(y + height), -startAngle, -arcAngle, true,
+		performDrawFilled(paint -> surface.getCanvas().drawArc(DpiScaler.autoScaleUp(x), DpiScaler.autoScaleUp(y),
+				DpiScaler.autoScaleUp(x + width), DpiScaler.autoScaleUp(y + height), -startAngle, -arcAngle, true,
 				paint));
 	}
 
@@ -969,10 +989,10 @@ public class SkiaGC implements IExternalGC {
 
 		// Create Skija path for the polygon
 		try (io.github.humbleui.skija.Path path = new io.github.humbleui.skija.Path()) { // Move to first point
-			path.moveTo(DPIScaler.autoScaleUp(pointArray[0]), DPIScaler.autoScaleUp(pointArray[1]));
+			path.moveTo(DpiScaler.autoScaleUp(pointArray[0]), DpiScaler.autoScaleUp(pointArray[1]));
 			// Add lines to subsequent points
 			for (int i = 2; i < pointArray.length; i += 2) {
-				path.lineTo(DPIScaler.autoScaleUp(pointArray[i]), DPIScaler.autoScaleUp(pointArray[i + 1]));
+				path.lineTo(DpiScaler.autoScaleUp(pointArray[i]), DpiScaler.autoScaleUp(pointArray[i + 1]));
 			}
 			// Close the path to form a polygon
 			path.closePath();
@@ -1116,7 +1136,7 @@ public class SkiaGC implements IExternalGC {
 
 	private Rect offsetRectangle(Rect rect) {
 		final float scaledOffsetValue = getScaledOffsetValue();
-		final float widthHightAutoScaleOffset = DPIScaler.autoScaleUp(1) - 1.0f;
+		final float widthHightAutoScaleOffset = DpiScaler.autoScaleUp(1) - 1.0f;
 		if (scaledOffsetValue != 0f) {
 			return new Rect(rect.getLeft() + scaledOffsetValue, rect.getTop() + scaledOffsetValue,
 					rect.getRight() + scaledOffsetValue + widthHightAutoScaleOffset,
@@ -1127,7 +1147,7 @@ public class SkiaGC implements IExternalGC {
 
 	private RRect offsetRectangle(RRect rect) {
 		final float scaledOffsetValue = getScaledOffsetValue();
-		final float widthHightAutoScaleOffset = DPIScaler.autoScaleUp(1) - 1.0f;
+		final float widthHightAutoScaleOffset = DpiScaler.autoScaleUp(1) - 1.0f;
 		if (scaledOffsetValue != 0f) {
 			return new RRect(rect.getLeft() + scaledOffsetValue, rect.getTop() + scaledOffsetValue,
 					rect.getRight() + scaledOffsetValue + widthHightAutoScaleOffset,
@@ -1150,18 +1170,18 @@ public class SkiaGC implements IExternalGC {
 		if (isDefaultLineWidth) {
 			return 0.5f;
 		}
-		final int effectiveLineWidth = DPIScaler.autoScaleUp(lineWidth);
+		final int effectiveLineWidth = DpiScaler.autoScaleUp(lineWidth);
 		if (effectiveLineWidth % 2 == 1) {
-			return DPIScaler.autoScaleUp(0.5f);
+			return DpiScaler.autoScaleUp(0.5f);
 		}
 		return 0f;
 	}
 
 	private static RRect createScaledRoundRectangle(int x, int y, int width, int height, float arcWidth,
 			float arcHeight) {
-		return new RRect(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y), DPIScaler.autoScaleUp(x + width),
-				DPIScaler.autoScaleUp(y + height),
-				new float[] { DPIScaler.autoScaleUp(arcWidth), DPIScaler.autoScaleUp(arcHeight) });
+		return new RRect(DpiScaler.autoScaleUp(x), DpiScaler.autoScaleUp(y), DpiScaler.autoScaleUp(x + width),
+				DpiScaler.autoScaleUp(y + height),
+				new float[] { DpiScaler.autoScaleUp(arcWidth), DpiScaler.autoScaleUp(arcHeight) });
 	}
 
 	@Override
@@ -1186,9 +1206,9 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public LineAttributes getLineAttributes() {
 		final LineAttributes attributes = getLineAttributesInPixels();
-		attributes.width = DPIScaler.autoScaleDown(attributes.width);
+		attributes.width = DpiScaler.autoScaleDown(attributes.width);
 		if (attributes.dash != null) {
-			attributes.dash = DPIScaler.autoScaleDown(attributes.dash);
+			attributes.dash = DpiScaler.autoScaleDown(attributes.dash);
 		}
 		return attributes;
 	}
@@ -1219,7 +1239,7 @@ public class SkiaGC implements IExternalGC {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
 
-		io.github.humbleui.skija.Image skijaImage = convertSWTImageToSkijaImage(image, DPIScaler.getDeviceZoom());
+		io.github.humbleui.skija.Image skijaImage = convertSWTImageToSkijaImage(image, DpiScaler.getDeviceZoom());
 		final io.github.humbleui.skija.Image copiedArea = surface.makeImageSnapshot(
 				createScaledRectangle(x, y, skijaImage.getWidth(), skijaImage.getHeight()).toIRect());
 
@@ -1245,7 +1265,7 @@ public class SkiaGC implements IExternalGC {
 	public void copyArea(int srcX, int srcY, int width, int height, int destX, int destY) {
 		final io.github.humbleui.skija.Image copiedArea = surface
 				.makeImageSnapshot(createScaledRectangle(srcX, srcY, width, height).toIRect());
-		surface.getCanvas().drawImage(copiedArea, DPIScaler.autoScaleUp(destX), DPIScaler.autoScaleUp(destY));
+		surface.getCanvas().drawImage(copiedArea, DpiScaler.autoScaleUp(destX), DpiScaler.autoScaleUp(destY));
 	}
 
 	@Override
@@ -1367,7 +1387,7 @@ public class SkiaGC implements IExternalGC {
 		}
 		final int[] lineDashesInt = new int[lineDashes.length];
 		for (int i = 0; i < lineDashesInt.length; i++) {
-			lineDashesInt[i] = DPIScaler.autoScaleDownToInt(lineDashes[i]);
+			lineDashesInt[i] = DpiScaler.autoScaleDownToInt(lineDashes[i]);
 		}
 		return lineDashesInt;
 	}
@@ -1538,7 +1558,7 @@ public class SkiaGC implements IExternalGC {
 		if (attributes == null) {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
-		final float scaledWidth = DPIScaler.autoScaleUp(attributes.width);
+		final float scaledWidth = DpiScaler.autoScaleUp(attributes.width);
 		setLineAttributesInPixels(attributes, scaledWidth);
 	}
 
@@ -1615,7 +1635,7 @@ public class SkiaGC implements IExternalGC {
 				}
 
 				// Scale dash values for DPI
-				newDashes[i] = DPIScaler.autoScaleUp(dash);
+				newDashes[i] = DpiScaler.autoScaleUp(dash);
 
 				if (!dashesChanged && currentDashes != null && currentDashes[i] != newDashes[i]) {
 					dashesChanged = true;
@@ -1667,7 +1687,7 @@ public class SkiaGC implements IExternalGC {
 				if (dashes[i] <= 0) {
 					SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 				}
-				newDashes[i] = DPIScaler.autoScaleUp((float) dashes[i]);
+				newDashes[i] = DpiScaler.autoScaleUp((float) dashes[i]);
 				if (!changed && lineDashes != null && lineDashes[i] != newDashes[i]) {
 					changed = true;
 				}

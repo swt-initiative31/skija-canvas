@@ -11,7 +11,7 @@
  * Contributors:
  *     IBM Corporation - initial API and implementation
  *******************************************************************************/
-package org.eclipse.swt.graphics;
+package org.eclipse.swt.internal.graphics;
 
 import java.util.Objects;
 

@@ -17,6 +17,7 @@ package org.eclipse.swt.widgets;
 import org.eclipse.swt.*;
 import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.internal.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.internal.win32.*;
 
 /**
@@ -44,7 +45,7 @@ import org.eclipse.swt.internal.win32.*;
 public class Canvas extends Composite {
 	Caret caret;
 	IME ime;
-	public IExternalCanvasHandler externalCanvasHandler;
+	private IExternalCanvasHandler externalCanvasHandler;
 
 /**
  * Prevents uninitialized instances from being created outside the package.

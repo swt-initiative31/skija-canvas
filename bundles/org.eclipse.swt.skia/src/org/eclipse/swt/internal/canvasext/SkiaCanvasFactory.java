@@ -8,11 +8,19 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.internal.canvasext;
 
+import org.eclipse.swt.internal.skia.SkiaGlCanvasExtension;
+import org.eclipse.swt.widgets.Canvas;
+
+/**
+ * Provides a factory for creating Skia-based canvas extensions. This factory is
+ * used by org.eclipse.swt.internal.canvasext.ExternalCanvasHandler with the
+ * resource loader to create canvas extensions when the SKIA style is specified.
+ */
 public class SkiaCanvasFactory implements IExternalCanvasFactory {
 
-	static boolean skiaFailedWithErrors = false;
+	private static boolean skiaFailedWithErrors = false;
 
 	@Override
 	public IExternalCanvasHandler createCanvasExtension(Canvas c) {
@@ -29,14 +37,5 @@ public class SkiaCanvasFactory implements IExternalCanvasFactory {
 			skiaFailedWithErrors = true;
 			return null;
 		}
-
-		// final var prop = System.getProperty(SkiaConfiguration.SKIA_PROPERTY);
-		// if(SkiaConfiguration.RASTER.equals(prop)) {
-		// return new SkiaRasterCanvasExtension(c);
-		// }
-		// if(SkiaConfiguration.OPENGL.equals(prop)) {
-		// }
-		// return null;
 	}
-
 }

@@ -2589,6 +2589,7 @@ public class SWT {
 	 * </ul>
 	 *
 	 * @noreference Still in test mode: this field is not yet to be referenced by clients.
+	 * @since 3.133
 	 */
 	public static final int SKIA = 1 << 23;
 

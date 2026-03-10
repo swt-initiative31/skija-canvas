@@ -132,9 +132,6 @@ public class SnippetClippingRectangle {
 		return new Canvas(shell, SWT.BORDER | style);
 	}
 
-	private static void setGridData(Control c) {
-		setGridData(c, 150);
-	}
 
 	private static void setGridData(Control c, int minHeight) {
 		final var g = new GridData();

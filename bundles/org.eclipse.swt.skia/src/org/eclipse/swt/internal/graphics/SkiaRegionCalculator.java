@@ -1,10 +1,14 @@
-package org.eclipse.swt.graphics;
+package org.eclipse.swt.internal.graphics;
 
 import java.util.HashMap;
 
-import org.eclipse.swt.graphics.RegionLog.OpType;
-import org.eclipse.swt.graphics.RegionLog.Operation;
-import org.eclipse.swt.widgets.ISkiaCanvasExtension;
+import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.graphics.Region;
+import org.eclipse.swt.internal.canvasext.RegionLogProvider;
+import org.eclipse.swt.internal.canvasext.RegionLog.OpType;
+import org.eclipse.swt.internal.canvasext.RegionLog.Operation;
+import org.eclipse.swt.internal.skia.ISkiaCanvasExtension;
 
 import io.github.humbleui.skija.Region.Op;
 import io.github.humbleui.types.IRect;

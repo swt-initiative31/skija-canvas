@@ -8,7 +8,6 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.SkiaCanvas;
 
 public class SnippetCanvasCompare {
 
@@ -18,7 +17,7 @@ public class SnippetCanvasCompare {
 		shell.setText("Snippet Canvas Compare");
 
 		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED| SWT.H_SCROLL), 1, "SWT Canvas");
-		configureCanvas(shell, new SkiaCanvas(shell, SWT.DOUBLE_BUFFERED | SWT.H_SCROLL), 2, "SkiaGlCanvas");
+		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED | SWT.H_SCROLL| SWT.SKIA), 2, "SkiaGlCanvas");
 
 
 		shell.setSize(1500, 1000);

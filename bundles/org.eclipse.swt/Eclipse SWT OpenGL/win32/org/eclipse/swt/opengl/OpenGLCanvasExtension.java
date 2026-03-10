@@ -11,9 +11,13 @@
 package org.eclipse.swt.opengl;
 
 import org.eclipse.swt.graphics.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.widgets.*;
 
-public abstract class OpenGLCanvasExtension extends GLCanvasExtension  {
+/**
+ * @noreference This class is not intended to be referenced by clients.
+ */
+public abstract class OpenGLCanvasExtension extends GLCanvasExtension {
 
 	private boolean redrawTriggered;
 	private Canvas canvas;
@@ -23,7 +27,9 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension  {
 		this.canvas = canvas;
 	}
 
-	@Override
+	/**
+	 * @noreference This method is not intended to be referenced by clients.
+	 */
 	public Object paint(PaintEventSender e, long wParam, long lParam) {
 
 		if (canvas.isDisposed())
@@ -32,7 +38,7 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension  {
 		doPaint(e);
 		swapBuffers();
 
-		if(redrawTriggered) {
+		if (redrawTriggered) {
 			canvas.redraw();
 			redrawTriggered = false;
 			return 0;
@@ -42,15 +48,26 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension  {
 
 	}
 
-	@Override
+	/**
+	 * @noreference This method is not intended to be referenced by clients.
+	 */
 	public void redrawTriggered() {
 		this.redrawTriggered = true;
 	}
 
+	/**
+	 * @noreference This method is not intended to be referenced by clients.
+	 */
 	abstract public void preResize(Event e);
 
+	/**
+	 * @noreference This method is not intended to be referenced by clients.
+	 */
 	public abstract void createSurface(long pointer, Point size, RasterImageInfo info);
 
+	/**
+	 * @noreference This method is not intended to be referenced by clients.
+	 */
 	public abstract void doPaint(PaintEventSender e);
 
 }

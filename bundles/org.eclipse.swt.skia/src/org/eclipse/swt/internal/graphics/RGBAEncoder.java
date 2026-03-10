@@ -1,6 +1,8 @@
-package org.eclipse.swt.graphics;
+package org.eclipse.swt.internal.graphics;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.ImageData;
+import org.eclipse.swt.graphics.RGB;
 
 /**
  * Encodes an ImageLoader's first ImageData to a raw RGBA byte array.

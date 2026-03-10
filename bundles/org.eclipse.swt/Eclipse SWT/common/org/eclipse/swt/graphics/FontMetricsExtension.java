@@ -2,9 +2,16 @@ package org.eclipse.swt.graphics;
 
 import org.eclipse.swt.internal.canvasext.*;
 
+/**
+ * @noreference This class is not intended to be referenced by clients.
+ */
 public final class FontMetricsExtension extends FontMetrics {
 	IExternalFontMetrics externalMetrics;
 
+	/**
+	 * @noreference This constructor is not intended to be referenced by clients.
+	 * @param extMetrics
+	 */
 	public FontMetricsExtension(IExternalFontMetrics extMetrics) {
 		this.externalMetrics = extMetrics;
 	}
@@ -44,10 +51,10 @@ public final class FontMetricsExtension extends FontMetrics {
 	public int hashCode() {
 		return externalMetrics.hashCode();
 	}
-	
+
 	@Override
 	public boolean equals(Object object) {
 		return externalMetrics.equals(object);
 	}
-	
+
 }

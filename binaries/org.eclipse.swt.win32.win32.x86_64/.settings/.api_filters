@@ -110,6 +110,30 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="Eclipse SWT OpenGL/win32/org/eclipse/swt/opengl/OpenGLCanvasExtension.java" type="org.eclipse.swt.opengl.OpenGLCanvasExtension">
+        <filter comment="Canvas Extension: internal use only." id="643846161">
+            <message_arguments>
+                <message_argument value="PaintEventSender"/>
+                <message_argument value="OpenGLCanvasExtension"/>
+                <message_argument value="doPaint(PaintEventSender)"/>
+            </message_arguments>
+        </filter>
+        <filter comment="Canvas extension: internal use only" id="643846161">
+            <message_arguments>
+                <message_argument value="PaintEventSender"/>
+                <message_argument value="OpenGLCanvasExtension"/>
+                <message_argument value="paint(PaintEventSender, long, long)"/>
+            </message_arguments>
+        </filter>
+    </resource>
+    <resource path="Eclipse SWT/common/org/eclipse/swt/SWT.java" type="org.eclipse.swt.SWT">
+        <filter comment="SKIA: for the moment ignore, before merging, increase version and merge." id="336658481">
+            <message_arguments>
+                <message_argument value="org.eclipse.swt.SWT"/>
+                <message_argument value="SKIA"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="Eclipse SWT/common/org/eclipse/swt/graphics/Point.java" type="org.eclipse.swt.graphics.Point$OfFloat">
         <filter id="338944126">
             <message_arguments>

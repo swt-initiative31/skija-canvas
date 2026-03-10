@@ -16,7 +16,7 @@ import java.util.*;
 import org.eclipse.swt.internal.canvasext.*;
 
 /**
- * Internal usage only!!.
+ * @noreference This class is not intended to be referenced by clients.
  */
 public final class GCExtension extends GC {
 
@@ -36,30 +36,54 @@ public final class GCExtension extends GC {
 
 	/**
 	 * Blocks access to the static factory methods from GC.
+	 * 
+	 * @noreference This class is not intended to be referenced by clients.
 	 */
 	public static GCExtension gtk_new(long handle, GCData data) {
 		throw new IllegalStateException("GCExtension does not support gtk_new");
 	}
 
+	/**
+	 * Blocks access to the static factory methods from GC.
+	 * 
+	 * @noreference This class is not intended to be referenced by clients.
+	 */
 	public static GCExtension gtk_new(Drawable drawable, GCData data) {
 		throw new IllegalStateException("GCExtension does not support gtk_new");
 	}
 
 	/**
-	 * Blocks access to the protected GC constructor.
+	 * Blocks access to the GC constructor.
+	 * 
+	 * @noreference This class is not intended to be referenced by clients.
 	 */
 	protected GCExtension() {
 		throw new IllegalStateException("GCExtension does not supported protected constructor");
 	}
 
+	/**
+	 * Blocks access to the GC constructor.
+	 * 
+	 * @noreference This class is not intended to be referenced by clients.
+	 */
 	public GCExtension(Drawable drawable) {
 		throw new IllegalStateException("Invalid Constructor call");
 	}
 
+	/**
+	 * Blocks access to the GC constructor.
+	 * 
+	 * @noreference This class is not intended to be referenced by clients.
+	 */
 	public GCExtension(Drawable drawable, int style) {
 		throw new IllegalStateException("Invalid Constructor call");
 	}
 
+	/**
+	 * Blocks access to the GC constructor.
+	 * 
+	 * @noreference This class is not intended to be referenced by clients.
+	 */
 	public GCExtension(final IExternalGC ext) {
 		this.e = ext;
 	}

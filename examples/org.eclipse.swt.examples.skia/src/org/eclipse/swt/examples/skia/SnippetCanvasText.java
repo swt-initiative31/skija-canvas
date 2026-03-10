@@ -8,7 +8,6 @@ import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
-import org.eclipse.swt.widgets.SkiaCanvas;
 
 public class SnippetCanvasText {
 	final static boolean useSkia = false;
@@ -27,8 +26,6 @@ public class SnippetCanvasText {
 		shell.setText("Snippet Canvas");
 		// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
 		final Canvas c = new Canvas(shell, style );
-
-		final StringBuilder b = new StringBuilder();
 
 		for (int j = 0; j < LINES; j++) {
 			text[j] = generateText(LETTERS_PER_LINE);

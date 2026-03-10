@@ -8,18 +8,24 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.internal.canvasext;
 
 import java.util.*;
 
 import org.eclipse.swt.*;
 import org.eclipse.swt.custom.*;
+import org.eclipse.swt.widgets.*;
 
+/**
+ * Handles the creation of external canvas extensions based on the style of the
+ * canvas and the availability of an extension factory.
+ */
 public class ExternalCanvasHandler {
 
 	private final static String DISABLE_EXTERNAL_CANVAS = "org.eclipse.swt.external.canvas:disabled";
-	
-	// this is only for test cases in order to check whether the software works with the canvas extension.
+
+	// this is only for test cases in order to check whether the software works with
+	// the canvas extension.
 	// NEVER USE THIS IN PRODUCTIVE CODE!!
 	private final static String FORCE_ENABLE_EXTERNAL_CANVAS = "org.eclipse.swt.external.canvas:forceEnabled";
 
@@ -29,7 +35,7 @@ public class ExternalCanvasHandler {
 	public static boolean isActive(Canvas canvas, int style) {
 
 		var disable = System.getProperty(DISABLE_EXTERNAL_CANVAS);
-		if(disable != null)
+		if (disable != null)
 			return false;
 
 		if (canvas instanceof StyledText || canvas instanceof Decorations)
@@ -39,7 +45,7 @@ public class ExternalCanvasHandler {
 			return true;
 
 		var forceEnable = System.getProperty(FORCE_ENABLE_EXTERNAL_CANVAS);
-		if(forceEnable != null)
+		if (forceEnable != null)
 			return true;
 
 		return false;

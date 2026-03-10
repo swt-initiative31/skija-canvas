@@ -1,8 +1,9 @@
-package org.eclipse.swt.widgets;
+package org.eclipse.swt.internal.skia;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.SkiaGC;
-import org.eclipse.swt.internal.canvasext.DPIScaler;
+import org.eclipse.swt.internal.canvasext.DpiScaler;
+import org.eclipse.swt.internal.graphics.SkiaGC;
+import org.eclipse.swt.widgets.Canvas;
 
 import io.github.humbleui.skija.BlendMode;
 import io.github.humbleui.skija.Paint;
@@ -45,8 +46,8 @@ public class SkiaCaretHandler {
 	}
 
 	private static Rect createScaledRectangle(int x, int y, int width, int height) {
-		return new Rect(DPIScaler.autoScaleUp(x), DPIScaler.autoScaleUp(y), DPIScaler.autoScaleUp(x + width),
-				DPIScaler.autoScaleUp(y + height));
+		return new Rect(DpiScaler.autoScaleUp(x), DpiScaler.autoScaleUp(y), DpiScaler.autoScaleUp(x + width),
+				DpiScaler.autoScaleUp(y + height));
 	}
 
 	private static float getScaledOffsetValue(float width) {
@@ -55,16 +56,16 @@ public class SkiaCaretHandler {
 			return 0.5f;
 		}
 
-		final float effectiveLineWidth = DPIScaler.autoScaleUp(width);
+		final float effectiveLineWidth = DpiScaler.autoScaleUp(width);
 		if (effectiveLineWidth % 2 == 1) {
-			return DPIScaler.autoScaleUp(0.5f);
+			return DpiScaler.autoScaleUp(0.5f);
 		}
 		return 0f;
 	}
 
 	private static Rect offsetRectangle(Rect rect) {
 		final float scaledOffsetValue = getScaledOffsetValue(rect.getLeft() - rect.getRight());
-		final float widthHightAutoScaleOffset = DPIScaler.autoScaleUp(1) - 1.0f;
+		final float widthHightAutoScaleOffset = DpiScaler.autoScaleUp(1) - 1.0f;
 		if (scaledOffsetValue != 0f) {
 			return new Rect(rect.getLeft() + scaledOffsetValue, rect.getTop() + scaledOffsetValue,
 					rect.getRight() + scaledOffsetValue + widthHightAutoScaleOffset,

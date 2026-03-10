@@ -6,10 +6,10 @@ import org.eclipse.swt.widgets.*;
 
 /**
  *
- * original calls come from DPIUtil
- *
+ *	Provides utility methods for the canvas extension to scale values according to the current DPI settings of the OS.
+ *	This is used internally to scale all values that are used for drawing and layout calculations.
  */
-public class DPIScaler {
+public class DpiScaler {
 
 	private Canvas canvas;
 
@@ -22,7 +22,7 @@ public class DPIScaler {
 		return new int[] { 100, 150, 200, 250, 300, 350, 400, 450, 500, 550, 600 };
 	}
 
-	public DPIScaler(Canvas canvas) {
+	public DpiScaler(Canvas canvas) {
 		this.canvas = canvas;
 	}
 

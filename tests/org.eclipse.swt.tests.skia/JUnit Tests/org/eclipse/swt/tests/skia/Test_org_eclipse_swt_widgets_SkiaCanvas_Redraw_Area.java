@@ -20,7 +20,7 @@ import org.eclipse.swt.events.PaintEvent;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.internal.canvasext.SkiaDpiScalerUtil;
+import org.eclipse.swt.internal.canvasext.DpiScalerUtil;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.junit.jupiter.api.Test;
@@ -83,7 +83,7 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Redraw_Area {
 	@Test
 	public void test_org_eclipse_swt_skia_redraw_rectangle() {
 
-		for (var zoom : SkiaDpiScalerUtil.getSupportedZooms()) {
+		for (var zoom : DpiScalerUtil.getSupportedZooms()) {
 
 			this.r = null;
 
@@ -91,8 +91,8 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Redraw_Area {
 			try {
 				t.init(null);
 
-				SkiaDpiScalerUtil.setNativeZoom(t.classicalCanvas, zoom);
-				SkiaDpiScalerUtil.setNativeZoom(t.skiaCanvas, zoom);
+				DpiScalerUtil.setNativeZoom(t.classicalCanvas, zoom);
+				DpiScalerUtil.setNativeZoom(t.skiaCanvas, zoom);
 
 				Display d = t.display;
 
@@ -122,7 +122,7 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Redraw_Area {
 	@Test
 	public void test_org_eclipse_swt_skia_redraw_rectangle2() {
 
-		for (var zoom : SkiaDpiScalerUtil.getSupportedZooms()) {
+		for (var zoom : DpiScalerUtil.getSupportedZooms()) {
 
 			this.r = null;
 
@@ -131,8 +131,8 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Redraw_Area {
 			try {
 				t.init(null);
 
-				SkiaDpiScalerUtil.setNativeZoom(t.classicalCanvas, zoom);
-				SkiaDpiScalerUtil.setNativeZoom(t.skiaCanvas, zoom);
+				DpiScalerUtil.setNativeZoom(t.classicalCanvas, zoom);
+				DpiScalerUtil.setNativeZoom(t.skiaCanvas, zoom);
 
 				Display d = t.display;
 

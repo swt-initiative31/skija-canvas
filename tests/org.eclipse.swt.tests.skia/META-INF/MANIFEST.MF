@@ -4,10 +4,10 @@ Bundle-Name: Eclipse SWT Tests Skia
 Bundle-SymbolicName: org.eclipse.swt.tests.skia
 Bundle-Version: 3.108.200.qualifier
 Bundle-Vendor: Eclipse.org
-Require-Bundle: org.eclipse.swt;bundle-version="[3.133.0,4.0.0)",
- junit-jupiter-api;bundle-version="[5.14.1,6.0.0)",
+Require-Bundle: junit-jupiter-api;bundle-version="[5.14.1,6.0.0)",
  junit-jupiter-engine;bundle-version="[5.14.1,6.0.0)",
- junit-jupiter-params;bundle-version="[5.14.1,6.0.0)"
+ junit-jupiter-params;bundle-version="[5.14.1,6.0.0)",
+ org.eclipse.swt;bundle-version="[3.133.100,4.0.0)"
 Eclipse-BundleShape: dir
 Bundle-RequiredExecutionEnvironment: JavaSE-21
 Automatic-Module-Name: org.eclipse.swt.tests.skia

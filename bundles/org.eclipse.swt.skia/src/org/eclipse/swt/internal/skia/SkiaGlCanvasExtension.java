@@ -42,7 +42,8 @@ import io.github.humbleui.skija.SurfaceOrigin;
 import io.github.humbleui.skija.SurfaceProps;
 import io.github.humbleui.types.Rect;
 
-public final class SkiaGlCanvasExtension extends OpenGLCanvasExtension implements ISkiaCanvasExtension, IExternalCanvasHandler  {
+public final class SkiaGlCanvasExtension extends OpenGLCanvasExtension
+implements ISkiaCanvasExtension, IExternalCanvasHandler {
 
 	private final DirectContext skijaContext;
 	private BackendRenderTarget renderTarget;
@@ -80,6 +81,7 @@ public final class SkiaGlCanvasExtension extends OpenGLCanvasExtension implement
 	}
 
 	private void onResize(Event e) {
+
 		final Rectangle rect = this.canvas.getClientArea();
 
 		final var scaled = resources.getScaler().scaleSize(rect.width, rect.height);
@@ -87,8 +89,6 @@ public final class SkiaGlCanvasExtension extends OpenGLCanvasExtension implement
 		if (renderTarget != null && !renderTarget.isClosed()) {
 			renderTarget.close();
 		}
-
-		// System.out.println("CreateOpenGLRenderTarget"); //$NON-NLS-1$
 
 		if (surface != null && !surface.isClosed()) {
 			surface.close();
@@ -102,6 +102,7 @@ public final class SkiaGlCanvasExtension extends OpenGLCanvasExtension implement
 		surface.getCanvas().clear(getBackroundForSkia());
 		if (this.lastImage != null && !this.lastImage.isClosed()) {
 			this.lastImage.close();
+			this.lastImage = null;
 		}
 
 	}
@@ -152,64 +153,75 @@ public final class SkiaGlCanvasExtension extends OpenGLCanvasExtension implement
 			return;
 		}
 
-		setCurrent();
+		final int saveCount = surface.getCanvas().getSaveCount();
 
-		boolean redrawWithClipping = false;
-		final var size = getSize();
-		Rectangle bounds = null;
-		this.redrawRectangle = null;
-		if (this.redrawRectangle != null) {
-			if (this.lastImage != null) {
-				surface.getCanvas().drawImage(lastImage, 0, 0);
+		System.out.println("surface saveCount: " + surface.getCanvas().getSaveCount() );
+
+		try {
+
+			setCurrent();
+
+			boolean redrawWithClipping = false;
+			final var size = getSize();
+			Rectangle bounds = null;
+			if (this.redrawRectangle != null) {
+				if (this.lastImage != null && !this.lastImage.isClosed()) {
+					surface.getCanvas().drawImage(lastImage, 0, 0);
+					this.lastImage.close();
+					this.lastImage = null;
+				}
+				final var ca = canvas.getClientArea();
+				ca.intersect(this.redrawRectangle);
+				bounds = ca;
+
+				if (bounds.width == 0 || bounds.height == 0) {
+					skijaContext.flush();
+					return;
+				}
+
+				redrawWithClipping = true;
+				final var r = resources.getScaler().scaleBounds(redrawRectangle, DPIUtil.getDeviceZoom());
+				surface.getCanvas().save();
+				surface.getCanvas().clipRect(new Rect(r.x, r.y, r.x + r.width, r.y + r.height));
+
+			} else {
+				surface.getCanvas().clear(getBackroundForSkia());
+				bounds = new Rectangle(0, 0, size.x, size.y);
+			}
+
+			final Event event = new Event();
+			event.count = 1;
+
+			event.setBounds(bounds);
+			final GCData data = new GCData();
+			data.device = this.canvas.getDisplay();
+			// critical for drawing without clearing
+			final SkiaGC gc = new SkiaGC(canvas, this, SWT.None);
+			event.gc = new GCExtension(gc);
+			event.display = this.canvas.getDisplay();
+			e.sendPaintEvent(event);
+			gc.dispose();
+			event.gc = null;
+			SkiaCaretHandler.handleCaret(surface, canvas);
+
+			if (this.lastImage != null && !this.lastImage.isClosed()) {
 				this.lastImage.close();
+			}
+			if (surface != null && surface.getCanvas() != null && !surface.getCanvas().isClosed()) {
+				this.lastImage = surface.makeImageSnapshot();
+			} else {
 				this.lastImage = null;
 			}
-			final var ca = canvas.getClientArea();
-			ca.intersect(this.redrawRectangle);
-			bounds = ca;
-
-			if (bounds.width == 0 || bounds.height == 0) {
-				skijaContext.flush();
-				return;
+			if (redrawWithClipping) {
+				surface.getCanvas().restore();
 			}
+			skijaContext.flush();
 
-			redrawWithClipping = true;
-			final var r = resources.getScaler().scaleBounds(redrawRectangle, DPIUtil.getDeviceZoom());
-			surface.getCanvas().clipRect(new Rect(r.x, r.y, r.x + r.width, r.y + r.height));
-
-		} else {
-			surface.getCanvas().clear(getBackroundForSkia());
-			bounds = new Rectangle(0, 0, size.x, size.y);
+		} finally {
+			if (surface != null && !surface.getCanvas().isClosed()) {
+				surface.getCanvas().restoreToCount(saveCount);
+			}
 		}
-
-		final Event event = new Event();
-		event.count = 1;
-
-		event.setBounds(bounds);
-		final GCData data = new GCData();
-		data.device = this.canvas.getDisplay();
-		// critical for drawing without clearing
-		final SkiaGC gc = new SkiaGC(canvas, this, SWT.None);
-		event.gc = new GCExtension(gc);
-		event.display = this.canvas.getDisplay();
-		e.sendPaintEvent(event);
-		gc.dispose();
-		event.gc = null;
-		SkiaCaretHandler.handleCaret(surface, canvas);
-
-		if (this.lastImage != null && !this.lastImage.isClosed()) {
-			this.lastImage.close();
-		}
-		this.redrawRectangle = null;
-		if(surface != null && surface.getCanvas() != null && !surface.getCanvas().isClosed()) {
-			this.lastImage = surface.makeImageSnapshot();
-		}else {
-			this.lastImage = null;
-		}
-		if (redrawWithClipping) {
-			surface.getCanvas().restore();
-		}
-		skijaContext.flush();
 
 	}
 

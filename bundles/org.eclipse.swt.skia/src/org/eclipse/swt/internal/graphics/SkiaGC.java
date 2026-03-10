@@ -119,6 +119,8 @@ public class SkiaGC implements IExternalGC {
 	private final int style;
 	private int textAntiAlias = SWT.ON;
 
+	private final int saveCount;
+
 	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvasExtension exst, int style) {
 		this.canvas = canvas;
 		device = canvas.getDisplay();
@@ -128,6 +130,8 @@ public class SkiaGC implements IExternalGC {
 		this.skiaExtension = exst;
 		this.resources = skiaExtension.getResources();
 		this.style = style;
+
+		this.saveCount = surface.getCanvas().getSaveCount();
 	}
 
 	private static Point extractSize(Drawable drawable) {
@@ -1050,7 +1054,7 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void setTransform(Transform transform) {
 
-		surface.getCanvas().restoreToCount(0);
+		surface.getCanvas().restoreToCount(saveCount);
 
 		if (transform == null) {
 			currentTransform = Matrix33.IDENTITY;
@@ -1467,7 +1471,7 @@ public class SkiaGC implements IExternalGC {
 		// if more layers will be used a more complex handling is necessary
 		final Canvas canvas = surface.getCanvas();
 		if (isClipSet) {
-			canvas.restore();
+			canvas.restoreToCount(saveCount);
 			isClipSet = false;
 		}
 		if (rect == null) {

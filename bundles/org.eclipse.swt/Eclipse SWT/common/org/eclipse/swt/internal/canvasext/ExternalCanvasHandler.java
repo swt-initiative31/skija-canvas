@@ -48,7 +48,7 @@ public class ExternalCanvasHandler {
 		if (forceEnable != null)
 			return true;
 
-		return false;
+		return true;
 	}
 
 	public static IExternalCanvasHandler createHandler(Canvas c) {

@@ -4,7 +4,7 @@ import org.eclipse.swt.widgets.Canvas;
 /**
  * Scaling utility for canvases.
  */
-public class SkiaDpiScalerUtil {
+public class DpiScalerUtil {
 
 	public static int[] getSupportedZooms() {
 		return DpiScaler.getSupportedZooms();

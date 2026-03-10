@@ -16,6 +16,6 @@ Bundle-Name: %fragmentName
 Bundle-Vendor: %providerName
 Bundle-Localization: fragment
 Bundle-RequiredExecutionEnvironment: JavaSE-21
-Fragment-Host: org.eclipse.swt;bundle-version="[3.133.0,4.0.0)"
+Fragment-Host: org.eclipse.swt;bundle-version="[3.133.100.qualifier,4.0.0)"
 Export-Package: org.eclipse.swt.internal.canvasext;x-friends:="org.eclipse.swt.examples.skia,org.eclipse.swt.skia,org.eclipse.swt.tests.skia"
 

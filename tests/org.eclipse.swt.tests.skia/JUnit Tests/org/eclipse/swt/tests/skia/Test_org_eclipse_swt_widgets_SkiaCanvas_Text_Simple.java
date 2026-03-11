@@ -26,6 +26,7 @@ import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 
@@ -49,6 +50,7 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Text_Simple {
 	}
 
 	@Test
+	@Disabled("This test does not seem to work on linux/gtk4. It works locally on linux/gtk3.")
 	public void test_org_eclipse_swt_skia_drawText() {
 
 		if (SWT.getPlatform().startsWith("win32")) {

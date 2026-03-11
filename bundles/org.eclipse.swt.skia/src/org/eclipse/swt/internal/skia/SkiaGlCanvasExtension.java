@@ -10,12 +10,14 @@
  *******************************************************************************/
 package org.eclipse.swt.internal.skia;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.GCData;
 import org.eclipse.swt.graphics.GCExtension;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.internal.DPIUtil;
 import org.eclipse.swt.internal.canvasext.DpiScaler;
 import org.eclipse.swt.internal.canvasext.IExternalCanvasHandler;
 import org.eclipse.swt.internal.canvasext.PaintEventSender;
@@ -50,11 +52,14 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 	private Surface surface;
 	private final Canvas canvas;
 	private SkiaResources resources;
-	private Rectangle redrawRectangle;
+	private final List<RedrawCommand> redrawCommands = new ArrayList<>();
+
 	private DpiScaler scaler;
 	private Image lastImage;
 
 	private static final int SAMPLES = 0;
+
+	private record RedrawCommand(Rectangle area) {}
 
 	public SkiaGlCanvasExtension(Canvas canvas) {
 		this(canvas, createGLData());
@@ -120,29 +125,17 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 		this.canvas.redraw();
 	}
 
-	// @Override
-	// public void createSurface(long pointer, Point size, RasterImageInfo info) {
-	// final Rectangle rect = this.canvas.getClientArea();
-	// renderTarget = BackendRenderTarget.makeGL(rect.width, rect.height, /* samples
-	// */32, /* stencil */0, /* fbid */0,
-	// FramebufferFormat.GR_GL_RGBA8);
-	//
-	// surface = Surface.makeFromBackendRenderTarget(skijaContext, renderTarget,
-	// SurfaceOrigin.BOTTOM_LEFT,
-	// SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB(), new
-	// SurfaceProps(PixelGeometry.RGB_H));
-	// // surface.getCanvas().clear(getBackroundForSkia());
-	//
-	// }
-
 	@Override
 	public void redrawTriggered(int x, int y, int width, int height, boolean all) {
-		this.redrawRectangle = new Rectangle(x, y, width, height);
+
+		this.redrawCommands.add(new RedrawCommand(new Rectangle(x, y, width, height)));
+		super.redrawTriggered();
+
 	}
 
 	@Override
 	public void redrawTriggered() {
-		this.redrawRectangle = null;
+		this.redrawCommands.add(new RedrawCommand(null));
 		super.redrawTriggered();
 	}
 
@@ -155,73 +148,134 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 
 		final int saveCount = surface.getCanvas().getSaveCount();
 
-		System.out.println("surface saveCount: " + surface.getCanvas().getSaveCount() );
-
 		try {
 
 			setCurrent();
 
-			boolean redrawWithClipping = false;
-			final var size = getSize();
 			Rectangle bounds = null;
-			if (this.redrawRectangle != null) {
-				if (this.lastImage != null && !this.lastImage.isClosed()) {
-					surface.getCanvas().drawImage(lastImage, 0, 0);
-					this.lastImage.close();
-					this.lastImage = null;
+
+			final Rectangle ca = canvas.getClientArea();
+			// for which area do we need to execute the paint events?
+			//If there are redraw commands, we can limit the area to the union of the specified redraw areas.
+			// If there are no redraw commands, we need to execute the paint events for the whole client area.
+			bounds = extractRedrawArea(e,ca);
+
+			// if the bounds are not equal to the client area, then the bounds area is smaller, which means there is an unchanged area
+			// which has to stay the same.
+			// if if we don't even have an image for drawing to the area, we need to execute the paint events for the whole client area,
+			// otherwise we would have an unchanged area which is not drawn at all.
+			if(!bounds.equals(ca )) {
+				final boolean imageDrawn = drawImageToSurface();
+				if(!imageDrawn) {
+					bounds = ca;
 				}
-				final var ca = canvas.getClientArea();
-				ca.intersect(this.redrawRectangle);
-				bounds = ca;
-
-				if (bounds.width == 0 || bounds.height == 0) {
-					skijaContext.flush();
-					return;
-				}
-
-				redrawWithClipping = true;
-				final var r = resources.getScaler().scaleBounds(redrawRectangle, DPIUtil.getDeviceZoom());
-				surface.getCanvas().save();
-				surface.getCanvas().clipRect(new Rect(r.x, r.y, r.x + r.width, r.y + r.height));
-
-			} else {
-				surface.getCanvas().clear(getBackroundForSkia());
-				bounds = new Rectangle(0, 0, size.x, size.y);
 			}
 
-			final Event event = new Event();
-			event.count = 1;
+			// if the bounds are empty, which means there is no area to draw, then we don't draw at all.
+			if(bounds.isEmpty()) {
+				skijaContext.flush();
+				return;
+			}
 
-			event.setBounds(bounds);
-			final GCData data = new GCData();
-			data.device = this.canvas.getDisplay();
-			// critical for drawing without clearing
-			final SkiaGC gc = new SkiaGC(canvas, this, SWT.None);
-			event.gc = new GCExtension(gc);
-			event.display = this.canvas.getDisplay();
-			e.sendPaintEvent(event);
-			gc.dispose();
-			event.gc = null;
+			// scale the bounds and clip the surface.
+			final var scaledBounds = scaler.scaleBounds(bounds, 100);
+			// new save count for the clip, so we can restore to this point in order to stay consistent for the future.
+			this.surface.getCanvas().save();
+			this.surface.getCanvas().clipRect(new Rect(scaledBounds.x, scaledBounds.y, scaledBounds.x + scaledBounds.width, scaledBounds.y +scaledBounds.height));
+			this.surface.getCanvas().clear(getBackroundForSkia());
+
+			executePaintEvents(e,bounds);
+			// saving the drawn image for the next redraw event.
+			createLastImageSnapshot();
+			// carets will be drawn after the image snapshot. Carets do not belong to the redraw logic.
+			// TODO: a blinking caret could be implemented by redrawing the last image and then draw the caret on top of it,
+			// without executing the paint events again.
 			SkiaCaretHandler.handleCaret(surface, canvas);
 
-			if (this.lastImage != null && !this.lastImage.isClosed()) {
-				this.lastImage.close();
-			}
-			if (surface != null && surface.getCanvas() != null && !surface.getCanvas().isClosed()) {
-				this.lastImage = surface.makeImageSnapshot();
-			} else {
-				this.lastImage = null;
-			}
-			if (redrawWithClipping) {
-				surface.getCanvas().restore();
-			}
 			skijaContext.flush();
+
 
 		} finally {
 			if (surface != null && !surface.getCanvas().isClosed()) {
 				surface.getCanvas().restoreToCount(saveCount);
 			}
 		}
+
+	}
+
+	private void executePaintEvents(PaintEventSender e, Rectangle bounds) {
+		final Event event = new Event();
+		event.count = 1;
+		event.setBounds(bounds);
+		final GCData data = new GCData();
+		data.device = this.canvas.getDisplay();
+		// critical for drawing without clearing
+		final SkiaGC gc = new SkiaGC(canvas, this, SWT.None);
+		event.gc = new GCExtension(gc);
+		event.display = this.canvas.getDisplay();
+		e.sendPaintEvent(event);
+		gc.dispose();
+		event.gc = null;
+
+	}
+
+	private void createLastImageSnapshot() {
+		if (this.lastImage != null && !this.lastImage.isClosed()) {
+			this.lastImage.close();
+			this.lastImage = null;
+		}
+		if (surface != null && surface.getCanvas() != null && !surface.getCanvas().isClosed()) {
+			this.lastImage = surface.makeImageSnapshot();
+		} else {
+			this.lastImage = null;
+		}
+
+	}
+
+	private boolean drawImageToSurface() {
+
+		if(this.lastImage != null && !this.lastImage.isClosed()) {
+			this.surface.getCanvas().drawImage(this.lastImage, 0, 0);
+			return true;
+		}
+
+		return false;
+	}
+
+	private Rectangle extractRedrawArea(PaintEventSender e, Rectangle ca) {
+
+		try {
+			if(this.redrawCommands.isEmpty()) {
+				return ca;
+			}
+
+			var area = this.redrawCommands.get(0).area;
+
+			if(area == null) {
+				this.redrawCommands.clear();
+				return ca;
+			}
+
+
+			if (this.redrawCommands.size() > 1) {
+
+				for (int i = 1; i < this.redrawCommands.size(); i++) {
+					final var a = this.redrawCommands.get(i).area;
+					if (a == null) {
+						return ca;
+					}
+					area = area.union(a);
+				}
+
+			}
+			return area.intersection(ca);
+
+
+
+		}finally {
+			this.redrawCommands.clear();
+		}
+
 
 	}
 

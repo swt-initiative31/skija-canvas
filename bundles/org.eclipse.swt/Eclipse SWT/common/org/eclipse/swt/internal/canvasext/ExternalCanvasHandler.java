@@ -22,6 +22,10 @@ import org.eclipse.swt.widgets.*;
  */
 public class ExternalCanvasHandler {
 
+	private static boolean FAILED_WITH_ERRORS = false;
+
+	// TODO Maybe the external canvas loading should be disabled by default and only activated,
+	// if the vm argument explicitly enables it.
 	private final static String DISABLE_EXTERNAL_CANVAS = "org.eclipse.swt.external.canvas:disabled";
 
 	// this is only for test cases in order to check whether the software works with
@@ -33,6 +37,9 @@ public class ExternalCanvasHandler {
 			.orElse(null);
 
 	public static boolean isActive(Canvas canvas, int style) {
+
+		if(FAILED_WITH_ERRORS)
+			return false;
 
 		var disable = System.getProperty(DISABLE_EXTERNAL_CANVAS);
 		if (disable != null)
@@ -52,7 +59,17 @@ public class ExternalCanvasHandler {
 	}
 
 	public static IExternalCanvasHandler createHandler(Canvas c) {
-		return externalFactory.createCanvasExtension(c);
-	}
 
+		if(FAILED_WITH_ERRORS)
+			return null;
+
+		try {
+			// it is possible that the loading of external libraries can fail.
+			return externalFactory.createCanvasExtension(c);
+		}catch(Throwable t) {
+			FAILED_WITH_ERRORS = true;
+			t.printStackTrace(System.err);
+			return null;
+		}
+	}
 }

@@ -39,7 +39,6 @@ import io.github.humbleui.skija.Image;
 import io.github.humbleui.skija.ImageInfo;
 import io.github.humbleui.skija.PixelGeometry;
 import io.github.humbleui.skija.Surface;
-import io.github.humbleui.skija.SurfaceColorFormat;
 import io.github.humbleui.skija.SurfaceOrigin;
 import io.github.humbleui.skija.SurfaceProps;
 import io.github.humbleui.types.Rect;
@@ -102,7 +101,7 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 		renderTarget = BackendRenderTarget.makeGL(scaled.x, scaled.y, /* samples */SAMPLES, /* stencil */0, /* fbid */0,
 				FramebufferFormat.GR_GL_RGBA8);
 		surface = Surface.wrapBackendRenderTarget(skijaContext, renderTarget, SurfaceOrigin.BOTTOM_LEFT,
-				SurfaceColorFormat.RGBA_8888, ColorSpace.getSRGB(),
+				ColorType.RGBA_8888, ColorSpace.getSRGB(),
 				new SurfaceProps(PixelGeometry.RGB_H).withDeviceIndependentFonts(false));
 		surface.getCanvas().clear(getBackroundForSkia());
 		if (this.lastImage != null && !this.lastImage.isClosed()) {

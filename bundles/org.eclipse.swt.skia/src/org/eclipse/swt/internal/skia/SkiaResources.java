@@ -17,6 +17,7 @@ import org.eclipse.swt.widgets.Display;
 
 import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.FontHinting;
+import io.github.humbleui.skija.FontMgr;
 import io.github.humbleui.skija.FontSlant;
 import io.github.humbleui.skija.FontStyle;
 import io.github.humbleui.skija.Typeface;
@@ -29,6 +30,8 @@ public class SkiaResources {
 	private final Canvas canvas;
 	private Font swtFont;
 	private io.github.humbleui.skija.Font skiaFont;
+
+	private static final Map<String, String> fontNameMapping = new ConcurrentHashMap<>();
 
 	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
 	private final Map<ImageKey, io.github.humbleui.skija.Image> imageCache = new HashMap<>();
@@ -112,8 +115,7 @@ public class SkiaResources {
 		}
 
 		final FontStyle style = new FontStyle(props.lfWeight, 5, slant);
-		final io.github.humbleui.skija.Font skijaFont = new io.github.humbleui.skija.Font(
-				Typeface.makeFromName(props.name, style));
+		final io.github.humbleui.skija.Font skijaFont = new io.github.humbleui.skija.Font(extractTypeface(props, style));
 
 		if (props.lfWidth != 0) {
 			final float stretch = (float) ((props.lfWidth / 10.0) + 0.5);
@@ -138,6 +140,69 @@ public class SkiaResources {
 		skijaFont.setAutoHintingForced(true);
 
 		return skijaFont;
+	}
+
+	private static Typeface extractTypeface(FontProperties props, FontStyle style) {
+
+		final FontMgr fm = FontMgr.getDefault();
+		var name = props.name;
+		name = name.trim();
+
+		if(fontNameMapping.containsKey(name)) {
+			return fm.matchFamilyStyle(fontNameMapping.get(name), style);
+		}
+
+		var bestMatch = findBestFit(name);
+
+		if(bestMatch == null) {
+			bestMatch = findBestFit(name.replaceAll("[^\\p{L}\\p{N}]+", " ")); //$NON-NLS-1$ //$NON-NLS-2$
+		}
+
+		if(bestMatch != null) {
+			fontNameMapping.put(name, bestMatch);
+			return fm.matchFamilyStyle(bestMatch, style);
+		}
+		// the arabic fonts are no longer supported, also on windows. Windows falls back to arial
+		if(name.toLowerCase().startsWith("arabic ")) { //$NON-NLS-1$
+			fontNameMapping.put(name, "Arial");
+			return fm.matchFamilyStyle("Arial", style); //$NON-NLS-1$
+		}
+		// no font found, fallback to arial and cache
+		fontNameMapping.put(name, "Arial");
+		return fm.matchFamilyStyle("Arial", style); //$NON-NLS-1$
+	}
+
+	private static String findBestFit(String name) {
+		final String[] parts = name.split(" "); //$NON-NLS-1$
+
+		for(int i = 0; i < parts.length; i++) {
+			parts[i] = parts[i].trim();
+		}
+
+
+		final FontMgr fm = FontMgr.getDefault();
+		final var count = fm.getFamiliesCount();
+
+		String bestMatch = null;
+		int bestMatchScore = 0;
+
+		for(int i = 0; i < count; i++) {
+
+			final var f = fm.getFamilyName(i);
+
+			int score = 0;
+			for (final String part : parts) {
+				if(f.toLowerCase().contains(part.toLowerCase())) {
+					score++;
+				}
+			}
+
+			if(score > bestMatchScore) {
+				bestMatchScore = score;
+				bestMatch = f;
+			}
+		}
+		return bestMatch;
 	}
 
 	private org.eclipse.swt.graphics.Font getDefaultFont() {
@@ -181,6 +246,8 @@ public class SkiaResources {
 		});
 
 		imageCache.clear();
+
+		fontNameMapping.clear();
 
 	}
 

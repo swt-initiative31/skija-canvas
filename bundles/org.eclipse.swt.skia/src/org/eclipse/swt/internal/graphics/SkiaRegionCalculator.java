@@ -5,22 +5,22 @@ import java.util.HashMap;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Region;
-import org.eclipse.swt.internal.canvasext.RegionLogProvider;
 import org.eclipse.swt.internal.canvasext.RegionLog.OpType;
 import org.eclipse.swt.internal.canvasext.RegionLog.Operation;
+import org.eclipse.swt.internal.canvasext.RegionLogProvider;
 import org.eclipse.swt.internal.skia.ISkiaCanvasExtension;
 
-import io.github.humbleui.skija.Region.Op;
+import io.github.humbleui.skija.RegionOp;
 import io.github.humbleui.types.IRect;
 
 public class SkiaRegionCalculator {
 
-	final static HashMap<OpType, Op> operationMapping = new HashMap<OpType, Op>();
+	final static HashMap<OpType, RegionOp> operationMapping = new HashMap<OpType, RegionOp>();
 
 	static {
-		operationMapping.put(OpType.ADD, Op.UNION);
-		operationMapping.put(OpType.SUBTRACT, Op.DIFFERENCE);
-		operationMapping.put(OpType.INTERSECT, Op.INTERSECT);
+		operationMapping.put(OpType.ADD, RegionOp.UNION);
+		operationMapping.put(OpType.SUBTRACT, RegionOp.DIFFERENCE);
+		operationMapping.put(OpType.INTERSECT, RegionOp.INTERSECT);
 	}
 
 	private final org.eclipse.swt.graphics.Region region;
@@ -34,7 +34,8 @@ public class SkiaRegionCalculator {
 
 	io.github.humbleui.skija.Region getSkiaRegion() {
 
-		// just all operations for the region creation will be executed to get the skia region.
+		// just all operations for the region creation will be executed to get the skia
+		// region.
 
 		if (calculatedRegion != null) {
 			return calculatedRegion;
@@ -52,7 +53,7 @@ public class SkiaRegionCalculator {
 	}
 
 	private void apply(Operation o, io.github.humbleui.skija.Region reg) {
-		final Op skiaOperation = operationMapping.get(o.type());
+		final RegionOp skiaOperation = operationMapping.get(o.type());
 		if (skiaOperation != null) {
 			executeOperation(skiaOperation, o.executionObject(), reg);
 			return;
@@ -76,7 +77,7 @@ public class SkiaRegionCalculator {
 
 	}
 
-	private void executeOperation(Op skiaOperation, Object ob, io.github.humbleui.skija.Region reg) {
+	private void executeOperation(RegionOp skiaOperation, Object ob, io.github.humbleui.skija.Region reg) {
 
 		if (ob instanceof final int[] polygon) {
 			final var tempReg = createPolygonSkiaRegion(polygon);
@@ -103,26 +104,28 @@ public class SkiaRegionCalculator {
 
 		final io.github.humbleui.skija.Region r = new io.github.humbleui.skija.Region();
 
-		final var p = new io.github.humbleui.skija.Path();
-		p.addPoly(toFloat(polygon), true);
+		try (final var p = new io.github.humbleui.skija.PathBuilder()) {
+			p.addPolygon(toFloat(polygon), true);
 
-		final Point maxV = getMax(polygon);
+			final Point maxV = getMax(polygon);
 
-		if (this.skiaExtension != null && this.skiaExtension.getTransformation() != null) {
-			p.transform(this.skiaExtension.getTransformation());
-			final int width = this.skiaExtension.getSurface().getWidth();
-			final int height = this.skiaExtension.getSurface().getHeight();
-			r.setRect(new IRect(0, 0, width, height));
-		} else {
-			r.setRect(new IRect(0, 0, maxV.x, maxV.y));
+			if (this.skiaExtension != null && this.skiaExtension.getTransformation() != null) {
+				p.transform(this.skiaExtension.getTransformation());
+				final int width = this.skiaExtension.getSurface().getWidth();
+				final int height = this.skiaExtension.getSurface().getHeight();
+				r.setRect(new IRect(0, 0, width, height));
+			} else {
+				r.setRect(new IRect(0, 0, maxV.x, maxV.y));
+			}
+
+			// a path has to be set for a clipping region.
+			// so first we have to create a region big enough for the path and then set the
+			// path.
+			r.setPath(p.build(), r);
+			p.close();
+
+			return r;
 		}
-
-		// a path has to be set for a clipping region.
-		// so first we have to create a region big enough for the path and then set the
-		// path.
-		r.setPath(p, r);
-
-		return r;
 	}
 
 	/**

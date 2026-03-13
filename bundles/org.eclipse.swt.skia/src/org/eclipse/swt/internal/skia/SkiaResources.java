@@ -1,7 +1,9 @@
 package org.eclipse.swt.internal.skia;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.swt.SWT;
@@ -31,7 +33,8 @@ public class SkiaResources {
 	private Font swtFont;
 	private io.github.humbleui.skija.Font skiaFont;
 
-	private static final Map<String, String> fontNameMapping = new ConcurrentHashMap<>();
+	private final Map<String, String> fontNameMapping = new ConcurrentHashMap<>();
+	private final Set<String> unkownFonts = new HashSet<>();
 
 	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
 	private final Map<ImageKey, io.github.humbleui.skija.Image> imageCache = new HashMap<>();
@@ -142,7 +145,7 @@ public class SkiaResources {
 		return skijaFont;
 	}
 
-	private static Typeface extractTypeface(FontProperties props, FontStyle style) {
+	private Typeface extractTypeface(FontProperties props, FontStyle style) {
 
 		final FontMgr fm = FontMgr.getDefault();
 		var name = props.name;
@@ -150,6 +153,10 @@ public class SkiaResources {
 
 		if(fontNameMapping.containsKey(name)) {
 			return fm.matchFamilyStyle(fontNameMapping.get(name), style);
+		}
+
+		if(unkownFonts.contains(name)) {
+			return fm.matchFamilyStyle(null, style);
 		}
 
 		var bestMatch = findBestFit(name);
@@ -162,14 +169,18 @@ public class SkiaResources {
 			fontNameMapping.put(name, bestMatch);
 			return fm.matchFamilyStyle(bestMatch, style);
 		}
-		// the arabic fonts are no longer supported, also on windows. Windows falls back to arial
-		if(name.toLowerCase().startsWith("arabic ")) { //$NON-NLS-1$
-			fontNameMapping.put(name, "Arial");
-			return fm.matchFamilyStyle("Arial", style); //$NON-NLS-1$
+
+		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
+			//arabic fonts are no longer supported on windows. Also windows falls back to arial
+			if(name.toLowerCase().startsWith("arabic ")) { //$NON-NLS-1$
+				fontNameMapping.put(name, "Arial");
+				return fm.matchFamilyStyle("Arial", style); //$NON-NLS-1$
+			}
 		}
 		// no font found, fallback to arial and cache
-		fontNameMapping.put(name, "Arial");
-		return fm.matchFamilyStyle("Arial", style); //$NON-NLS-1$
+		unkownFonts.add(name);
+		return fm.matchFamilyStyle(null, style);
+
 	}
 
 	private static String findBestFit(String name) {
@@ -248,6 +259,7 @@ public class SkiaResources {
 		imageCache.clear();
 
 		fontNameMapping.clear();
+		unkownFonts.clear();
 
 	}
 

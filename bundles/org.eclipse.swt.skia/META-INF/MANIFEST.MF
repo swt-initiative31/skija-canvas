@@ -3,15 +3,14 @@ Bundle-ManifestVersion: 2
 Bundle-SymbolicName: org.eclipse.swt.skia
 Bundle-Version: 3.133.100.qualifier
 Automatic-Module-Name: org.eclipse.swt.skia
-Bundle-ClassPath: lib/,
- lib/skija-linux-x64-0.116.3.jar,
- lib/skija-macos-arm64-0.116.3.jar,
- lib/skija-shared-0.116.3.jar,
- lib/skija-shared-0.116.3-sources.jar,
- lib/skija-windows-x64-0.116.3.jar,
+Bundle-ClassPath: lib/skija-linux-x64-0.143.11.jar,
+ lib/skija-shared-0.143.11.jar,
+ lib/skija-windows-x64-0.143.11.jar,
+ lib/skija-windows-x64-0.143.11-sources.jar,
  lib/types-0.1.1.jar,
  lib/types-0.1.1-sources.jar,
- .
+ lib/,
+ ./
 Bundle-Name: %fragmentName
 Bundle-Vendor: %providerName
 Bundle-Localization: fragment

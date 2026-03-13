@@ -793,7 +793,7 @@ public class SkiaGC implements IExternalGC {
 		}
 
 		// Create Skija path for the polygon
-		try (io.github.humbleui.skija.Path path = new io.github.humbleui.skija.Path()) {
+		try (io.github.humbleui.skija.PathBuilder path = new io.github.humbleui.skija.PathBuilder()) {
 			// Move to first point
 			path.moveTo(DpiScaler.autoScaleUp(pointArray[0]), DpiScaler.autoScaleUp(pointArray[1]));
 			// Add lines to subsequent points
@@ -802,7 +802,7 @@ public class SkiaGC implements IExternalGC {
 			}
 			path.closePath();
 			// Draw the polygon outline
-			performDraw(paint -> surface.getCanvas().drawPath(path, paint));
+			performDraw(paint -> surface.getCanvas().drawPath(path.build(), paint));
 		}
 		// Restore x-coordinates if mirrored
 		if (adjustX) {
@@ -817,7 +817,7 @@ public class SkiaGC implements IExternalGC {
 			return null;
 		}
 		final PathData data = swtPath.getPathData();
-		final io.github.humbleui.skija.Path skijaPath = new io.github.humbleui.skija.Path();
+		final io.github.humbleui.skija.PathBuilder skijaPath = new io.github.humbleui.skija.PathBuilder();
 		final float[] pts = data.points;
 		final byte[] types = data.types;
 		int pi = 0;
@@ -844,7 +844,9 @@ public class SkiaGC implements IExternalGC {
 			default:
 			}
 		}
-		return skijaPath;
+		final var p = skijaPath.build();
+		skijaPath.close();
+		return p;
 	}
 
 	@Override
@@ -992,7 +994,7 @@ public class SkiaGC implements IExternalGC {
 		}
 
 		// Create Skija path for the polygon
-		try (io.github.humbleui.skija.Path path = new io.github.humbleui.skija.Path()) { // Move to first point
+		try (io.github.humbleui.skija.PathBuilder path = new io.github.humbleui.skija.PathBuilder()) { // Move to first point
 			path.moveTo(DpiScaler.autoScaleUp(pointArray[0]), DpiScaler.autoScaleUp(pointArray[1]));
 			// Add lines to subsequent points
 			for (int i = 2; i < pointArray.length; i += 2) {
@@ -1002,7 +1004,7 @@ public class SkiaGC implements IExternalGC {
 			path.closePath();
 			path.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
 			// Fill the polygon
-			performDrawFilled(paint -> surface.getCanvas().drawPath(path, paint));
+			performDrawFilled(paint -> surface.getCanvas().drawPath(path.build(), paint));
 		}
 	}
 

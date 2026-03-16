@@ -10,8 +10,9 @@
  *******************************************************************************/
 package org.eclipse.swt.opengl;
 
+import java.util.function.*;
+
 import org.eclipse.swt.graphics.*;
-import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.widgets.*;
 /**
  * @noreference This class is not intended to be referenced by clients.
@@ -24,7 +25,7 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension {
 		super(canvas, data);
 	}
 
-	public Object paint(PaintEventSender e,long arg1, long arg2) {
+	public Object paint(Consumer<Event> paintEventSender,long arg1, long arg2) {
 
 		if (canvas.isDisposed())
 			return null;
@@ -33,7 +34,7 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension {
 		{
 			setCurrent();
 		}
-		doPaint(e);
+		doPaint(paintEventSender);
 		swapBuffers();
 
 		return null;
@@ -43,7 +44,7 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension {
 
 	public abstract void createSurface(long pointer, Point size, RasterImageInfo info);
 
-	public abstract void doPaint(PaintEventSender e);
+	public abstract void doPaint(Consumer<Event> paintEventSender);
 
 	public void redrawTriggered() {
 	}

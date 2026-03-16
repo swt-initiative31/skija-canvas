@@ -41,7 +41,7 @@
     <sonar.c.file.suffixes>-</sonar.c.file.suffixes>
     <sonar.cpp.file.suffixes>-</sonar.cpp.file.suffixes>
     <sonar.objc.file.suffixes>-</sonar.objc.file.suffixes>
-    <failOnJavadocErrors>false</failOnJavadocErrors>
+    <failOnJavadocErrors>true</failOnJavadocErrors>
   </properties>
 
   <!-- 
@@ -236,7 +236,6 @@
     <module>examples/org.eclipse.swt.examples.ole.win32</module>
     <module>examples/org.eclipse.swt.examples.views</module>
     <module>tests/org.eclipse.swt.tests</module>
-    <module>tests/org.eclipse.swt.tests.skia</module>
     <module>features/org.eclipse.swt.tools.feature</module>
   </modules>
 </project>

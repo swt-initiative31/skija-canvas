@@ -12,6 +12,7 @@ package org.eclipse.swt.internal.skia;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.GCData;
@@ -20,7 +21,6 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.internal.canvasext.DpiScaler;
 import org.eclipse.swt.internal.canvasext.IExternalCanvasHandler;
-import org.eclipse.swt.internal.canvasext.PaintEventSender;
 import org.eclipse.swt.internal.graphics.SkiaGC;
 import org.eclipse.swt.opengl.GLData;
 import org.eclipse.swt.opengl.OpenGLCanvasExtension;
@@ -58,7 +58,8 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 
 	private static final int SAMPLES = 0;
 
-	private record RedrawCommand(Rectangle area) {}
+	private record RedrawCommand(Rectangle area) {
+	}
 
 	public SkiaGlCanvasExtension(Canvas canvas) {
 		this(canvas, createGLData());
@@ -139,7 +140,7 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 	}
 
 	@Override
-	public void doPaint(PaintEventSender e) {
+	public void doPaint(Consumer<Event> paintEventSender) {
 
 		if (surface == null) {
 			return;
@@ -155,44 +156,52 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 
 			final Rectangle ca = canvas.getClientArea();
 			// for which area do we need to execute the paint events?
-			//If there are redraw commands, we can limit the area to the union of the specified redraw areas.
-			// If there are no redraw commands, we need to execute the paint events for the whole client area.
-			bounds = extractRedrawArea(e,ca);
+			// If there are redraw commands, we can limit the area to the union of the
+			// specified redraw areas.
+			// If there are no redraw commands, we need to execute the paint events for the
+			// whole client area.
+			bounds = extractRedrawArea(ca);
 
-			// if the bounds are not equal to the client area, then the bounds area is smaller, which means there is an unchanged area
+			// if the bounds are not equal to the client area, then the bounds area is
+			// smaller, which means there is an unchanged area
 			// which has to stay the same.
-			// if if we don't even have an image for drawing to the area, we need to execute the paint events for the whole client area,
+			// if if we don't even have an image for drawing to the area, we need to execute
+			// the paint events for the whole client area,
 			// otherwise we would have an unchanged area which is not drawn at all.
-			if(!bounds.equals(ca )) {
+			if (!bounds.equals(ca)) {
 				final boolean imageDrawn = drawImageToSurface();
-				if(!imageDrawn) {
+				if (!imageDrawn) {
 					bounds = ca;
 				}
 			}
 
-			// if the bounds are empty, which means there is no area to draw, then we don't draw at all.
-			if(bounds.isEmpty()) {
+			// if the bounds are empty, which means there is no area to draw, then we don't
+			// draw at all.
+			if (bounds.isEmpty()) {
 				skijaContext.flush();
 				return;
 			}
 
 			// scale the bounds and clip the surface.
 			final var scaledBounds = scaler.scaleBounds(bounds, 100);
-			// new save count for the clip, so we can restore to this point in order to stay consistent for the future.
+			// new save count for the clip, so we can restore to this point in order to stay
+			// consistent for the future.
 			this.surface.getCanvas().save();
-			this.surface.getCanvas().clipRect(new Rect(scaledBounds.x, scaledBounds.y, scaledBounds.x + scaledBounds.width, scaledBounds.y +scaledBounds.height));
+			this.surface.getCanvas().clipRect(new Rect(scaledBounds.x, scaledBounds.y,
+					scaledBounds.x + scaledBounds.width, scaledBounds.y + scaledBounds.height));
 			this.surface.getCanvas().clear(getBackroundForSkia());
 
-			executePaintEvents(e,bounds);
+			executePaintEvents(paintEventSender, bounds);
 			// saving the drawn image for the next redraw event.
 			createLastImageSnapshot();
-			// carets will be drawn after the image snapshot. Carets do not belong to the redraw logic.
-			// TODO: a blinking caret could be implemented by redrawing the last image and then draw the caret on top of it,
+			// carets will be drawn after the image snapshot. Carets do not belong to the
+			// redraw logic.
+			// TODO: a blinking caret could be implemented by redrawing the last image and
+			// then draw the caret on top of it,
 			// without executing the paint events again.
 			SkiaCaretHandler.handleCaret(surface, canvas);
 
 			skijaContext.flush();
-
 
 		} finally {
 			if (surface != null && !surface.getCanvas().isClosed()) {
@@ -202,7 +211,7 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 
 	}
 
-	private void executePaintEvents(PaintEventSender e, Rectangle bounds) {
+	private void executePaintEvents(Consumer<Event> consumer, Rectangle bounds) {
 		final Event event = new Event();
 		event.count = 1;
 		event.setBounds(bounds);
@@ -212,7 +221,7 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 		final SkiaGC gc = new SkiaGC(canvas, this, SWT.None);
 		event.gc = new GCExtension(gc);
 		event.display = this.canvas.getDisplay();
-		e.sendPaintEvent(event);
+		consumer.accept(event);
 		gc.dispose();
 		event.gc = null;
 
@@ -233,7 +242,7 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 
 	private boolean drawImageToSurface() {
 
-		if(this.lastImage != null && !this.lastImage.isClosed()) {
+		if (this.lastImage != null && !this.lastImage.isClosed()) {
 			this.surface.getCanvas().drawImage(this.lastImage, 0, 0);
 			return true;
 		}
@@ -241,20 +250,19 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 		return false;
 	}
 
-	private Rectangle extractRedrawArea(PaintEventSender e, Rectangle ca) {
+	private Rectangle extractRedrawArea(Rectangle ca) {
 
 		try {
-			if(this.redrawCommands.isEmpty()) {
+			if (this.redrawCommands.isEmpty()) {
 				return ca;
 			}
 
 			var area = this.redrawCommands.get(0).area;
 
-			if(area == null) {
+			if (area == null) {
 				this.redrawCommands.clear();
 				return ca;
 			}
-
 
 			if (this.redrawCommands.size() > 1) {
 
@@ -269,12 +277,9 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 			}
 			return area.intersection(ca);
 
-
-
-		}finally {
+		} finally {
 			this.redrawCommands.clear();
 		}
-
 
 	}
 
@@ -285,15 +290,6 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 	@Override
 	public SkiaResources getResources() {
 		return this.resources;
-	}
-
-	private Point getSize() {
-
-		final var c = canvas.getSize();
-		final var p = resources.getScaler().scaleSize(c.x, c.y);
-		final var s = new Point(p.x, p.y);
-
-		return s;
 	}
 
 	@Override

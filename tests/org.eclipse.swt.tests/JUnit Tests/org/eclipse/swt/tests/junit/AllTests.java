@@ -14,6 +14,7 @@
 package org.eclipse.swt.tests.junit;
 
 
+import org.eclipse.swt.tests.skia.AllSkiaTests;
 import org.junit.platform.suite.api.SelectClasses;
 import org.junit.platform.suite.api.Suite;
 
@@ -23,7 +24,8 @@ import org.junit.platform.suite.api.Suite;
 @Suite(failIfNoTests = false)
 @SelectClasses({
 	AllNonBrowserTests.class,
-//	AllBrowserTests.class
+//	AllBrowserTests.class,//
+	AllSkiaTests.class,//
 })
 public class AllTests {
 

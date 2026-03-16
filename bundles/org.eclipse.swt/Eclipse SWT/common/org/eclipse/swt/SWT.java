@@ -2589,8 +2589,8 @@ public class SWT {
 	 * </ul>
 	 *
 	 * @noreference Still in test mode: this field is not yet to be referenced by clients.
+	 * @experimental This API is experimental and may change or be removed in future releases.
 	 * @since 3.133
-	 * @Experimental This API is still under development and is expected to change in the future.  It is not recommended for general use at this time.
 	 */
 	public static final int SKIA = 1 << 23;
 
@@ -5030,3 +5030,4 @@ static {
 	}
 }
 }
+

@@ -18,7 +18,7 @@ Export-Package:
  org.eclipse.swt.internal;x-friends:="org.eclipse.ui",
  org.eclipse.swt.internal.accessibility.gtk;x-internal:=true,
  org.eclipse.swt.internal.cairo;x-internal:=true,
- org.eclipse.swt.internal.canvasext;x-friends:="org.eclipse.swt.tests.skia",
+ org.eclipse.swt.internal.canvasext;x-friends:="org.eclipse.swt.tests",
  org.eclipse.swt.internal.gtk;x-internal:=true,
  org.eclipse.swt.internal.gtk3;x-internal:=true,
  org.eclipse.swt.internal.gtk4;x-internal:=true,

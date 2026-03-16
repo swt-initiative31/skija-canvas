@@ -10,8 +10,9 @@
  *******************************************************************************/
 package org.eclipse.swt.opengl;
 
+import java.util.function.*;
+
 import org.eclipse.swt.graphics.*;
-import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.widgets.*;
 
 /**
@@ -30,12 +31,12 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension {
 	/**
 	 * @noreference This method is not intended to be referenced by clients.
 	 */
-	public Object paint(PaintEventSender e, long wParam, long lParam) {
+	public Object paint(Consumer<Event> consumer, long wParam, long lParam) {
 
 		if (canvas.isDisposed())
 			return null;
 		this.redrawTriggered = false;
-		doPaint(e);
+		doPaint(consumer);
 		swapBuffers();
 
 		if (redrawTriggered) {
@@ -68,6 +69,6 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension {
 	/**
 	 * @noreference This method is not intended to be referenced by clients.
 	 */
-	public abstract void doPaint(PaintEventSender e);
+	public abstract void doPaint(Consumer<Event> paintEventSender);
 
 }

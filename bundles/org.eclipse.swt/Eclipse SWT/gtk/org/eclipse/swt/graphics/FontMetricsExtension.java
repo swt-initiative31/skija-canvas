@@ -7,12 +7,6 @@ import org.eclipse.swt.internal.canvasext.*;
  */
 public final class FontMetricsExtension extends FontMetrics {
 
-
-/**
- * 	@noreference Block access to underlying fields.
- */
-	public Object handle;
-
 	private IExternalFontMetrics externalMetrics;
 
 	/**

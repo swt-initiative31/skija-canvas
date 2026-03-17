@@ -23,12 +23,12 @@ public final class GCExtension extends GC {
 	private final IExternalGC e;
 
 	/**
-	 * Blocks access to the public GC field 'handle'.
+	 * @noreference Blocks access to the public GC field 'handle'.
 	 */
 	public long handle = 0;
 
 	/**
-	 * Blocks access to the public GC method 'handle()'.
+	 * @noreference Blocks access to the public GC method 'handle()'.
 	 */
 	public long handle() {
 		throw new IllegalStateException("GCExtension does not support handle access");
@@ -36,7 +36,7 @@ public final class GCExtension extends GC {
 
 	/**
 	 * Blocks access to the static factory methods from GC.
-	 * 
+	 *
 	 * @noreference This class is not intended to be referenced by clients.
 	 */
 	public static GCExtension gtk_new(long handle, GCData data) {
@@ -45,7 +45,7 @@ public final class GCExtension extends GC {
 
 	/**
 	 * Blocks access to the static factory methods from GC.
-	 * 
+	 *
 	 * @noreference This class is not intended to be referenced by clients.
 	 */
 	public static GCExtension gtk_new(Drawable drawable, GCData data) {
@@ -54,7 +54,7 @@ public final class GCExtension extends GC {
 
 	/**
 	 * Blocks access to the GC constructor.
-	 * 
+	 *
 	 * @noreference This class is not intended to be referenced by clients.
 	 */
 	protected GCExtension() {
@@ -63,7 +63,7 @@ public final class GCExtension extends GC {
 
 	/**
 	 * Blocks access to the GC constructor.
-	 * 
+	 *
 	 * @noreference This class is not intended to be referenced by clients.
 	 */
 	public GCExtension(Drawable drawable) {
@@ -72,7 +72,7 @@ public final class GCExtension extends GC {
 
 	/**
 	 * Blocks access to the GC constructor.
-	 * 
+	 *
 	 * @noreference This class is not intended to be referenced by clients.
 	 */
 	public GCExtension(Drawable drawable, int style) {
@@ -81,7 +81,7 @@ public final class GCExtension extends GC {
 
 	/**
 	 * Blocks access to the GC constructor.
-	 * 
+	 *
 	 * @noreference This class is not intended to be referenced by clients.
 	 */
 	public GCExtension(final IExternalGC ext) {

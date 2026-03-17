@@ -6,7 +6,14 @@ import org.eclipse.swt.internal.canvasext.*;
  * @noreference This class is not intended to be referenced by clients.
  */
 public final class FontMetricsExtension extends FontMetrics {
-	IExternalFontMetrics externalMetrics;
+
+
+/**
+ * 	@noreference Block access to underlying fields.
+ */
+	public Object handle;
+
+	private IExternalFontMetrics externalMetrics;
 
 	/**
 	 * @noreference This constructor is not intended to be referenced by clients.

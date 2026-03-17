@@ -90,7 +90,6 @@ public class SnippetRegion {
 	// surface.getCanvas().clear(0xFFFFFFFF);
 
 	e.gc.setClipping(r);
-	;
 
 	e.gc.setBackground(e.display.getSystemColor(SWT.COLOR_RED));
 	e.gc.fillRectangle(0, 0, 100, 100);

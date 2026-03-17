@@ -536,4 +536,9 @@ public final class GCExtension extends GC {
 		return e.getDevice();
 	}
 
+	static boolean usesExternalGC(GC gc) {
+		new IllegalStateException("External GC is not supported in TextLayout").printStackTrace(System.err);
+		return gc instanceof GCExtension;
+	}
+
 }

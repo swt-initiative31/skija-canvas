@@ -705,6 +705,8 @@ long createGdipBrush(Color color, int alpha) {
  */
 public void draw (GC gc, int x, int y) {
 	checkLayout();
+	if(GCExtension.usesExternalGC(gc))
+		return;
 	drawInPixels(gc, x, y);
 }
 
@@ -729,6 +731,8 @@ public void draw (GC gc, int x, int y) {
  */
 public void draw (GC gc, int x, int y, int selectionStart, int selectionEnd, Color selectionForeground, Color selectionBackground) {
 	checkLayout();
+	if(GCExtension.usesExternalGC(gc))
+		return;
 	drawInPixels(gc, x, y, selectionStart, selectionEnd, selectionForeground, selectionBackground);
 }
 
@@ -765,6 +769,8 @@ void drawInPixels (GC gc, int xInPoints, int yInPoints, int selectionStart, int 
  */
 public void draw (GC gc, int x, int y, int selectionStart, int selectionEnd, Color selectionForeground, Color selectionBackground, int flags) {
 	checkLayout();
+	if(GCExtension.usesExternalGC(gc))
+		return;
 	drawInPixels(gc, x, y, selectionStart, selectionEnd, selectionForeground, selectionBackground, flags);
 }
 
@@ -4029,4 +4035,5 @@ int untranslateOffset(int offset) {
 public void setDefaultTabWidth(int tabLength) {
 	// unused in win32
 }
+
 }

@@ -304,4 +304,9 @@ public class SkiaResources {
 		return this.imageCache.get(new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom));
 	}
 
+	public static io.github.humbleui.skija.Font createSkiaFont(Font font) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
 }

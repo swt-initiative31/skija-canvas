@@ -621,7 +621,7 @@ void drawInPixels(GC gc, int x, int y, int selectionStart, int selectionEnd, Col
 	checkLayout ();
 	
 	if(gc instanceof GCExtension gcext) {
-		gcext.textLayoutDraw(this, gc,  xInPoints,  yInPoints,  selectionStart,  selectionEnd,  selectionForeground,  selectionBackground,  flags);
+		gcext.textLayoutDraw(this, gc,  x,  y,  selectionStart,  selectionEnd,  selectionForeground,  selectionBackground,  flags);
 		return;
 	}
 	

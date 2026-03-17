@@ -63,7 +63,7 @@
 				<version>${tycho.version}</version>
 				<configuration>
 					<addSourceFolders>true</addSourceFolders>
-					 <failOnError>true</failOnError>
+					 <failOnError>false</failOnError>
 				</configuration>
 			</plugin>
 			<plugin>

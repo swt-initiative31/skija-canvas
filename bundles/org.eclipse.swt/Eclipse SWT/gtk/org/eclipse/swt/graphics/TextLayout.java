@@ -559,8 +559,6 @@ void destroy() {
  * </ul>
  */
 public void draw(GC gc, int x, int y) {
-	if(GCExtension.usesExternalGC(gc))
-		return;
 	drawInPixels(gc, x, y, -1, -1, null, null, 0);
 }
 
@@ -585,8 +583,6 @@ public void draw(GC gc, int x, int y) {
  */
 public void draw(GC gc, int x, int y, int selectionStart, int selectionEnd, Color selectionForeground, Color selectionBackground) {
 	checkLayout ();
-	if(GCExtension.usesExternalGC(gc))
-		return;
 	drawInPixels(gc, x, y, selectionStart, selectionEnd, selectionForeground, selectionBackground, 0);
 }
 
@@ -619,12 +615,16 @@ public void draw(GC gc, int x, int y, int selectionStart, int selectionEnd, Colo
  */
 public void draw(GC gc, int x, int y, int selectionStart, int selectionEnd, Color selectionForeground, Color selectionBackground, int flags) {
 	checkLayout ();
-	if(GCExtension.usesExternalGC(gc))
-		return;
 	drawInPixels(gc, x, y, selectionStart, selectionEnd, selectionForeground, selectionBackground, flags);
 }
 void drawInPixels(GC gc, int x, int y, int selectionStart, int selectionEnd, Color selectionForeground, Color selectionBackground, int flags) {
 	checkLayout ();
+	
+	if(gc instanceof GCExtension gcext) {
+		gcext.textLayoutDraw(this, gc,  xInPoints,  yInPoints,  selectionStart,  selectionEnd,  selectionForeground,  selectionBackground,  flags);
+		return;
+	}
+	
 	computeRuns();
 	if (gc == null) SWT.error(SWT.ERROR_NULL_ARGUMENT);
 	if (gc.isDisposed()) SWT.error(SWT.ERROR_INVALID_ARGUMENT);

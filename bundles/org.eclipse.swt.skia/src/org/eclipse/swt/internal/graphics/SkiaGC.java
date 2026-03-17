@@ -41,6 +41,7 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Region;
+import org.eclipse.swt.graphics.TextLayout;
 import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.internal.DPIUtil;
 import org.eclipse.swt.internal.canvasext.DpiScaler;
@@ -1880,6 +1881,26 @@ public class SkiaGC implements IExternalGC {
 
 		final var fe = new FontMetricsExtension(new SkiaFontMetrics(m));
 		return fe;
+	}
+
+	@Override
+	public Drawable getDrawable() {
+		return canvas;
+	}
+
+	@Override
+	public void textLayoutDraw(TextLayout textLayout, GC gc, int xInPoints, int yInPoints, int selectionStart,
+			int selectionEnd, Color selectionForeground, Color selectionBackground, int flags) {
+
+		final var size = canvas.getClientArea();
+		final Image i = new Image(device, size.width, size.height);
+		final GC nativeGC = new GC(i);
+
+		textLayout.draw(nativeGC, xInPoints, yInPoints, selectionStart, selectionEnd, selectionForeground, selectionBackground, flags);
+		drawImage(i, 0, 0);
+		i.dispose();
+		nativeGC.dispose();
+
 	}
 
 }

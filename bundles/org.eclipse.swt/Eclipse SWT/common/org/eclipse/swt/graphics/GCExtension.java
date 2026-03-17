@@ -536,9 +536,9 @@ public final class GCExtension extends GC {
 		return e.getDevice();
 	}
 
-	static boolean usesExternalGC(GC gc) {
-		new IllegalStateException("External GC is not supported in TextLayout").printStackTrace(System.err);
-		return gc instanceof GCExtension;
+	public void textLayoutDraw(TextLayout textLayout, GC gc, int xInPoints, int yInPoints, int selectionStart,
+			int selectionEnd, Color selectionForeground, Color selectionBackground, int flags) {
+		e.textLayoutDraw(textLayout,gc,xInPoints,yInPoints,selectionStart, selectionEnd, selectionForeground, selectionBackground, flags);
 	}
 
 }

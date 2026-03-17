@@ -23,11 +23,6 @@ public final class GCExtension extends GC {
 	private final IExternalGC e;
 
 	/**
-	 * @noreference Blocks access to the public GC field 'handle'.
-	 */
-	public long handle = 0;
-
-	/**
 	 * @noreference Blocks access to the public GC method 'handle()'.
 	 */
 	public long handle() {

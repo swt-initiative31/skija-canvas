@@ -256,34 +256,4 @@
             </message_arguments>
         </filter>
     </resource>
-    <resource path="Eclipse SWT/gtk/org/eclipse/swt/graphics/GC.java" type="org.eclipse.swt.graphics.GC">
-        <filter id="1106355860" comment="SkiaCanvas: handle field is intentionally exposed for internal extension, not public API.">
-            <message_arguments>
-                <message_argument value="org.eclipse.swt.graphics.GC"/>
-                <message_argument value="handle"/>
-            </message_arguments>
-        </filter>
-    </resource>
-    <resource path="Eclipse SWT/gtk/org/eclipse/swt/graphics/FontMetrics.java" type="org.eclipse.swt.graphics.FontMetrics">
-        <filter id="1106355860" comment="SkiaCanvas: handle field is intentionally exposed for internal extension, not public API.">
-            <message_arguments>
-                <message_argument value="org.eclipse.swt.graphics.FontMetrics"/>
-                <message_argument value="handle"/>
-            </message_arguments>
-        </filter>
-        <filter id="134217934" comment="SkiaCanvas: handle field uses internal TEXTMETRIC type, required for platform integration.">
-            <message_arguments>
-                <message_argument value="org.eclipse.swt.graphics.FontMetrics"/>
-                <message_argument value="handle"/>
-                <message_argument value="org.eclipse.swt.internal.win32.TEXTMETRIC"/>
-            </message_arguments>
-        </filter>
-        <filter id="134217934" comment="SkiaCanvas: win32_new method uses internal TEXTMETRIC type, required for platform integration.">
-            <message_arguments>
-                <message_argument value="org.eclipse.swt.graphics.FontMetrics"/>
-                <message_argument value="win32_new(org.eclipse.swt.internal.win32.TEXTMETRIC, int)"/>
-                <message_argument value="org.eclipse.swt.internal.win32.TEXTMETRIC"/>
-            </message_arguments>
-        </filter>
-    </resource>
 </component>

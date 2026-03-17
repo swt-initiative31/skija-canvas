@@ -2581,6 +2581,7 @@ public class SWT {
 	public static final int CHROMIUM = 1 << 17;
 
 	 /**
+	 * Experimental This API is experimental and may change or be removed in future releases.
 	 * Style constant specifying that a Canvas should use Skia
 	 * for rendering its content (value is 1&lt;&lt;23).
 	 * <p><b>Used By:</b></p>
@@ -2589,7 +2590,6 @@ public class SWT {
 	 * </ul>
 	 *
 	 * @noreference Still in test mode: this field is not yet to be referenced by clients.
-	 * @experimental This API is experimental and may change or be removed in future releases.
 	 * @since 3.133
 	 */
 	public static final int SKIA = 1 << 23;

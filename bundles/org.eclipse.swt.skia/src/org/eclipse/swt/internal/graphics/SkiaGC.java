@@ -45,6 +45,7 @@ import org.eclipse.swt.graphics.TextLayout;
 import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.internal.DPIUtil;
 import org.eclipse.swt.internal.canvasext.DpiScaler;
+import org.eclipse.swt.internal.canvasext.FontProperties;
 import org.eclipse.swt.internal.canvasext.IExternalGC;
 import org.eclipse.swt.internal.skia.ISkiaCanvasExtension;
 import org.eclipse.swt.internal.skia.SkiaResources;
@@ -79,6 +80,8 @@ import io.github.humbleui.types.RRect;
 import io.github.humbleui.types.Rect;
 
 public class SkiaGC implements IExternalGC {
+
+	private final static boolean USE_TEXT_CASH = true;
 
 	static boolean logImageNullError = true;
 
@@ -120,7 +123,6 @@ public class SkiaGC implements IExternalGC {
 	private final int style;
 	private int textAntiAlias = SWT.ON;
 
-	private final int saveCount;
 
 	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvasExtension exst, int style) {
 		this.canvas = canvas;
@@ -131,8 +133,6 @@ public class SkiaGC implements IExternalGC {
 		this.skiaExtension = exst;
 		this.resources = skiaExtension.getResources();
 		this.style = style;
-
-		this.saveCount = surface.getCanvas().getSaveCount();
 	}
 
 	private static Point extractSize(Drawable drawable) {
@@ -236,10 +236,6 @@ public class SkiaGC implements IExternalGC {
 			paint.setColor(convertSWTColorToSkijaColor(getBackground()));
 		}
 
-	}
-
-	private static String[] splitString(String text) {
-		return text.split("\r\n|\n|\r"); //$NON-NLS-1$
 	}
 
 	@Override
@@ -402,12 +398,12 @@ public class SkiaGC implements IExternalGC {
 
 		var img = resources.getCachedImage(swtImage, zoom);
 
-		if(img != null  && !img.isClosed()) {
+		if (img != null && !img.isClosed()) {
 			return img;
 		}
 
 		final ImageData imageData = swtImage.getImageData(zoom);
-		img =  convertSWTImageToSkijaImage(imageData);
+		img = convertSWTImageToSkijaImage(imageData);
 
 		resources.cacheImage(swtImage, zoom, img);
 
@@ -583,46 +579,6 @@ public class SkiaGC implements IExternalGC {
 		drawTextBlob(text, flags, x, y);
 	}
 
-	/**
-	 * Expands tab characters (\t) in the text to position-dependent spaces, so that
-	 * the next character aligns to the next tab stop (every 8 average character
-	 * widths by default). The expansion is based on the current x position and the
-	 * average character width of the font.
-	 *
-	 * @param text   The input text containing tab characters
-	 * @param startX The starting x position in pixels (used to calculate tab
-	 *               alignment)
-	 * @return The text with tabs expanded to spaces, aligned to the next tab stop
-	 */
-	private String expandTabs(String text, int startX) {
-		final StringBuilder result = new StringBuilder();
-		int currentX = 0;
-		final int spaceWidth = textExtent(" ").x; //$NON-NLS-1$
-		final float _avgCharWidth = getSkiaFont().getMetrics()._avgCharWidth;
-		int avgCharWidth = (int) _avgCharWidth;
-		if (avgCharWidth <= 0) {
-			avgCharWidth = spaceWidth > 0 ? spaceWidth : 1;
-		}
-		final int tabSpacingPx = 8 * avgCharWidth;
-		for (int i = 0; i < text.length(); i++) {
-			final char ch = text.charAt(i);
-			if (ch == '\t') {
-				final int offsetInTab = tabSpacingPx > 0 ? (currentX - startX) % tabSpacingPx : 0;
-				final int nextTabX = currentX + (tabSpacingPx - offsetInTab);
-				while (currentX < nextTabX) {
-					result.append(' ');
-					currentX += textExtent(" ").x; //$NON-NLS-1$
-				}
-			} else {
-				final String s = String.valueOf(ch);
-				final int charWidth = textExtent(s).x;
-				result.append(ch);
-				currentX += charWidth;
-			}
-		}
-		return result.toString();
-	}
-
 	private io.github.humbleui.skija.Font getSkiaFont() {
 		return this.resources.getSkiaFont();
 	}
@@ -633,52 +589,45 @@ public class SkiaGC implements IExternalGC {
 			return;
 		}
 
+		final String splits[] = this.resources.getTextSplits(inputText, flags);
+
+
+		final FontProperties props = FontProperties.getFontProperties(getFont());
 		final boolean transparent = isTransparent(flags);
-		final boolean replaceAmpersand = (flags & SWT.DRAW_MNEMONIC) != 0;
-		final boolean delimiter = (flags & SWT.DRAW_DELIMITER) != 0;
-		final boolean tabulatorExpansion = (flags & SWT.DRAW_TAB) != 0;
+		final int backgroundColor = this.alpha < 255 ? convertSWTColorToSkijaColor(getBackground(), this.alpha)
+				: convertSWTColorToSkijaColor(getBackground());
+		final int foregroundColor = convertSWTColorToSkijaColor(getForeground(), this.alpha);
 
-		if (tabulatorExpansion) {
-			inputText = expandTabs(inputText, x);
-		} else {
-			inputText = inputText.replaceAll("\\t", ""); //$NON-NLS-1$ //$NON-NLS-2$
-		}
 
-		if (replaceAmpersand) {
-			inputText = replaceMnemonics(inputText);
-		}
-
-		// replace form feed characters with "\u240C" this is the unicode standard sign
-		// for form feed.
-		// unfortunately skia does not even render these form feed characters...
-		inputText = inputText.replace("\f", "\u240C"); //$NON-NLS-1$//$NON-NLS-2$
-
-		String[] splits;
-		if (delimiter) {
-			splits = splitString(inputText);
-		} else {
-			splits = new String[] { removeDelimiter(inputText) };
-		}
 
 		final var splitsToDraw = splits;
+		final int[] yPos = new int[1];
+		yPos[0] = y;
+		for (final var text : splitsToDraw) { // $NON-NLS-1$
 
-		final var f = getSkiaFont();
-		performDraw(fgp -> {
+			final var f = getSkiaFont();
 
-			int yPos = y;
 
-			final boolean antiAlias = this.textAntiAlias == SWT.ON || this.textAntiAlias == SWT.DEFAULT;
-			fgp.setAntiAlias(antiAlias);
-			fgp.setMode(PaintMode.FILL);
+			if (USE_TEXT_CASH) {
+				final var cachedImage = this.resources.getTextImage(text, props, transparent, backgroundColor,
+						foregroundColor);
+				if (cachedImage != null && !cachedImage.isClosed()) {
+					surface.getCanvas().drawImage(cachedImage, x, yPos[0]);
+					yPos[0] += Math.ceil(cachedImage.getHeight());
+					continue;
+				}
+				System.out.println("No cached image found for text: " + text);
+			}
+			performDraw(fgp -> {
+				final boolean antiAlias = this.textAntiAlias == SWT.ON || this.textAntiAlias == SWT.DEFAULT;
+				fgp.setAntiAlias(antiAlias);
+				fgp.setMode(PaintMode.FILL);
+				f.setSubpixel(antiAlias);
+				f.setEdging(antiAlias ? FontEdging.SUBPIXEL_ANTI_ALIAS : FontEdging.ALIAS);
 
-			f.setSubpixel(antiAlias);
-			f.setEdging(antiAlias ? FontEdging.SUBPIXEL_ANTI_ALIAS : FontEdging.ALIAS);
-
-			fgp.setStrokeWidth(1);
-			fgp.setStrokeCap(PaintStrokeCap.BUTT);
-			fgp.setPathEffect(null);
-
-			for (final var text : splitsToDraw) { // $NON-NLS-1$
+				fgp.setStrokeWidth(1);
+				fgp.setStrokeCap(PaintStrokeCap.BUTT);
+				fgp.setPathEffect(null);
 
 				final var rect = f.measureText(text, fgp);
 
@@ -690,41 +639,67 @@ public class SkiaGC implements IExternalGC {
 				final var ascI = (int) Math.ceil(Math.abs(asc));
 				final var desI = (int) Math.ceil(Math.abs(des));
 				final var heightI = ascI + desI;
-				final var r = resources.getScaler().scaleSize(x, yPos);
+				final var r = resources.getScaler().scaleSize(x, yPos[0]);
+				final Point size = new Point((int) Math.ceil(rect.getWidth()), (int) Math.ceil(heightI + leading));
 
-				if (!transparent) {
+				Surface supportSurface = null;
 
-					performDrawFilled(paint -> {
-						surface.getCanvas().drawRect(new Rect(r.x, r.y, r.x + rect.getWidth(), r.y + heightI + leading),
-								paint);
-					});
+				try {
+
+					if (USE_TEXT_CASH) {
+						supportSurface = this.skiaExtension.createSupportSurface(size.x, size.y);
+					}
+					if (!transparent) {
+
+						if (supportSurface != null) {
+							supportSurface.getCanvas().clear(convertSWTColorToSkijaColor(getBackground(), this.alpha));
+						} else {
+
+							performDrawFilled(paint -> {
+								surface.getCanvas().drawRect(
+										new Rect(r.x, r.y, r.x + rect.getWidth(), r.y + heightI + leading), paint);
+							});
+						}
+
+					} else {
+						if (supportSurface != null) {
+							// transparent
+							supportSurface.getCanvas().clear(0);
+						}
+					}
+
+					if (supportSurface != null) {
+						supportSurface.getCanvas().drawString(text, 0, ascI, f, fgp);
+						surface.getCanvas().drawImage(supportSurface.makeImageSnapshot(), r.x, r.y);
+						System.out.println("Draw Support Surface...");
+					} else {
+						surface.getCanvas().drawString(text, r.x, r.y + ascI, f, fgp);
+						yPos[0] += heightI + leading;
+					}
 
 				}
 
-				surface.getCanvas().drawString(text, r.x, r.y + ascI, f, fgp);
-				yPos += heightI + leading;
-			}
-		});
+				finally {
+					if (supportSurface != null && !supportSurface.isClosed()) {
+						System.out.println("cache text image for text: " + text);
+						final var image = supportSurface.makeImageSnapshot();
+						this.resources.cacheTextImage(text, props, transparent, backgroundColor, foregroundColor,
+								image);
+						supportSurface.close();
+					}
+
+				}
+			});
+		}
 
 	}
 
-	private static String removeDelimiter(String inputText) {
-		return inputText.replaceAll("\r\n|\r|\n", ""); //$NON-NLS-1$//$NON-NLS-2$
-	}
+
 
 	private static boolean isTransparent(int flags) {
 		return (SWT.DRAW_TRANSPARENT & flags) != 0;
 	}
 
-	private static String replaceMnemonics(String text) {
-		final int mnemonicIndex = text.lastIndexOf('&');
-		if (mnemonicIndex != -1) {
-			text = text.replaceAll("&", ""); //$NON-NLS-1$ //$NON-NLS-2$
-			// TODO Underline the mnemonic key
-			// it seems this also does not work in windows with a simple snippet.
-		}
-		return text;
-	}
 
 	@Override
 	public void drawArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
@@ -995,7 +970,8 @@ public class SkiaGC implements IExternalGC {
 		}
 
 		// Create Skija path for the polygon
-		try (io.github.humbleui.skija.PathBuilder path = new io.github.humbleui.skija.PathBuilder()) { // Move to first point
+		try (io.github.humbleui.skija.PathBuilder path = new io.github.humbleui.skija.PathBuilder()) { // Move to first
+			// point
 			path.moveTo(DpiScaler.autoScaleUp(pointArray[0]), DpiScaler.autoScaleUp(pointArray[1]));
 			// Add lines to subsequent points
 			for (int i = 2; i < pointArray.length; i += 2) {
@@ -1044,6 +1020,17 @@ public class SkiaGC implements IExternalGC {
 		return new Point((int) width, (int) height);
 	}
 
+	private static String replaceMnemonics(String text) {
+		final int mnemonicIndex = text.lastIndexOf('&');
+		if (mnemonicIndex != -1) {
+			text = text.replaceAll("&", ""); //$NON-NLS-1$ //$NON-NLS-2$
+			// TODO Underline the mnemonic key
+			// it seems this also does not work in windows with a simple snippet.
+		}
+		return text;
+	}
+
+
 	@Override
 	public void setFont(org.eclipse.swt.graphics.Font font) {
 		this.resources.setFont(font);
@@ -1057,7 +1044,6 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void setTransform(Transform transform) {
 
-		surface.getCanvas().restoreToCount(saveCount);
 
 		if (transform == null) {
 			currentTransform = Matrix33.IDENTITY;
@@ -1474,7 +1460,6 @@ public class SkiaGC implements IExternalGC {
 		// if more layers will be used a more complex handling is necessary
 		final Canvas canvas = surface.getCanvas();
 		if (isClipSet) {
-			canvas.restoreToCount(saveCount);
 			isClipSet = false;
 		}
 		if (rect == null) {
@@ -1896,7 +1881,8 @@ public class SkiaGC implements IExternalGC {
 		final Image i = new Image(device, size.width, size.height);
 		final GC nativeGC = new GC(i);
 
-		textLayout.draw(nativeGC, xInPoints, yInPoints, selectionStart, selectionEnd, selectionForeground, selectionBackground, flags);
+		textLayout.draw(nativeGC, xInPoints, yInPoints, selectionStart, selectionEnd, selectionForeground,
+				selectionBackground, flags);
 		drawImage(i, 0, 0);
 		i.dispose();
 		nativeGC.dispose();

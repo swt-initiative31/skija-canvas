@@ -20,10 +20,13 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.internal.canvasext.DpiScaler;
 import org.eclipse.swt.internal.canvasext.FontProperties;
 import org.eclipse.swt.internal.canvasext.ImageVersion;
 import org.eclipse.swt.internal.skia.cache.ImageKey;
+import org.eclipse.swt.internal.skia.cache.ImageTextKey;
+import org.eclipse.swt.internal.skia.cache.SplitsTextCache;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 
@@ -48,6 +51,9 @@ public class SkiaResources {
 
 	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
 	private final Map<ImageKey, io.github.humbleui.skija.Image> imageCache = new HashMap<>();
+	private final Map<ImageTextKey, io.github.humbleui.skija.Image> textImageCache = new HashMap<>();
+	private final Map<SplitsTextCache, String[]> cachedTextSplits = new HashMap<>();
+
 	private final ISkiaCanvasExtension skiaExtension;
 
 	public SkiaResources(Canvas canvas, ISkiaCanvasExtension skiaExtension) {
@@ -268,6 +274,16 @@ public class SkiaResources {
 
 		imageCache.clear();
 
+
+		textImageCache.values().forEach(i -> {
+			if (!i.isClosed()) {
+				i.close();
+			}
+		});
+
+		textImageCache.clear();
+		cachedTextSplits.clear();
+
 		fontNameMapping.clear();
 		unkownFonts.clear();
 
@@ -309,4 +325,125 @@ public class SkiaResources {
 		return null;
 	}
 
+	public void cacheTextImage(String text, FontProperties fontProperties, boolean transparent, int background, int foreground, io.github.humbleui.skija.Image skijaImage) {
+		if (USE_IMAGE_CACHE ) {
+			final var key = new ImageTextKey(text, fontProperties, transparent, background, foreground);
+			final var old = textImageCache.get(key);
+			if (old != null && !old.isClosed()) {
+				old.close();
+			}
+			this.textImageCache.put(key, skijaImage);
+		}
+	}
+
+	public io.github.humbleui.skija.Image getTextImage(String text, FontProperties fontProperties, boolean transparent, int background, int foreground) {
+		return this.textImageCache.get(new ImageTextKey(text, fontProperties, transparent, background, foreground));
+	}
+
+
+	private static String[] splitString(String text) {
+		return text.split("\r\n|\n|\r"); //$NON-NLS-1$
+	}
+
+
+	public String[] getTextSplits(String inputText, int flags) {
+
+		final boolean replaceAmpersand = (flags & SWT.DRAW_MNEMONIC) != 0;
+		final boolean delimiter = (flags & SWT.DRAW_DELIMITER) != 0;
+		final boolean tabulatorExpansion = (flags & SWT.DRAW_TAB) != 0;
+
+		var splits = cachedTextSplits.get(new SplitsTextCache(inputText, replaceAmpersand, delimiter, tabulatorExpansion));
+
+		if(splits == null) {
+			if (tabulatorExpansion) {
+				inputText = expandTabs(inputText, 0);
+			} else {
+				inputText = inputText.replaceAll("\\t", ""); //$NON-NLS-1$ //$NON-NLS-2$
+			}
+
+			if (replaceAmpersand) {
+				inputText = replaceMnemonics(inputText);
+			}
+
+			// replace form feed characters with "\u240C" this is the unicode standard sign
+			// for form feed.
+			// unfortunately skia does not even render these form feed characters...
+			inputText = inputText.replace("\f", "\u240C"); //$NON-NLS-1$//$NON-NLS-2$
+
+			if (delimiter) {
+				splits = splitString(inputText);
+			} else {
+				splits = new String[] { removeDelimiter(inputText) };
+			}
+		}
+
+		cachedTextSplits.put(new SplitsTextCache(inputText, replaceAmpersand, delimiter, tabulatorExpansion), splits);
+
+		return splits;
+	}
+
+	/**
+	 * Expands tab characters (\t) in the text to position-dependent spaces, so that
+	 * the next character aligns to the next tab stop (every 8 average character
+	 * widths by default). The expansion is based on the current x position and the
+	 * average character width of the font.
+	 *
+	 * @param text   The input text containing tab characters
+	 * @param startX The starting x position in pixels (used to calculate tab
+	 *               alignment)
+	 * @return The text with tabs expanded to spaces, aligned to the next tab stop
+	 */
+	private String expandTabs(String text, int startX) {
+		final StringBuilder result = new StringBuilder();
+		int currentX = 0;
+		final int spaceWidth = textExtent(" ").x; //$NON-NLS-1$
+		final float _avgCharWidth = getSkiaFont().getMetrics()._avgCharWidth;
+		int avgCharWidth = (int) _avgCharWidth;
+		if (avgCharWidth <= 0) {
+			avgCharWidth = spaceWidth > 0 ? spaceWidth : 1;
+		}
+		final int tabSpacingPx = 8 * avgCharWidth;
+		for (int i = 0; i < text.length(); i++) {
+			final char ch = text.charAt(i);
+			if (ch == '\t') {
+				final int offsetInTab = tabSpacingPx > 0 ? (currentX - startX) % tabSpacingPx : 0;
+				final int nextTabX = currentX + (tabSpacingPx - offsetInTab);
+				while (currentX < nextTabX) {
+					result.append(' ');
+					currentX += textExtent(" ").x; //$NON-NLS-1$
+				}
+			} else {
+				final String s = String.valueOf(ch);
+				final int charWidth = textExtent(s).x;
+				result.append(ch);
+				currentX += charWidth;
+			}
+		}
+		return result.toString();
+	}
+
+	private Point textExtent(String text, int flags) {
+
+		final float height = getSkiaFont().getMetrics().getHeight();
+		final float width = getSkiaFont().measureTextWidth(replaceMnemonics(text));
+		return new Point((int) width, (int) height);
+	}
+
+	private Point textExtent(String string) {
+		return textExtent(string, SWT.NONE);
+	}
+
+
+	private static String removeDelimiter(String inputText) {
+		return inputText.replaceAll("\r\n|\r|\n", ""); //$NON-NLS-1$//$NON-NLS-2$
+	}
+	private static String replaceMnemonics(String text) {
+		final int mnemonicIndex = text.lastIndexOf('&');
+		if (mnemonicIndex != -1) {
+			text = text.replaceAll("&", ""); //$NON-NLS-1$ //$NON-NLS-2$
+			// TODO Underline the mnemonic key
+			// it seems this also does not work in windows with a simple snippet.
+		}
+		return text;
+	}
 }

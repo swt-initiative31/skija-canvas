@@ -10,9 +10,9 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
 
 public class SnippetCanvasText {
-	final static boolean useSkia = false;
-	
-	
+	final static boolean useSkia = true;
+
+
 	final static int style = SWT.DOUBLE_BUFFERED | (useSkia ? SWT.SKIA : SWT.NONE);
 	final static int LETTERS_PER_LINE = 800;
 	final static int LINES = 60;

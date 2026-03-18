@@ -1878,13 +1878,15 @@ public class SkiaGC implements IExternalGC {
 	public void textLayoutDraw(TextLayout textLayout, GC gc, int xInPoints, int yInPoints, int selectionStart,
 			int selectionEnd, Color selectionForeground, Color selectionBackground, int flags) {
 
-		final var size = canvas.getClientArea();
-		final Image i = new Image(device, size.width, size.height);
+		final var rectangle = textLayout.getBounds();
+
+		final Image i = new Image(device, rectangle.width, rectangle.height);
 		final GC nativeGC = new GC(i);
 
-		textLayout.draw(nativeGC, xInPoints, yInPoints, selectionStart, selectionEnd, selectionForeground,
+		textLayout.draw(nativeGC, 0, 0, selectionStart, selectionEnd, selectionForeground,
 				selectionBackground, flags);
-		drawImage(i, 0, 0);
+
+		drawImage(i, rectangle.x, rectangle.y, rectangle.width, rectangle.height, xInPoints, yInPoints, rectangle.width, rectangle.height);
 		i.dispose();
 		nativeGC.dispose();
 

@@ -11,13 +11,18 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
 public class SnippetTextLayout {
+
+	private static final boolean useSkia = true; // Set to false to use default TextLayout
+
     public static void main(String[] args) {
         Display display = new Display();
         Shell shell = new Shell(display);
         shell.setText("TextLayout Example");
         shell.setLayout(new FillLayout());
 
-        Canvas canvas = new Canvas(shell, SWT.DOUBLE_BUFFERED | SWT.SKIA);
+        int style = useSkia ? SWT.DOUBLE_BUFFERED | SWT.SKIA : SWT.DOUBLE_BUFFERED;
+
+        Canvas canvas = new Canvas(shell, style);
         canvas.addPaintListener(new PaintListener() {
             @Override
             public void paintControl(PaintEvent e) {
@@ -26,6 +31,11 @@ public class SnippetTextLayout {
                 layout.setStyle(null, 0, 4); // Default style for 'Hello'
                 layout.setStyle(new org.eclipse.swt.graphics.TextStyle(
                     display.getSystemFont(), new Color(display, 0, 128, 255), null), 7, 15); // Style 'Skia Text'
+
+                e.gc.setBackground(display.getSystemColor(SWT.COLOR_GREEN));
+
+                e.gc.fillRectangle(e.x, e.y, e.width, e.height);
+
                 layout.draw(e.gc, 20, 20);
                 layout.dispose();
             }

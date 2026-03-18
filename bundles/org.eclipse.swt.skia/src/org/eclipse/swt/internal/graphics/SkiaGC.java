@@ -81,7 +81,7 @@ import io.github.humbleui.types.Rect;
 
 public class SkiaGC implements IExternalGC {
 
-	public final static boolean USE_TEXT_CASH = false;
+	public final static boolean USE_TEXT_CASH = true;
 
 	static boolean logImageNullError = true;
 
@@ -639,7 +639,11 @@ public class SkiaGC implements IExternalGC {
 				final var desI = (int) Math.ceil(Math.abs(des));
 				final var heightI = ascI + desI;
 				final var r = resources.getScaler().scaleSize(x, yPos[0]);
-				final Point size = new Point((int) Math.ceil(rect.getWidth()) , (int) Math.ceil(heightI + leading));
+
+				// skija draws a text with a slightly shift. So make the area a little bit wider.
+				final float characterShift = Math.abs(f.getMetrics().getXMin() * 0.15f) ;
+
+				final Point size = new Point((int) Math.ceil(rect.getWidth()+characterShift) , (int) Math.ceil(heightI + leading));
 
 				Surface supportSurface = null;
 
@@ -656,7 +660,7 @@ public class SkiaGC implements IExternalGC {
 						} else {
 							performDrawFilled(paint -> {
 								surface.getCanvas().drawRect(
-										new Rect(r.x, r.y, r.x + rect.getWidth(), r.y + heightI + leading), paint);
+										new Rect(r.x, r.y, r.x + size.x, r.y + size.y), paint);
 							});
 						}
 

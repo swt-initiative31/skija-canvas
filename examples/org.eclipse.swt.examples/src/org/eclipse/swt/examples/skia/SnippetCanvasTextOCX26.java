@@ -3,15 +3,14 @@ package org.eclipse.swt.examples.skia;
 import java.util.Random;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
 
-public class SnippetCanvasText {
-	final static boolean useSkia = true;
-
+public class SnippetCanvasTextOCX26 {
+	final static boolean useSkia = false;
 
 	final static int style = SWT.DOUBLE_BUFFERED | (useSkia ? SWT.SKIA : SWT.NONE);
 	final static int LETTERS_PER_LINE = 2000;
@@ -26,6 +25,8 @@ public class SnippetCanvasText {
 		shell.setText("Snippet Canvas");
 		// here you can switch between Canvas SkiaRasterCanvas and SkiaCanvas
 		final Canvas c = new Canvas(shell, style );
+		c.setBackground(display.getSystemColor(SWT.COLOR_BLACK));
+		c.setForeground(display.getSystemColor(SWT.COLOR_WHITE));
 
 		for (int j = 0; j < LINES; j++) {
 			text[j] = generateText(LETTERS_PER_LINE);
@@ -34,8 +35,8 @@ public class SnippetCanvasText {
 		c.setSize(100, 100);
 
 		shell.addListener(SWT.Resize, e -> onResize(e, c));
-		c.addListener(SWT.Paint, SnippetCanvasText::onPaint);
-		c.addListener(SWT.Paint, SnippetCanvasText::onPaint2);
+		c.addListener(SWT.Paint, SnippetCanvasTextOCX26::onPaint);
+		c.addListener(SWT.Paint, SnippetCanvasTextOCX26::onPaint2);
 
 		shell.setSize(1000, LETTERS_PER_LINE * 3 + 80);
 
@@ -58,7 +59,36 @@ public class SnippetCanvasText {
 
 		final var s = ((Canvas) e.widget);
 
-		final Point size = s.getSize();
+		Font f = e.display.getSystemFont();
+
+		var fd = f.getFontData()[0];
+
+		fd.setHeight(250);
+
+		e.gc.setAlpha(200);
+		var fontBefore = e.gc.getFont();
+		var newFont = new Font(e.display, fd);
+		e.gc.setFont(newFont);
+		e.gc.setForeground(e.display.getSystemColor(SWT.COLOR_GREEN));
+		e.gc.drawText("OCX 2026" ,100,50,true  );
+		newFont.dispose();
+
+		fd.setHeight(50);
+		newFont = new Font(e.display, fd);
+		e.gc.setFont(newFont);
+
+		if(useSkia) {
+			e.gc.drawText("GPU Accelerated Drawing With Skia SWT" ,100,450,true  );
+		} else {
+			e.gc.drawText("CPU Drawing With Classical SWT" ,100,450,true  );
+		}
+		newFont.dispose();
+
+		e.gc.setFont(fontBefore);
+		e.gc.setAlpha(255);
+		e.gc.setForeground(e.display.getSystemColor(SWT.COLOR_WHITE));
+
+		final var size = s.getSize();
 
 		long currentPosTime = System.currentTimeMillis() - startTime;
 
@@ -89,7 +119,15 @@ public class SnippetCanvasText {
 			}
 			frames++;
 
+			var fontBefore = e.display.getSystemFont();
+			var fd = fontBefore.getFontData()[0];
+			fd.setHeight(50);
+			var newFont = new Font(e.display, fd);
+			e.gc.setFont(newFont);
+
 			e.gc.drawText("Frames: " + framesToDraw, 10, 10,true);
+
+			newFont.dispose();
 
 		}
 

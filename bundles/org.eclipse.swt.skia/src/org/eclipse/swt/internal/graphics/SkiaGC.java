@@ -123,7 +123,6 @@ public class SkiaGC implements IExternalGC {
 	private final int style;
 	private int textAntiAlias = SWT.ON;
 
-
 	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvasExtension exst, int style) {
 		this.canvas = canvas;
 		device = canvas.getDisplay();
@@ -591,14 +590,12 @@ public class SkiaGC implements IExternalGC {
 
 		final String splits[] = this.resources.getTextSplits(inputText, flags);
 
-
 		final FontProperties props = FontProperties.getFontProperties(getFont());
 		final boolean transparent = isTransparent(flags);
 		final int backgroundColor = this.alpha < 255 ? convertSWTColorToSkijaColor(getBackground(), this.alpha)
 				: convertSWTColorToSkijaColor(getBackground());
 		final int foregroundColor = convertSWTColorToSkijaColor(getForeground(), this.alpha);
-
-
+		final boolean antiAlias = this.textAntiAlias == SWT.ON || this.textAntiAlias == SWT.DEFAULT;
 
 		final var splitsToDraw = splits;
 		final int[] yPos = new int[1];
@@ -607,10 +604,9 @@ public class SkiaGC implements IExternalGC {
 
 			final var f = getSkiaFont();
 
-
-			if (USE_TEXT_CASH ) {
+			if (USE_TEXT_CASH) {
 				final var cachedImage = this.resources.getTextImage(text, props, transparent, backgroundColor,
-						foregroundColor);
+						foregroundColor, antiAlias);
 				if (cachedImage != null && !cachedImage.isClosed()) {
 					surface.getCanvas().drawImage(cachedImage, x, yPos[0]);
 					yPos[0] += Math.ceil(cachedImage.getHeight());
@@ -618,7 +614,6 @@ public class SkiaGC implements IExternalGC {
 				}
 			}
 			performDraw(fgp -> {
-				final boolean antiAlias = this.textAntiAlias == SWT.ON || this.textAntiAlias == SWT.DEFAULT;
 				fgp.setAntiAlias(antiAlias);
 				fgp.setMode(PaintMode.FILL);
 				f.setSubpixel(antiAlias);
@@ -640,10 +635,20 @@ public class SkiaGC implements IExternalGC {
 				final var heightI = ascI + desI;
 				final var r = resources.getScaler().scaleSize(x, yPos[0]);
 
-				// skija draws a text with a slightly shift. So make the area a little bit wider.
-				final float characterShift = Math.abs(f.getMetrics().getXMin() * 0.15f) ;
+				// skija draws a text with a slightly shift. So textExtent is insufficient in the width
+				// So make the area a little bit wider.
 
-				final Point size = new Point((int) Math.ceil(rect.getWidth()+characterShift) , (int) Math.ceil(heightI + leading));
+				// Idea:
+				// 1. the support surface should always be wide enough to contain the complete text.
+				// 2. the background rectangle can be a little bit smaller, and in the worst case a small part of the text is not covered.
+				// Similar in windows. Actually for some fonts and sizes this solution is already better than windows.
+
+				final double additionalArea = Math.abs(asc);
+				// heuristic number. After 0.12 of the ascent, the text is usually sufficiently in the rectangle area.
+				final double endOfRectangle = Math.abs(asc) * 0.12;
+
+				final Point size = new Point((int) Math.ceil(rect.getWidth() + additionalArea),
+						(int) Math.ceil(heightI + leading));
 
 				Surface supportSurface = null;
 
@@ -655,11 +660,17 @@ public class SkiaGC implements IExternalGC {
 					if (!transparent) {
 
 						if (supportSurface != null) {
-							supportSurface.getCanvas().clear(convertSWTColorToSkijaColor(getBackground(), this.alpha));
+
+							// always clear the support surface, then fill a specific rectangle area with the background color, the rest stays transparent.
+							supportSurface.getCanvas().clear(0);
+							try (Paint p = new Paint()) {
+								p.setColor(convertSWTColorToSkijaColor(getBackground(), this.alpha));
+								supportSurface.getCanvas().drawRect(new Rect(0, 0, (int) Math.ceil(rect.getWidth() + endOfRectangle), size.y), p);
+							}
+
 						} else {
 							performDrawFilled(paint -> {
-								surface.getCanvas().drawRect(
-										new Rect(r.x, r.y, r.x + size.x, r.y + size.y), paint);
+								surface.getCanvas().drawRect(new Rect(r.x, r.y, r.x + size.x, r.y +(int) Math.ceil(rect.getWidth() + endOfRectangle)), paint);
 							});
 						}
 
@@ -675,12 +686,14 @@ public class SkiaGC implements IExternalGC {
 
 						final var image = supportSurface.makeImageSnapshot();
 						this.resources.cacheTextImage(text, props, transparent, backgroundColor, foregroundColor,
-								image);
+								antiAlias, image);
 						supportSurface.close();
 						surface.getCanvas().drawImage(image, r.x, r.y);
-
+						yPos[0] += Math.ceil(image.getHeight());
 					} else {
 						surface.getCanvas().drawString(text, r.x, r.y + ascI, f, fgp);
+						supportSurface.getCanvas().drawRect(new Rect(r.x, r.y, r.x + size.x - 4, r.y + size.y - 4),
+								fgp);
 						yPos[0] += heightI + leading;
 					}
 
@@ -700,7 +713,6 @@ public class SkiaGC implements IExternalGC {
 	private static boolean isTransparent(int flags) {
 		return (SWT.DRAW_TRANSPARENT & flags) != 0;
 	}
-
 
 	@Override
 	public void drawArc(int x, int y, int width, int height, int startAngle, int arcAngle) {
@@ -1031,7 +1043,6 @@ public class SkiaGC implements IExternalGC {
 		return text;
 	}
 
-
 	@Override
 	public void setFont(org.eclipse.swt.graphics.Font font) {
 		this.resources.setFont(font);
@@ -1044,7 +1055,6 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setTransform(Transform transform) {
-
 
 		if (transform == null) {
 			currentTransform = Matrix33.IDENTITY;
@@ -1883,10 +1893,10 @@ public class SkiaGC implements IExternalGC {
 		final Image i = new Image(device, rectangle.width, rectangle.height);
 		final GC nativeGC = new GC(i);
 
-		textLayout.draw(nativeGC, 0, 0, selectionStart, selectionEnd, selectionForeground,
-				selectionBackground, flags);
+		textLayout.draw(nativeGC, 0, 0, selectionStart, selectionEnd, selectionForeground, selectionBackground, flags);
 
-		drawImage(i, rectangle.x, rectangle.y, rectangle.width, rectangle.height, xInPoints, yInPoints, rectangle.width, rectangle.height);
+		drawImage(i, rectangle.x, rectangle.y, rectangle.width, rectangle.height, xInPoints, yInPoints, rectangle.width,
+				rectangle.height);
 		i.dispose();
 		nativeGC.dispose();
 

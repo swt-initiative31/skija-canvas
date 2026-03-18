@@ -10,29 +10,26 @@ public class ImageTextKey {
 	public final boolean transparent;
 	public final int background;
 	public final int foreground;
+	public final boolean antiAlias;
 
-	public ImageTextKey(String text, FontProperties fontProperties, boolean transparent, int background, int foreground) {
+	public ImageTextKey(String text, FontProperties fontProperties, boolean transparent, int background, int foreground, boolean antiAlias) {
 		this.text = text;
 		this.fontProperties = fontProperties;
 		this.transparent = transparent;
 		this.background = background;
 		this.foreground = foreground;
+		this.antiAlias = antiAlias;
 	}
 
 	@Override
 	public int hashCode() {
 
 		if(transparent) {
-			return Objects.hash(fontProperties, foreground, text, transparent);
+			return Objects.hash(fontProperties, foreground, text, transparent, antiAlias);
 		}
-		return Objects.hash(background, fontProperties, foreground, text);
+		return Objects.hash(background, fontProperties, foreground, text, antiAlias);
 	}
 
-	@Override
-	public String toString() {
-		return "ImageTextKey [text=" + text + ", fontProperties=" + fontProperties + ", transparent=" + transparent
-				+ ", background=" + background + ", foreground=" + foreground + "]";
-	}
 
 	@Override
 	public boolean equals(Object obj) {
@@ -50,11 +47,11 @@ public class ImageTextKey {
 		if(transparent ) {
 			return  Objects.equals(fontProperties, other.fontProperties)
 					&& foreground == other.foreground && Objects.equals(text, other.text) &&
-					other.transparent;
+					other.transparent && antiAlias == other.antiAlias;
 		}
 
 		return background == other.background && Objects.equals(fontProperties, other.fontProperties)
-				&& foreground == other.foreground && Objects.equals(text, other.text);
+				&& foreground == other.foreground && Objects.equals(text, other.text) && antiAlias == other.antiAlias;
 	}
 
 

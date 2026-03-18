@@ -328,9 +328,9 @@ public class SkiaResources {
 	}
 
 	public void cacheTextImage(String text, FontProperties fontProperties, boolean transparent, int background,
-			int foreground, io.github.humbleui.skija.Image skijaImage) {
+			int foreground, boolean antiAlias, io.github.humbleui.skija.Image skijaImage) {
 		if (USE_IMAGE_CACHE) {
-			final var key = new ImageTextKey(text, fontProperties, transparent, background, foreground);
+			final var key = new ImageTextKey(text, fontProperties, transparent, background, foreground, antiAlias);
 			final var old = textImageCache.get(key);
 			if (old != null && !old.isClosed()) {
 				old.close();
@@ -340,8 +340,8 @@ public class SkiaResources {
 	}
 
 	public io.github.humbleui.skija.Image getTextImage(String text, FontProperties fontProperties, boolean transparent,
-			int background, int foreground) {
-		return this.textImageCache.get(new ImageTextKey(text, fontProperties, transparent, background, foreground));
+			int background, int foreground, boolean antialias) {
+		return this.textImageCache.get(new ImageTextKey(text, fontProperties, transparent, background, foreground, antialias));
 	}
 
 	private static String[] splitString(String text) {

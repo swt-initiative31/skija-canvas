@@ -3,7 +3,7 @@ package org.eclipse.swt.examples.skia;
 import java.util.Random;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.Point;
+import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.widgets.Canvas;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Event;
@@ -12,11 +12,10 @@ import org.eclipse.swt.widgets.Shell;
 public class SnippetCanvasText {
 	final static boolean useSkia = true;
 
-
 	final static int style = SWT.DOUBLE_BUFFERED | (useSkia ? SWT.SKIA : SWT.NONE);
-	final static int LETTERS_PER_LINE = 800;
+	final static int LETTERS_PER_LINE = 2000;
 	final static int LINES = 60;
-	final static int SHIFT_LEFT = 1000;
+	final static int SHIFT_LEFT = 2000;
 
 	static String[] text = new String[LINES];
 
@@ -58,21 +57,41 @@ public class SnippetCanvasText {
 
 		final var s = ((Canvas) e.widget);
 
-		final Point size = s.getSize();
+		Font f = e.display.getSystemFont();
 
-		long currentPosTime = System.currentTimeMillis() - startTime;
+		var fd = f.getFontData()[0];
 
-		currentPosTime = currentPosTime % 10000;
+		fd.setHeight(250);
 
-		final double position = (double) currentPosTime / (double) 10000;
+		e.gc.setAlpha(150);
+		var fontBefore = e.gc.getFont();
+		var newFont = new Font(e.display, fd);
+		e.gc.setFont(newFont);
+		e.gc.setForeground(e.display.getSystemColor(SWT.COLOR_GREEN));
+		e.gc.setBackground(e.display.getSystemColor(SWT.COLOR_DARK_RED));
+		e.gc.drawText("OCX 2026" ,100,50,false  );
+		e.gc.setFont(fontBefore);
+		newFont.dispose();
 
-		final int shift = (int) (position * size.x) - SHIFT_LEFT;
-		final int shiftDown = 20;
-
-
-		for(int j = 0 ; j < LINES; j++) {
-			e.gc.drawText(text[j], shift, shiftDown + 20 * j,true);
-		}
+//		e.gc.setAlpha(255);
+//		e.gc.setForeground(e.display.getSystemColor(SWT.COLOR_BLACK));
+//
+//		final Point size = s.getSize();
+//
+//
+//		long currentPosTime = System.currentTimeMillis() - startTime;
+//
+//		currentPosTime = currentPosTime % 10000;
+//
+//		final double position = (double) currentPosTime / (double) 10000;
+//
+//		final int shift = (int) (position * size.x) - SHIFT_LEFT;
+//		final int shiftDown = 20;
+//
+//
+//		for(int j = 0 ; j < LINES; j++) {
+//			e.gc.drawText(text[j], shift, shiftDown + 20 * j,true);
+//		}
 	}
 
 	private static void onPaint2(Event e) {

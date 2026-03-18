@@ -24,6 +24,7 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.internal.canvasext.DpiScaler;
 import org.eclipse.swt.internal.canvasext.FontProperties;
 import org.eclipse.swt.internal.canvasext.ImageVersion;
+import org.eclipse.swt.internal.graphics.SkiaGC;
 import org.eclipse.swt.internal.skia.cache.ImageKey;
 import org.eclipse.swt.internal.skia.cache.ImageTextKey;
 import org.eclipse.swt.internal.skia.cache.SplitsTextCache;
@@ -113,6 +114,7 @@ public class SkiaResources {
 		if (cachedFont != null && cachedFont.isClosed()) {
 			fontCache.remove(props);
 			cachedFont = null;
+			System.out.println("Remove cached skia font");
 		}
 
 		io.github.humbleui.skija.Font f = null;
@@ -134,7 +136,8 @@ public class SkiaResources {
 		}
 
 		final FontStyle style = new FontStyle(props.lfWeight, 5, slant);
-		final io.github.humbleui.skija.Font skijaFont = new io.github.humbleui.skija.Font(extractTypeface(props, style));
+		final io.github.humbleui.skija.Font skijaFont = new io.github.humbleui.skija.Font(
+				extractTypeface(props, style));
 
 		if (props.lfWidth != 0) {
 			final float stretch = (float) ((props.lfWidth / 10.0) + 0.5);
@@ -167,28 +170,29 @@ public class SkiaResources {
 		var name = props.name;
 		name = name.trim();
 
-		if(fontNameMapping.containsKey(name)) {
+		if (fontNameMapping.containsKey(name)) {
 			return fm.matchFamilyStyle(fontNameMapping.get(name), style);
 		}
 
-		if(unkownFonts.contains(name)) {
+		if (unkownFonts.contains(name)) {
 			return fm.matchFamilyStyle(null, style);
 		}
 
 		var bestMatch = findBestFit(name);
 
-		if(bestMatch == null) {
+		if (bestMatch == null) {
 			bestMatch = findBestFit(name.replaceAll("[^\\p{L}\\p{N}]+", " ")); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 
-		if(bestMatch != null) {
+		if (bestMatch != null) {
 			fontNameMapping.put(name, bestMatch);
 			return fm.matchFamilyStyle(bestMatch, style);
 		}
 
 		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
-			//arabic fonts are no longer supported on windows. Also windows falls back to arial
-			if(name.toLowerCase().startsWith("arabic ")) { //$NON-NLS-1$
+			// arabic fonts are no longer supported on windows. Also windows falls back to
+			// arial
+			if (name.toLowerCase().startsWith("arabic ")) { //$NON-NLS-1$
 				fontNameMapping.put(name, "Arial");
 				return fm.matchFamilyStyle("Arial", style); //$NON-NLS-1$
 			}
@@ -202,10 +206,9 @@ public class SkiaResources {
 	private static String findBestFit(String name) {
 		final String[] parts = name.split(" "); //$NON-NLS-1$
 
-		for(int i = 0; i < parts.length; i++) {
+		for (int i = 0; i < parts.length; i++) {
 			parts[i] = parts[i].trim();
 		}
-
 
 		final FontMgr fm = FontMgr.getDefault();
 		final var count = fm.getFamiliesCount();
@@ -213,18 +216,18 @@ public class SkiaResources {
 		String bestMatch = null;
 		int bestMatchScore = 0;
 
-		for(int i = 0; i < count; i++) {
+		for (int i = 0; i < count; i++) {
 
 			final var f = fm.getFamilyName(i);
 
 			int score = 0;
 			for (final String part : parts) {
-				if(f.toLowerCase().contains(part.toLowerCase())) {
+				if (f.toLowerCase().contains(part.toLowerCase())) {
 					score++;
 				}
 			}
 
-			if(score > bestMatchScore) {
+			if (score > bestMatchScore) {
 				bestMatchScore = score;
 				bestMatch = f;
 			}
@@ -274,7 +277,6 @@ public class SkiaResources {
 
 		imageCache.clear();
 
-
 		textImageCache.values().forEach(i -> {
 			if (!i.isClosed()) {
 				i.close();
@@ -306,7 +308,7 @@ public class SkiaResources {
 	}
 
 	public void cacheImage(Image swtImage, int zoom, io.github.humbleui.skija.Image skijaImage) {
-		if (USE_IMAGE_CACHE ) {
+		if (USE_IMAGE_CACHE) {
 			final var key = new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom);
 			final var old = imageCache.get(key);
 			if (old != null && !old.isClosed()) {
@@ -325,8 +327,9 @@ public class SkiaResources {
 		return null;
 	}
 
-	public void cacheTextImage(String text, FontProperties fontProperties, boolean transparent, int background, int foreground, io.github.humbleui.skija.Image skijaImage) {
-		if (USE_IMAGE_CACHE ) {
+	public void cacheTextImage(String text, FontProperties fontProperties, boolean transparent, int background,
+			int foreground, io.github.humbleui.skija.Image skijaImage) {
+		if (USE_IMAGE_CACHE) {
 			final var key = new ImageTextKey(text, fontProperties, transparent, background, foreground);
 			final var old = textImageCache.get(key);
 			if (old != null && !old.isClosed()) {
@@ -336,15 +339,14 @@ public class SkiaResources {
 		}
 	}
 
-	public io.github.humbleui.skija.Image getTextImage(String text, FontProperties fontProperties, boolean transparent, int background, int foreground) {
+	public io.github.humbleui.skija.Image getTextImage(String text, FontProperties fontProperties, boolean transparent,
+			int background, int foreground) {
 		return this.textImageCache.get(new ImageTextKey(text, fontProperties, transparent, background, foreground));
 	}
-
 
 	private static String[] splitString(String text) {
 		return text.split("\r\n|\n|\r"); //$NON-NLS-1$
 	}
-
 
 	public String[] getTextSplits(String inputText, int flags) {
 
@@ -352,9 +354,14 @@ public class SkiaResources {
 		final boolean delimiter = (flags & SWT.DRAW_DELIMITER) != 0;
 		final boolean tabulatorExpansion = (flags & SWT.DRAW_TAB) != 0;
 
-		var splits = cachedTextSplits.get(new SplitsTextCache(inputText, replaceAmpersand, delimiter, tabulatorExpansion));
+		String[] splits = null;
 
-		if(splits == null) {
+		if (SkiaGC.USE_TEXT_CASH) {
+			splits = cachedTextSplits
+					.get(new SplitsTextCache(inputText, replaceAmpersand, delimiter, tabulatorExpansion));
+		}
+
+		if (splits == null) {
 			if (tabulatorExpansion) {
 				inputText = expandTabs(inputText, 0);
 			} else {
@@ -377,8 +384,10 @@ public class SkiaResources {
 			}
 		}
 
-		cachedTextSplits.put(new SplitsTextCache(inputText, replaceAmpersand, delimiter, tabulatorExpansion), splits);
-
+		if (SkiaGC.USE_TEXT_CASH) {
+			cachedTextSplits.put(new SplitsTextCache(inputText, replaceAmpersand, delimiter, tabulatorExpansion),
+					splits);
+		}
 		return splits;
 	}
 
@@ -433,10 +442,10 @@ public class SkiaResources {
 		return textExtent(string, SWT.NONE);
 	}
 
-
 	private static String removeDelimiter(String inputText) {
 		return inputText.replaceAll("\r\n|\r|\n", ""); //$NON-NLS-1$//$NON-NLS-2$
 	}
+
 	private static String replaceMnemonics(String text) {
 		final int mnemonicIndex = text.lastIndexOf('&');
 		if (mnemonicIndex != -1) {

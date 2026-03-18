@@ -81,7 +81,7 @@ import io.github.humbleui.types.Rect;
 
 public class SkiaGC implements IExternalGC {
 
-	private final static boolean USE_TEXT_CASH = true;
+	public final static boolean USE_TEXT_CASH = false;
 
 	static boolean logImageNullError = true;
 
@@ -608,7 +608,7 @@ public class SkiaGC implements IExternalGC {
 			final var f = getSkiaFont();
 
 
-			if (USE_TEXT_CASH) {
+			if (USE_TEXT_CASH ) {
 				final var cachedImage = this.resources.getTextImage(text, props, transparent, backgroundColor,
 						foregroundColor);
 				if (cachedImage != null && !cachedImage.isClosed()) {
@@ -616,7 +616,6 @@ public class SkiaGC implements IExternalGC {
 					yPos[0] += Math.ceil(cachedImage.getHeight());
 					continue;
 				}
-				System.out.println("No cached image found for text: " + text);
 			}
 			performDraw(fgp -> {
 				final boolean antiAlias = this.textAntiAlias == SWT.ON || this.textAntiAlias == SWT.DEFAULT;
@@ -640,7 +639,7 @@ public class SkiaGC implements IExternalGC {
 				final var desI = (int) Math.ceil(Math.abs(des));
 				final var heightI = ascI + desI;
 				final var r = resources.getScaler().scaleSize(x, yPos[0]);
-				final Point size = new Point((int) Math.ceil(rect.getWidth()), (int) Math.ceil(heightI + leading));
+				final Point size = new Point((int) Math.ceil(rect.getWidth()) , (int) Math.ceil(heightI + leading));
 
 				Surface supportSurface = null;
 
@@ -648,13 +647,13 @@ public class SkiaGC implements IExternalGC {
 
 					if (USE_TEXT_CASH) {
 						supportSurface = this.skiaExtension.createSupportSurface(size.x, size.y);
+
 					}
 					if (!transparent) {
 
 						if (supportSurface != null) {
 							supportSurface.getCanvas().clear(convertSWTColorToSkijaColor(getBackground(), this.alpha));
 						} else {
-
 							performDrawFilled(paint -> {
 								surface.getCanvas().drawRect(
 										new Rect(r.x, r.y, r.x + rect.getWidth(), r.y + heightI + leading), paint);
@@ -668,10 +667,15 @@ public class SkiaGC implements IExternalGC {
 						}
 					}
 
-					if (supportSurface != null) {
+					if (supportSurface != null && !supportSurface.isClosed()) {
 						supportSurface.getCanvas().drawString(text, 0, ascI, f, fgp);
-						surface.getCanvas().drawImage(supportSurface.makeImageSnapshot(), r.x, r.y);
-						System.out.println("Draw Support Surface...");
+
+						final var image = supportSurface.makeImageSnapshot();
+						this.resources.cacheTextImage(text, props, transparent, backgroundColor, foregroundColor,
+								image);
+						supportSurface.close();
+						surface.getCanvas().drawImage(image, r.x, r.y);
+
 					} else {
 						surface.getCanvas().drawString(text, r.x, r.y + ascI, f, fgp);
 						yPos[0] += heightI + leading;
@@ -681,10 +685,6 @@ public class SkiaGC implements IExternalGC {
 
 				finally {
 					if (supportSurface != null && !supportSurface.isClosed()) {
-						System.out.println("cache text image for text: " + text);
-						final var image = supportSurface.makeImageSnapshot();
-						this.resources.cacheTextImage(text, props, transparent, backgroundColor, foregroundColor,
-								image);
 						supportSurface.close();
 					}
 
@@ -693,8 +693,6 @@ public class SkiaGC implements IExternalGC {
 		}
 
 	}
-
-
 
 	private static boolean isTransparent(int flags) {
 		return (SWT.DRAW_TRANSPARENT & flags) != 0;

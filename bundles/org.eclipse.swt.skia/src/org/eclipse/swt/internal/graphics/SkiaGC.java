@@ -651,7 +651,6 @@ public class SkiaGC implements IExternalGC {
 
 					if (USE_TEXT_CASH) {
 						supportSurface = this.skiaExtension.createSupportSurface(size.x, size.y);
-
 					}
 					if (!transparent) {
 

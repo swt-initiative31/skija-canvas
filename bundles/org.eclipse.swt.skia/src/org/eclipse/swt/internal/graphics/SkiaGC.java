@@ -81,7 +81,7 @@ import io.github.humbleui.types.Rect;
 
 public class SkiaGC implements IExternalGC {
 
-	public final static boolean USE_TEXT_CASH = true;
+	public final static boolean USE_TEXT_CASH = false;
 
 	static boolean logImageNullError = true;
 
@@ -590,40 +590,32 @@ public class SkiaGC implements IExternalGC {
 
 		final String splits[] = this.resources.getTextSplits(inputText, flags);
 
-		final FontProperties props = FontProperties.getFontProperties(getFont());
-		final boolean transparent = isTransparent(flags);
-		final int backgroundColor = this.alpha < 255 ? convertSWTColorToSkijaColor(getBackground(), this.alpha)
-				: convertSWTColorToSkijaColor(getBackground());
-		final int foregroundColor = convertSWTColorToSkijaColor(getForeground(), this.alpha);
-		final boolean antiAlias = this.textAntiAlias == SWT.ON || this.textAntiAlias == SWT.DEFAULT;
+		if (USE_TEXT_CASH) {
+			drawTextBlobWithCache(splits, flags, x, y);
+			return;
+		}
 
-		final var splitsToDraw = splits;
+		drawTextBlobNoCache(splits, flags, x, y);
+	}
+
+	private void drawTextBlobNoCache(String[] splits, int flags, int x, int y) {
+
+		final boolean transparent = isTransparent(flags);
+		final boolean antiAlias = this.textAntiAlias == SWT.ON || this.textAntiAlias == SWT.DEFAULT;
 		final int[] yPos = new int[1];
 		yPos[0] = y;
-		for (final var text : splitsToDraw) { // $NON-NLS-1$
+		final var f = getSkiaFont();
 
-			final var f = getSkiaFont();
+		performDraw(fgp -> {
+			fgp.setAntiAlias(antiAlias);
+			fgp.setMode(PaintMode.FILL);
+			f.setSubpixel(antiAlias);
+			f.setEdging(antiAlias ? FontEdging.SUBPIXEL_ANTI_ALIAS : FontEdging.ALIAS);
 
-			if (USE_TEXT_CASH) {
-				final var cachedImage = this.resources.getTextImage(text, props, transparent, backgroundColor,
-						foregroundColor, antiAlias);
-				if (cachedImage != null && !cachedImage.isClosed()) {
-					surface.getCanvas().drawImage(cachedImage, x, yPos[0]);
-					yPos[0] += Math.ceil(cachedImage.getHeight());
-					continue;
-				}
-			}
-			performDraw(fgp -> {
-				fgp.setAntiAlias(antiAlias);
-				fgp.setMode(PaintMode.FILL);
-				f.setSubpixel(antiAlias);
-				f.setEdging(antiAlias ? FontEdging.SUBPIXEL_ANTI_ALIAS : FontEdging.ALIAS);
-
-				fgp.setStrokeWidth(1);
-				fgp.setStrokeCap(PaintStrokeCap.BUTT);
-				fgp.setPathEffect(null);
-
-				final var rect = f.measureText(text, fgp);
+			fgp.setStrokeWidth(1);
+			fgp.setStrokeCap(PaintStrokeCap.BUTT);
+			fgp.setPathEffect(null);
+			for (final var text : splits) {
 
 				final var metric = f.getMetrics();
 				final var asc = metric.getAscent();
@@ -635,76 +627,125 @@ public class SkiaGC implements IExternalGC {
 				final var heightI = ascI + desI;
 				final var r = resources.getScaler().scaleSize(x, yPos[0]);
 
-				// skija draws a text with a slightly shift. So textExtent is insufficient in the width
-				// So make the area a little bit wider.
+				if (!transparent) {
+
+					// draw rectangle background for the text.
+
+					// Skia draws a text with a slightly right shift. So textExtent is insufficient
+					// in the width to make sure, the background area is big enough
+					// So make the area a little bit wider.
+
+					// The background rectangle can be a little bit smaller, and in the worst
+					// case a small part of the text is not covered.
+					// Similar in windows. Actually for some fonts and sizes this solution is
+					// already better than windows.
+
+					// heuristic number. After 0.12 of the ascent, the text is usually sufficiently
+					// in the rectangle area.
+					final double endOfRectangle = Math.abs(asc) * 0.12;
+					final var rect = f.measureText(text, fgp);
+
+					final Point size = new Point((int) Math.ceil(rect.getWidth() + endOfRectangle),
+							(int) Math.ceil(heightI + leading));
+
+					performDrawFilled(paint -> {
+						surface.getCanvas().drawRect(new Rect(r.x, r.y, r.x + size.x, r.y + size.y), paint);
+					});
+
+				}
+				surface.getCanvas().drawString(text, r.x, r.y + ascI, f, fgp);
+				yPos[0] += heightI + leading;
+			}
+		});
+
+	}
+
+	private void drawTextBlobWithCache(String[] splits, int flags, int x, int y) {
+
+		final FontProperties props = FontProperties.getFontProperties(getFont());
+		final boolean transparent = isTransparent(flags);
+		final int backgroundColor = this.alpha < 255 ? convertSWTColorToSkijaColor(getBackground(), this.alpha)
+				: convertSWTColorToSkijaColor(getBackground());
+		final int foregroundColor = convertSWTColorToSkijaColor(getForeground(), this.alpha);
+		final boolean antiAlias = this.textAntiAlias == SWT.ON || this.textAntiAlias == SWT.DEFAULT;
+
+		final int[] yPos = new int[1];
+		yPos[0] = y;
+		for (final var text : splits) {
+
+			final var f = getSkiaFont();
+			final var cachedImage = this.resources.getTextImage(text, props, transparent, backgroundColor,
+					foregroundColor, antiAlias);
+			if (cachedImage != null && !cachedImage.isClosed()) {
+				surface.getCanvas().drawImage(cachedImage, x, yPos[0]);
+				yPos[0] += Math.ceil(cachedImage.getHeight());
+				continue;
+			}
+			performDraw(fgp -> {
+				fgp.setAntiAlias(antiAlias);
+				fgp.setMode(PaintMode.FILL);
+				f.setSubpixel(antiAlias);
+				f.setEdging(antiAlias ? FontEdging.SUBPIXEL_ANTI_ALIAS : FontEdging.ALIAS);
+
+				fgp.setStrokeWidth(1);
+				fgp.setStrokeCap(PaintStrokeCap.BUTT);
+				fgp.setPathEffect(null);
+				fgp.setBlendMode(BlendMode.SRC_IN);
+
+				final var rect = f.measureText(text, fgp);
+				final var metric = f.getMetrics();
+				final var asc = metric.getAscent();
+				final var des = metric.getDescent();
+				final var leading = metric.getLeading();
+
+				final var ascI = (int) Math.ceil(Math.abs(asc));
+				final var desI = (int) Math.ceil(Math.abs(des));
+				final var heightI = ascI + desI;
+				final var r = resources.getScaler().scaleSize(x, yPos[0]);
+
+				// skija draws a text with a slightly right shift. So textExtent is insufficient
+				// in
+				// the width. So make the background area a little bit wider.
 
 				// Idea:
-				// 1. the support surface should always be wide enough to contain the complete text.
-				// 2. the background rectangle can be a little bit smaller, and in the worst case a small part of the text is not covered.
-				// Similar in windows. Actually for some fonts and sizes this solution is already better than windows.
+				// 1. the support surface should always be wide enough to contain the complete
+				// text.
+				// 2. the background rectangle can be a little bit smaller, and in the worst
+				// case a small part of the text is not covered.
+				// Similar in windows. Actually for some fonts and sizes this solution is
+				// already better than windows.
 
-				final double additionalArea = Math.abs(asc);
-				// heuristic number. After 0.12 of the ascent, the text is usually sufficiently in the rectangle area.
-				final double endOfRectangle = Math.abs(asc) * 0.12;
+				final double additionalArea = Math.abs(asc) * 2;
 
 				final Point size = new Point((int) Math.ceil(rect.getWidth() + additionalArea),
 						(int) Math.ceil(heightI + leading));
 
-				Surface supportSurface = null;
-
-				try {
-
-					if (USE_TEXT_CASH) {
-						supportSurface = this.skiaExtension.createSupportSurface(size.x, size.y);
-					}
+				try (Surface supportSurface = this.skiaExtension.createSupportSurface(size.x, size.y)) {
+					supportSurface.getCanvas().clear(0);
 					if (!transparent) {
 
-						if (supportSurface != null) {
-
-							// always clear the support surface, then fill a specific rectangle area with the background color, the rest stays transparent.
-							supportSurface.getCanvas().clear(0);
-							try (Paint p = new Paint()) {
-								p.setColor(convertSWTColorToSkijaColor(getBackground(), this.alpha));
-								supportSurface.getCanvas().drawRect(new Rect(0, 0, (int) Math.ceil(rect.getWidth() + endOfRectangle), size.y), p);
-							}
-
-						} else {
-							performDrawFilled(paint -> {
-								surface.getCanvas().drawRect(new Rect(r.x, r.y, r.x + size.x, r.y +(int) Math.ceil(rect.getWidth() + endOfRectangle)), paint);
-							});
+						// heuristic number. After 0.12 of the ascent, the text is usually sufficiently
+						// in the rectangle area.
+						final double endOfRectangle = Math.abs(asc) * 0.12;
+						// always clear the support surface, then fill a specific rectangle area with
+						// the background color, the rest stays transparent.
+						try (Paint p = new Paint()) {
+							p.setColor(convertSWTColorToSkijaColor(getBackground(), this.alpha));
+							supportSurface.getCanvas().drawRect(
+									new Rect(0, 0, (int) Math.ceil(rect.getWidth() + endOfRectangle), size.y), p);
 						}
 
-					} else {
-						if (supportSurface != null) {
-							// transparent
-							supportSurface.getCanvas().clear(0);
-						}
 					}
 
-					if (supportSurface != null && !supportSurface.isClosed()) {
-						supportSurface.getCanvas().drawString(text, 0, ascI, f, fgp);
-
-						final var image = supportSurface.makeImageSnapshot();
-						this.resources.cacheTextImage(text, props, transparent, backgroundColor, foregroundColor,
-								antiAlias, image);
-						supportSurface.close();
-						surface.getCanvas().drawImage(image, r.x, r.y);
-						yPos[0] += Math.ceil(image.getHeight());
-					} else {
-						surface.getCanvas().drawString(text, r.x, r.y + ascI, f, fgp);
-						supportSurface.getCanvas().drawRect(new Rect(r.x, r.y, r.x + size.x - 4, r.y + size.y - 4),
-								fgp);
-						yPos[0] += heightI + leading;
-					}
+					supportSurface.getCanvas().drawString(text, 0, ascI, f, fgp);
+					final var image = supportSurface.makeImageSnapshot();
+					this.resources.cacheTextImage(text, props, transparent, backgroundColor, foregroundColor, antiAlias,
+							image);
+					surface.getCanvas().drawImage(image, r.x, r.y);
+					yPos[0] += Math.ceil(image.getHeight());
 
 				}
 
-				finally {
-					if (supportSurface != null && !supportSurface.isClosed()) {
-						supportSurface.close();
-					}
-
-				}
 			});
 		}
 
@@ -806,36 +847,38 @@ public class SkiaGC implements IExternalGC {
 			return null;
 		}
 		final PathData data = swtPath.getPathData();
-		final io.github.humbleui.skija.PathBuilder skijaPath = new io.github.humbleui.skija.PathBuilder();
-		final float[] pts = data.points;
-		final byte[] types = data.types;
-		int pi = 0;
-		for (final byte type : types) {
-			switch (type) {
-			case SWT.PATH_MOVE_TO:
-				skijaPath.moveTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
-				break;
-			case SWT.PATH_LINE_TO:
-				skijaPath.lineTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
-				break;
-			case SWT.PATH_CUBIC_TO:
-				skijaPath.cubicTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
-						DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
-						DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
-				break;
-			case SWT.PATH_QUAD_TO:
-				skijaPath.quadTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
-						DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
-				break;
-			case SWT.PATH_CLOSE:
-				skijaPath.closePath();
-				break;
-			default:
+
+		try (final io.github.humbleui.skija.PathBuilder skijaPath = new io.github.humbleui.skija.PathBuilder()) {
+
+			final float[] pts = data.points;
+			final byte[] types = data.types;
+			int pi = 0;
+			for (final byte type : types) {
+				switch (type) {
+				case SWT.PATH_MOVE_TO:
+					skijaPath.moveTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
+					break;
+				case SWT.PATH_LINE_TO:
+					skijaPath.lineTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
+					break;
+				case SWT.PATH_CUBIC_TO:
+					skijaPath.cubicTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
+							DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
+							DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
+					break;
+				case SWT.PATH_QUAD_TO:
+					skijaPath.quadTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
+							DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
+					break;
+				case SWT.PATH_CLOSE:
+					skijaPath.closePath();
+					break;
+				default:
+				}
 			}
+			final var p = skijaPath.build();
+			return p;
 		}
-		final var p = skijaPath.build();
-		skijaPath.close();
-		return p;
 	}
 
 	@Override
@@ -1450,14 +1493,15 @@ public class SkiaGC implements IExternalGC {
 		if (path.isDisposed()) {
 			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 		}
-		final io.github.humbleui.skija.Path skijaPath = convertSWTPathToSkijaPath(path);
-		if (skijaPath == null) {
-			return;
+		try (final io.github.humbleui.skija.Path skijaPath = convertSWTPathToSkijaPath(path)) {
+			if (skijaPath == null) {
+				return;
+			}
+			skijaPath.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
+			canvas.save();
+			isClipSet = true;
+			canvas.clipPath(skijaPath, ClipMode.INTERSECT, true);
 		}
-		skijaPath.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
-		canvas.save();
-		isClipSet = true;
-		canvas.clipPath(skijaPath, ClipMode.INTERSECT, true);
 	}
 
 	@Override

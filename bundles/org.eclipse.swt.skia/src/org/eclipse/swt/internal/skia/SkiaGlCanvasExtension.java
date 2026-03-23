@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.graphics.GCData;
 import org.eclipse.swt.graphics.GCExtension;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
@@ -215,16 +214,15 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 		final Event event = new Event();
 		event.count = 1;
 		event.setBounds(bounds);
-		final GCData data = new GCData();
-		data.device = this.canvas.getDisplay();
-		// critical for drawing without clearing
 		final SkiaGC gc = new SkiaGC(canvas, this, SWT.None);
 		event.gc = new GCExtension(gc);
 		event.display = this.canvas.getDisplay();
-		consumer.accept(event);
-		gc.dispose();
-		event.gc = null;
-
+		try {
+			consumer.accept(event);
+		} finally {
+			gc.dispose();
+			event.gc = null;
+		}
 	}
 
 	private void createLastImageSnapshot() {

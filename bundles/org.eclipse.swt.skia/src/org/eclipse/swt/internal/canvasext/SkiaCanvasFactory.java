@@ -32,8 +32,8 @@ public class SkiaCanvasFactory implements IExternalCanvasFactory {
 		try {
 			return new SkiaGlCanvasExtension(c);
 		} catch (final Throwable t) {
-			// TODO use logger instead of printStackTrace
-			t.printStackTrace();
+			// Skia initialization failed; log and disable Skia for all future calls
+			Logger.logException(t);
 			skiaFailedWithErrors = true;
 			return null;
 		}

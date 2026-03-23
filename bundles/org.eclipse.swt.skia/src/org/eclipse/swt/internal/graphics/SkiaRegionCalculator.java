@@ -93,7 +93,7 @@ public class SkiaRegionCalculator {
 			final var tempReg = createPolygonSkiaRegion(polygon);
 			reg.op(tempReg, skiaOperation);
 		} else if (ob instanceof final Rectangle rec) {
-			final var irect = createIRect(rec);
+			final var irect = createRectRegion(rec);
 			reg.op(irect, skiaOperation);
 		} else if (ob instanceof final Region otherReg) {
 			final SkiaRegionCalculator src = new SkiaRegionCalculator(otherReg, skiaExtension);
@@ -102,7 +102,10 @@ public class SkiaRegionCalculator {
 
 	}
 
-	private io.github.humbleui.skija.Region createIRect(Rectangle rec) {
+	/**
+	 * Creates a Skija region from an SWT rectangle by converting it to a polygon.
+	 */
+	private io.github.humbleui.skija.Region createRectRegion(Rectangle rec) {
 		final var rect = new IRect(rec.x, rec.y, rec.x + rec.width, rec.y + rec.height);
 
 		return createPolygonSkiaRegion(new int[] { rect.getLeft(), rect.getTop(), rect.getRight(), rect.getTop(),

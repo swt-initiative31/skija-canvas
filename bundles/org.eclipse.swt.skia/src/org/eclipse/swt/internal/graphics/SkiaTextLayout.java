@@ -19,7 +19,6 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.TextLayout;
 import org.eclipse.swt.graphics.TextStyle;
 import org.eclipse.swt.internal.Callback;
-import org.eclipse.swt.internal.Compatibility;
 import org.eclipse.swt.internal.DPIUtil;
 import org.eclipse.swt.internal.canvasext.IExternalFontMetrics;
 import org.eclipse.swt.internal.skia.SkiaResources;
@@ -162,59 +161,22 @@ public final class SkiaTextLayout {
 	}
 
 	void init() {
-
 		synchronized (textLayouts) {
 			if (surface == null) {
 				final Rectangle b = device.getBounds();
-
 				surface = Surface.makeRaster(
 						ImageInfo.makeN32Premul(b.width, b.height), 0,
 						new SurfaceProps(PixelGeometry.RGB_H));
-
-				// DPI Analysis
-				final org.eclipse.swt.graphics.Point dpi = device.getDPI();
-
 			}
-
 			setFont(device.getSystemFont());
-
 			textLayouts.add(this);
-
 		}
-
-
 	}
 
 	void checkLayout() {
 		if (isDisposed()) {
 			SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
 		}
-	}
-
-	// not used...
-	float[] computePolyline(int left, int top, int right, int bottom) {
-		final int height = bottom - top; // can be any number
-		final int width = 2 * height; // must be even
-		int peaks = Compatibility.ceil(right - left, width);
-		if (peaks == 0 && right - left > 2) {
-			peaks = 1;
-		}
-		final int length = ((2 * peaks) + 1) * 2;
-		if (length < 0) {
-			return new float[0];
-		}
-
-		final float[] coordinates = new float[length];
-		for (int i = 0; i < peaks; i++) {
-			final int index = 4 * i;
-			coordinates[index] = left + (width * i);
-			coordinates[index + 1] = bottom;
-			coordinates[index + 2] = coordinates[index] + width / 2;
-			coordinates[index + 3] = top;
-		}
-		coordinates[length - 2] = left + (width * peaks);
-		coordinates[length - 1] = bottom;
-		return coordinates;
 	}
 
 	private float getFontSize() {
@@ -1112,20 +1074,7 @@ public final class SkiaTextLayout {
 			}
 		}
 
-		// boolean underline = ts.underline;
-		// boolean underline = ts.underline;
-		// boolean overline = false;
-		// boolean strikethrough = ts.strikeout;
-		//
-		// // TODO can we use multiple decoratoins at one TextStyle??
-		// Color underlineCol = ts.underlineColor;
-		// // Color underlineCol = getDevice().getSystemColor(SWT.COLOR_RED);
-		// Color strikethroughCol = ts.strikeoutColor;
-		//
-		// DecorationStyle ds = new DecorationStyle(underline, overline,
-		// strikethrough, false,
-		// SkiaGC.convertSWTColorToSkijaColor(underlineCol),
-		// DecorationLineStyle.SOLID, 1);
+		// TODO: implement text decoration support (underline, strikethrough, overline)
 
 		final io.github.humbleui.skija.paragraph.TextStyle textSty = new io.github.humbleui.skija.paragraph.TextStyle()
 				.setFontStyle(fs).setFontSize(fontSize)

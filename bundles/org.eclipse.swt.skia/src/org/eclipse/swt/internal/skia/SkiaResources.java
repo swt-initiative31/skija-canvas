@@ -48,7 +48,7 @@ public class SkiaResources {
 	private io.github.humbleui.skija.Font skiaFont;
 
 	private final Map<String, String> fontNameMapping = new ConcurrentHashMap<>();
-	private final Set<String> unkownFonts = new HashSet<>();
+	private final Set<String> unknownFonts = new HashSet<>();
 
 	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
 	private final Map<ImageKey, io.github.humbleui.skija.Image> imageCache = new HashMap<>();
@@ -114,7 +114,6 @@ public class SkiaResources {
 		if (cachedFont != null && cachedFont.isClosed()) {
 			fontCache.remove(props);
 			cachedFont = null;
-			System.out.println("Remove cached skia font");
 		}
 
 		io.github.humbleui.skija.Font f = null;
@@ -147,15 +146,12 @@ public class SkiaResources {
 		int fontSize = (props.lfHeight);
 		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
 			fontSize = skiaExtension.getScaler().getZoomedFontSize(fontSize);
-		}
-		if (SWT.getPlatform().equals("gtk") || true) { //$NON-NLS-1$
-			// TODO move this to the local font size calculation in gtk
-			// this should be done in the scaler.
+		}else { // currently the other system is linux/gtk
+			// Convert font size from points to pixels using the device DPI
+			// TODO: move platform-specific font size calculation into the scaler
 			fontSize = (fontSize * Display.getDefault().getDPI().y) / 72;
 		}
 		skijaFont.setSize(fontSize);
-		// --------------------------------------------------
-		// This might be the same option like the windows gdi text antialias option.
 		skijaFont.setEdging(FontEdging.SUBPIXEL_ANTI_ALIAS);
 		skijaFont.setSubpixel(true);
 		skijaFont.setHinting(FontHinting.NORMAL);
@@ -174,7 +170,7 @@ public class SkiaResources {
 			return fm.matchFamilyStyle(fontNameMapping.get(name), style);
 		}
 
-		if (unkownFonts.contains(name)) {
+		if (unknownFonts.contains(name)) {
 			return fm.matchFamilyStyle(null, style);
 		}
 
@@ -197,8 +193,8 @@ public class SkiaResources {
 				return fm.matchFamilyStyle("Arial", style); //$NON-NLS-1$
 			}
 		}
-		// no font found, fallback to arial and cache
-		unkownFonts.add(name);
+		// No matching font found, use system default
+		unknownFonts.add(name);
 		return fm.matchFamilyStyle(null, style);
 
 	}
@@ -287,7 +283,7 @@ public class SkiaResources {
 		cachedTextSplits.clear();
 
 		fontNameMapping.clear();
-		unkownFonts.clear();
+		unknownFonts.clear();
 
 	}
 
@@ -322,8 +318,11 @@ public class SkiaResources {
 		return this.imageCache.get(new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom));
 	}
 
+	/**
+	 * Creates a Skija font from an SWT font.
+	 * TODO: implement proper SWT-to-Skija font conversion
+	 */
 	public static io.github.humbleui.skija.Font createSkiaFont(Font font) {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
@@ -356,7 +355,7 @@ public class SkiaResources {
 
 		String[] splits = null;
 
-		if (SkiaGC.USE_TEXT_CASH) {
+		if (SkiaGC.USE_TEXT_CACHE) {
 			splits = cachedTextSplits
 					.get(new SplitsTextCache(inputText, replaceAmpersand, delimiter, tabulatorExpansion));
 		}
@@ -384,7 +383,7 @@ public class SkiaResources {
 			}
 		}
 
-		if (SkiaGC.USE_TEXT_CASH) {
+		if (SkiaGC.USE_TEXT_CACHE) {
 			cachedTextSplits.put(new SplitsTextCache(inputText, replaceAmpersand, delimiter, tabulatorExpansion),
 					splits);
 		}
@@ -406,8 +405,8 @@ public class SkiaResources {
 		final StringBuilder result = new StringBuilder();
 		int currentX = 0;
 		final int spaceWidth = textExtent(" ").x; //$NON-NLS-1$
-		final float _avgCharWidth = getSkiaFont().getMetrics()._avgCharWidth;
-		int avgCharWidth = (int) _avgCharWidth;
+		final float avgCharWidthF = getSkiaFont().getMetrics()._avgCharWidth;
+		int avgCharWidth = (int) avgCharWidthF;
 		if (avgCharWidth <= 0) {
 			avgCharWidth = spaceWidth > 0 ? spaceWidth : 1;
 		}

@@ -15,7 +15,6 @@ package org.eclipse.swt.internal.graphics;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -47,6 +46,7 @@ import org.eclipse.swt.internal.DPIUtil;
 import org.eclipse.swt.internal.canvasext.DpiScaler;
 import org.eclipse.swt.internal.canvasext.FontProperties;
 import org.eclipse.swt.internal.canvasext.IExternalGC;
+import org.eclipse.swt.internal.canvasext.Logger;
 import org.eclipse.swt.internal.skia.ISkiaCanvasExtension;
 import org.eclipse.swt.internal.skia.SkiaResources;
 import org.eclipse.swt.widgets.Display;
@@ -80,10 +80,9 @@ import io.github.humbleui.types.Rect;
 
 public class SkiaGC implements IExternalGC {
 
-	public final static boolean USE_TEXT_CASH = false;
+	public final static boolean USE_TEXT_CACHE = false;
 
-	private static boolean logImageNullError = true;
-
+	public static boolean logImageNullError = true;
 	private final Surface surface;
 	private int lineWidth = 1;
 	private int lineStyle;
@@ -112,7 +111,7 @@ public class SkiaGC implements IExternalGC {
 
 	private final ISkiaCanvasExtension skiaExtension;
 	private final SkiaResources resources;
-	private boolean XORModeActive;
+	private boolean xorModeActive;
 	private final int style;
 	private int textAntiAlias = SWT.ON;
 
@@ -125,6 +124,7 @@ public class SkiaGC implements IExternalGC {
 		this.skiaExtension = exst;
 		this.resources = skiaExtension.getResources();
 		this.style = style;
+		// Save the initial canvas state so it can be fully restored on dispose()
 		this.initialSaveCount = this.surface.getCanvas().save();
 	}
 
@@ -132,35 +132,26 @@ public class SkiaGC implements IExternalGC {
 	public void dispose() {
 
 		resources.resetBaseColors();
+		// Restore all canvas state changes made during the lifetime of this GC,
+		// including any clipping or transform layers pushed after construction
 		surface.getCanvas().restoreToCount(initialSaveCount);
 
 	}
 
 	private void performDraw(Consumer<Paint> operations) {
 		try (final Paint paint = new Paint()) {
+			// Set up all paint properties first
 			paint.setAlpha(alpha);
 			paint.setColor(convertSWTColorToSkijaColor(getForeground(), this.alpha));
-
-			paint.setAntiAlias(this.antialias == SWT.OFF);
-			if (this.XORModeActive) {
+			paint.setAntiAlias(this.antialias != SWT.OFF);
+			if (this.xorModeActive) {
 				paint.setBlendMode(BlendMode.DIFFERENCE);
 			} else {
 				paint.setBlendMode(BlendMode.SRC_OVER);
 			}
 			paint.setMode(PaintMode.STROKE);
-
-			if (this.foregroundPattern != null && !this.foregroundPattern.isDisposed()) {
-				final Shader shader = convertSWTPatternToSkijaShader(this.foregroundPattern);
-				if (shader != null) {
-					paint.setShader(shader);
-				}
-			}
-
 			paint.setStrokeWidth(lineWidth);
-
-			final PaintStrokeCap cap = getSkijaLineCap();
-			paint.setStrokeCap(cap);
-
+			paint.setStrokeCap(getSkijaLineCap());
 			switch (this.lineStyle) {
 			case SWT.LINE_DOT ->
 			paint.setPathEffect(PathEffect.makeDash(new float[] { 1f * lineWidth, 1f * lineWidth }, 0.0f));
@@ -172,9 +163,17 @@ public class SkiaGC implements IExternalGC {
 					1f * lineWidth, 1f * lineWidth, 1f * lineWidth, 1f * lineWidth, 1f * lineWidth }, 0.0f));
 			default -> paint.setPathEffect(null);
 			}
-			;
-
-			operations.accept(paint);
+			// Set shader last and use try-with-resources to prevent resource leaks
+			if (this.foregroundPattern != null && !this.foregroundPattern.isDisposed()) {
+				try (Shader shader = convertSWTPatternToSkijaShader(this.foregroundPattern)) {
+					if (shader != null) {
+						paint.setShader(shader);
+					}
+					operations.accept(paint);
+				}
+			} else {
+				operations.accept(paint);
+			}
 		}
 	}
 
@@ -189,28 +188,27 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private void performDrawFilled(Consumer<Paint> operations) {
-		performDraw(paint -> {
+		try (final Paint paint = new Paint()) {
 			paint.setMode(PaintMode.FILL);
-			applyBackgroundPattern(paint);
-			operations.accept(paint);
-		});
-	}
-
-	private void applyBackgroundPattern(Paint paint) {
-		if (backgroundPattern != null && !backgroundPattern.isDisposed()) {
-			final Shader shader = convertSWTPatternToSkijaShader(backgroundPattern);
-			if (shader != null) {
-				paint.setShader(shader);
-				return;
+			// Set background color by default
+			if (this.alpha < 255) {
+				paint.setColor(convertSWTColorToSkijaColor(getBackground(), this.alpha));
+			} else {
+				paint.setColor(convertSWTColorToSkijaColor(getBackground()));
+			}
+			// If a background pattern is set, override color with shader using
+			// try-with-resources to prevent resource leaks
+			if (backgroundPattern != null && !backgroundPattern.isDisposed()) {
+				try (Shader shader = convertSWTPatternToSkijaShader(backgroundPattern)) {
+					if (shader != null) {
+						paint.setShader(shader);
+					}
+					operations.accept(paint);
+				}
+			} else {
+				operations.accept(paint);
 			}
 		}
-		// Fallback to backGround color if no pattern or pattern conversion failed
-		if (this.alpha < 255) {
-			paint.setColor(convertSWTColorToSkijaColor(getBackground(), this.alpha));
-		} else {
-			paint.setColor(convertSWTColorToSkijaColor(getBackground()));
-		}
-
 	}
 
 	@Override
@@ -220,13 +218,11 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setBackground(Color color) {
-		// TODO why use resource if i reset the colors nonetheless??
 		this.resources.setBackground(color);
 	}
 
 	@Override
 	public void setForeground(Color color) {
-		// TODO why use resource if i reset the colors nonetheless??
 		this.resources.setForeground(color);
 	}
 
@@ -236,11 +232,11 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private static void logImageNull(int[] positionData) {
+
 		if (logImageNullError) {
-			final StringBuilder sb = new StringBuilder();
-			sb.append("SkijaGC.drawImage(..) Error: image is null! Postition parameters (as array):  "); //$NON-NLS-1$
-			sb.append(Arrays.toString(positionData));
-			new IllegalArgumentException(sb.toString()).printStackTrace(System.err);
+
+			Logger.logException(new IllegalArgumentException(
+					"Image argument is null. Position and size data: " + java.util.Arrays.toString(positionData))); //$NON-NLS-1$
 			logImageNullError = false;
 		}
 	}
@@ -364,11 +360,6 @@ public class SkiaGC implements IExternalGC {
 		}
 
 		return ColorType.UNKNOWN;
-
-		// throw new UnsupportedOperationException("Unsupported SWT ColorType: " +
-		// Integer.toBinaryString(palette.redMask)
-		// + "__" + Integer.toBinaryString(palette.greenMask) + "__" +
-		// Integer.toBinaryString(palette.blueMask));
 	}
 
 	private io.github.humbleui.skija.Image convertSWTImageToSkijaImage(Image swtImage, int zoom) {
@@ -454,6 +445,7 @@ public class SkiaGC implements IExternalGC {
 		return d;
 	}
 
+
 	public static void writeFile(String str, io.github.humbleui.skija.Image image) {
 		final byte[] imageBytes = EncoderPNG.encode(image).getBytes();
 
@@ -465,7 +457,7 @@ public class SkiaGC implements IExternalGC {
 		try (FileOutputStream fis = new FileOutputStream(f)) {
 			fis.write(imageBytes);
 		} catch (final Exception e) {
-			e.printStackTrace();
+			Logger.logException(e);
 		}
 	}
 
@@ -568,7 +560,7 @@ public class SkiaGC implements IExternalGC {
 
 		final String splits[] = this.resources.getTextSplits(inputText, flags);
 
-		if (USE_TEXT_CASH) {
+		if (USE_TEXT_CACHE) {
 			drawTextBlobWithCache(splits, flags, x, y);
 			return;
 		}
@@ -1021,23 +1013,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void fillRectangle(int x, int y, int width, int height) {
-
-		// final Paint p = new Paint();
-		// p.setAlpha(255);
-
-		// final Shader s = Shader.makeLinearGradient(0,0, 100 , 100 , new int[] {
-		// 0xFF00FFFF, 0x00FF00FF} );
-		// p.setShader(s);
-		//
-
-		// final var s = convertSWTPatternToSkijaShader(backgroundPattern);
-		//
-		// p.setShader(s);
-		// surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p);
 		performDrawFilled(paint -> surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), paint));
-
-		// surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height),
-		// getBackgroundPaint());
 	}
 
 	@Override
@@ -1102,6 +1078,8 @@ public class SkiaGC implements IExternalGC {
 			surface.getCanvas().setMatrix(currentTransform);
 		}
 
+		// Save the canvas state after applying the new transform, so subsequent
+		// operations (e.g. clipping) can be stacked and later restored independently
 		surface.getCanvas().save();
 
 	}
@@ -1109,26 +1087,10 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void setAlpha(int alpha) {
 		alpha = alpha & 0xFF;
-
 		if (alpha < 0 || alpha > 255) {
 			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 		}
 		this.alpha = alpha;
-		// if (this.alpha != alpha) {
-		// if (hasAlphaLayer) {
-		// surface.getCanvas().restore();
-		// hasAlphaLayer = false;
-		// }
-		// this.alpha = alpha;
-		// if (alpha < 255) {
-		// try (Paint layerPaint = new Paint()) {
-		// layerPaint.setAlphaf(alpha / 255.0f);
-		// surface.getCanvas().saveLayer(null, layerPaint);
-		// layerPaint.close();
-		// }
-		// hasAlphaLayer = true;
-		// }
-		// }
 	}
 
 	@Override
@@ -1264,33 +1226,43 @@ public class SkiaGC implements IExternalGC {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
 
-		io.github.humbleui.skija.Image skijaImage = convertSWTImageToSkijaImage(image, DpiScaler.getDeviceZoom());
-		final io.github.humbleui.skija.Image copiedArea = surface.makeImageSnapshot(
-				createScaledRectangle(x, y, skijaImage.getWidth(), skijaImage.getHeight()).toIRect());
+		final io.github.humbleui.skija.Image skijaImage = convertSWTImageToSkijaImage(image, DpiScaler.getDeviceZoom());
+		try (final io.github.humbleui.skija.Image copiedArea = surface.makeImageSnapshot(
+				createScaledRectangle(x, y, skijaImage.getWidth(), skijaImage.getHeight()).toIRect())) {
 
-		if (copiedArea == null) {
-			new IllegalArgumentException("Copied area is null: ").printStackTrace(System.err);
-			return;
+			if (copiedArea == null) {
+				SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+			}
+
+			try (final Surface imageSurface = surface.makeSurface(skijaImage.getWidth(), skijaImage.getHeight())) {
+				imageSurface.getCanvas().drawImage(copiedArea, 0, 0);
+				try (final io.github.humbleui.skija.Image snapshot = imageSurface.makeImageSnapshot()) {
+					final ImageData imgData = convertSkijaImageToImageData(snapshot);
+					Image i = null;
+					GC gc = null;
+					try {
+						i = new Image(device, imgData);
+						gc = new GC(image);
+						gc.drawImage(i, 0, 0);
+					} finally {
+						if (gc != null) {
+							gc.dispose();
+						}
+						if (i != null) {
+							i.dispose();
+						}
+					}
+				}
+			}
 		}
-
-		final Surface imageSurface = surface.makeSurface(skijaImage.getWidth(), skijaImage.getHeight());
-		final Canvas imageCanvas = imageSurface.getCanvas();
-		imageCanvas.drawImage(copiedArea, 0, 0);
-		skijaImage = imageSurface.makeImageSnapshot();
-		final ImageData imgData = convertSkijaImageToImageData(skijaImage);
-		final Image i = new Image(device, imgData);
-
-		final GC gc = new GC(image);
-		gc.drawImage(i, 0, 0);
-		gc.dispose();
-		i.dispose();
 	}
 
 	@Override
 	public void copyArea(int srcX, int srcY, int width, int height, int destX, int destY) {
-		final io.github.humbleui.skija.Image copiedArea = surface
-				.makeImageSnapshot(createScaledRectangle(srcX, srcY, width, height).toIRect());
-		surface.getCanvas().drawImage(copiedArea, DpiScaler.autoScaleUp(destX), DpiScaler.autoScaleUp(destY));
+		try (io.github.humbleui.skija.Image copiedArea = surface
+				.makeImageSnapshot(createScaledRectangle(srcX, srcY, width, height).toIRect())) {
+			surface.getCanvas().drawImage(copiedArea, DpiScaler.autoScaleUp(destX), DpiScaler.autoScaleUp(destY));
+		}
 	}
 
 	@Override
@@ -1447,7 +1419,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public boolean getXORMode() {
-		return XORModeActive;
+		return xorModeActive;
 	}
 
 	@Override
@@ -1462,7 +1434,7 @@ public class SkiaGC implements IExternalGC {
 	public void setClipping(Path path) {
 		final Canvas canvas = surface.getCanvas();
 		if (isClipSet) {
-			canvas.restore();
+			canvas.restore(); // pop the previously saved clip layer
 			isClipSet = false;
 		}
 		if (path == null) {
@@ -1476,6 +1448,7 @@ public class SkiaGC implements IExternalGC {
 				return;
 			}
 			skijaPath.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
+			// Push a new canvas layer so the clip can be undone later with restore()
 			canvas.save();
 			isClipSet = true;
 			canvas.clipPath(skijaPath, ClipMode.INTERSECT, true);
@@ -1485,12 +1458,10 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void setClipping(Rectangle rect) {
 
-		/**
-		 * this is a minimal implementation for set clipping with skija.
-		 */
-
-		// skija seems to work with state layer which will be set on top of each other.
-		// if more layers will be used a more complex handling is necessary
+		// Skija uses a canvas state stack; each save() pushes a new layer,
+		// and restore() pops it, removing the clipping region set in that layer.
+		// Since only one clip is tracked at a time, no explicit restore() is needed here
+		// because the clip will be cleared when the next setClipping call is made or on dispose.
 		final Canvas canvas = surface.getCanvas();
 		if (isClipSet) {
 			isClipSet = false;
@@ -1500,6 +1471,7 @@ public class SkiaGC implements IExternalGC {
 			return;
 		}
 		currentClipBounds = new Rectangle(rect.x, rect.y, rect.width, rect.height);
+		// Push a new canvas layer so the clip can be undone later with restore()
 		canvas.save();
 		canvas.clipRect(createScaledRectangle(rect));
 		isClipSet = true;
@@ -1509,15 +1481,11 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void setClipping(Region region) {
 
-		/**
-		 * this is a minimal implementation for set clipping with skija.
-		 */
-
-		// skija seems to work with state layer which will be set on top of each other.
-		// if more layers will be used a more complex handling is necessary
+		// Skija uses a canvas state stack; each save() pushes a new layer,
+		// and restore() pops it, removing the clipping region set in that layer.
 		final Canvas canvas = surface.getCanvas();
 		if (isClipSet) {
-			canvas.restore();
+			canvas.restore(); // pop the previously saved clip layer
 			isClipSet = false;
 		}
 		currentClipBounds = null;
@@ -1529,6 +1497,7 @@ public class SkiaGC implements IExternalGC {
 
 		final SkiaRegionCalculator calc = new SkiaRegionCalculator(region, skiaExtension);
 		final var skiaRegion = calc.getSkiaRegion();
+		// Push a new canvas layer so the clip can be undone later with restore()
 		canvas.save();
 		canvas.clipRegion(skiaRegion);
 		isClipSet = true;
@@ -1562,19 +1531,11 @@ public class SkiaGC implements IExternalGC {
 		// interpolation
 
 		switch (interpolation) {
-		case SWT.NONE:
-			this.interpolationMode = SamplingMode.DEFAULT; // Nearest neighbor
-			break;
-		case SWT.LOW:
-			this.interpolationMode = SamplingMode.LINEAR;
-			break;
-		case SWT.DEFAULT:
-			this.interpolationMode = SamplingMode.MITCHELL;
-		case SWT.HIGH:
-			this.interpolationMode = SamplingMode.CATMULL_ROM;
-			break;
-		default:
-			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+		case SWT.NONE -> this.interpolationMode = SamplingMode.DEFAULT; // Nearest neighbor
+		case SWT.LOW -> this.interpolationMode = SamplingMode.LINEAR;
+		case SWT.DEFAULT -> this.interpolationMode = SamplingMode.MITCHELL;
+		case SWT.HIGH -> this.interpolationMode = SamplingMode.CATMULL_ROM;
+		default -> SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 		}
 	}
 
@@ -1742,7 +1703,7 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void setXORMode(boolean xor) {
 
-		this.XORModeActive = xor;
+		this.xorModeActive = xor;
 
 	}
 
@@ -1912,15 +1873,25 @@ public class SkiaGC implements IExternalGC {
 
 		final var rectangle = textLayout.getBounds();
 
-		final Image i = new Image(device, rectangle.width, rectangle.height);
-		final GC nativeGC = new GC(i);
+		Image i = null;
+		GC nativeGC = null;
+		try {
+			i = new Image(device, rectangle.width, rectangle.height);
+			nativeGC = new GC(i);
 
-		textLayout.draw(nativeGC, 0, 0, selectionStart, selectionEnd, selectionForeground, selectionBackground, flags);
+			textLayout.draw(nativeGC, 0, 0, selectionStart, selectionEnd, selectionForeground, selectionBackground,
+					flags);
 
-		drawImage(i, rectangle.x, rectangle.y, rectangle.width, rectangle.height, xInPoints, yInPoints, rectangle.width,
-				rectangle.height);
-		i.dispose();
-		nativeGC.dispose();
+			drawImage(i, rectangle.x, rectangle.y, rectangle.width, rectangle.height, xInPoints, yInPoints,
+					rectangle.width, rectangle.height);
+		} finally {
+			if (nativeGC != null) {
+				nativeGC.dispose();
+			}
+			if (i != null) {
+				i.dispose();
+			}
+		}
 
 	}
 

@@ -49,7 +49,6 @@ import org.eclipse.swt.internal.canvasext.FontProperties;
 import org.eclipse.swt.internal.canvasext.IExternalGC;
 import org.eclipse.swt.internal.skia.ISkiaCanvasExtension;
 import org.eclipse.swt.internal.skia.SkiaResources;
-import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 
 import io.github.humbleui.skija.Bitmap;
@@ -83,12 +82,7 @@ public class SkiaGC implements IExternalGC {
 
 	public final static boolean USE_TEXT_CASH = false;
 
-	static boolean logImageNullError = true;
-
-	static final float[] LINE_DOT_PATTERN = new float[] { 3, 3 };
-	static final float[] LINE_DASH_PATTERN = new float[] { 18, 6 };
-	static final float[] LINE_DASHDOT_PATTERN = new float[] { 9, 6, 3, 6 };
-	static final float[] LINE_DASHDOTDOT_PATTERN = new float[] { 9, 3, 3, 3, 3, 3 };
+	private static boolean logImageNullError = true;
 
 	private final Surface surface;
 	private int lineWidth = 1;
@@ -104,7 +98,6 @@ public class SkiaGC implements IExternalGC {
 	private Pattern foregroundPattern;
 	private Pattern backgroundPattern;
 
-	private final Point originalDrawingSize;
 	private final org.eclipse.swt.widgets.Canvas canvas;
 	private final Display device;
 
@@ -123,39 +116,23 @@ public class SkiaGC implements IExternalGC {
 	private final int style;
 	private int textAntiAlias = SWT.ON;
 
+	private final int initialSaveCount;
+
 	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvasExtension exst, int style) {
 		this.canvas = canvas;
 		device = canvas.getDisplay();
-		originalDrawingSize = extractSize(canvas);
-		currentClipBounds = new Rectangle(0, 0, originalDrawingSize.x, originalDrawingSize.y);
 		this.surface = exst.getSurface();
 		this.skiaExtension = exst;
 		this.resources = skiaExtension.getResources();
 		this.style = style;
-	}
-
-	private static Point extractSize(Drawable drawable) {
-		Point size = new Point(0, 0);
-		if (drawable instanceof final Image image) {
-			final var imageBounds = image.getBounds();
-			size.x = imageBounds.width;
-			size.y = imageBounds.height;
-		} else if (drawable instanceof final Control control) {
-			size = control.getSize();
-		} else if (drawable instanceof final Device device) {
-			final var deviceBounds = device.getBounds();
-			size.x = deviceBounds.width;
-			size.y = deviceBounds.height;
-		}
-		return size;
+		this.initialSaveCount = this.surface.getCanvas().save();
 	}
 
 	@Override
 	public void dispose() {
 
 		resources.resetBaseColors();
-		surface.getCanvas().restoreToCount(0);
-		surface.getCanvas().resetMatrix();
+		surface.getCanvas().restoreToCount(initialSaveCount);
 
 	}
 
@@ -214,7 +191,6 @@ public class SkiaGC implements IExternalGC {
 	private void performDrawFilled(Consumer<Paint> operations) {
 		performDraw(paint -> {
 			paint.setMode(PaintMode.FILL);
-			paint.setAntiAlias(true);
 			applyBackgroundPattern(paint);
 			operations.accept(paint);
 		});
@@ -244,11 +220,13 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setBackground(Color color) {
+		// TODO why use resource if i reset the colors nonetheless??
 		this.resources.setBackground(color);
 	}
 
 	@Override
 	public void setForeground(Color color) {
+		// TODO why use resource if i reset the colors nonetheless??
 		this.resources.setForeground(color);
 	}
 
@@ -1518,7 +1496,7 @@ public class SkiaGC implements IExternalGC {
 			isClipSet = false;
 		}
 		if (rect == null) {
-			currentClipBounds = new Rectangle(0, 0, originalDrawingSize.x, originalDrawingSize.y);
+			currentClipBounds = null;
 			return;
 		}
 		currentClipBounds = new Rectangle(rect.x, rect.y, rect.width, rect.height);
@@ -1542,7 +1520,7 @@ public class SkiaGC implements IExternalGC {
 			canvas.restore();
 			isClipSet = false;
 		}
-		currentClipBounds = new Rectangle(0, 0, originalDrawingSize.x, originalDrawingSize.y);
+		currentClipBounds = null;
 		currentClipRegion = region;
 
 		if (region == null) {

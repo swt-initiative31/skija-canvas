@@ -80,7 +80,7 @@ import io.github.humbleui.types.Rect;
 
 public class SkiaGC implements IExternalGC {
 
-	public final static boolean USE_TEXT_CACHE = false;
+	public final static boolean USE_TEXT_CACHE = true;
 
 	public static boolean logImageNullError = true;
 	private final Surface surface;

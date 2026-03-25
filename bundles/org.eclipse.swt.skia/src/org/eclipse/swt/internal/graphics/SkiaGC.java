@@ -281,7 +281,7 @@ public class SkiaGC implements IExternalGC {
 		}
 		final Canvas canvas = surface.getCanvas();
 
-		final int fac = (int)Math.ceil(factor);
+		final int fac = (int) Math.ceil(factor);
 
 		performDraw(paint -> {
 			paint.setAlpha(alpha);
@@ -444,7 +444,6 @@ public class SkiaGC implements IExternalGC {
 
 		return d;
 	}
-
 
 	public static void writeFile(String str, io.github.humbleui.skija.Image image) {
 		final byte[] imageBytes = EncoderPNG.encode(image).getBytes();
@@ -632,6 +631,7 @@ public class SkiaGC implements IExternalGC {
 
 	private void drawTextBlobWithCache(String[] splits, int flags, int x, int y) {
 
+		final var f = getSkiaFont();
 		final FontProperties props = FontProperties.getFontProperties(getFont());
 		final boolean transparent = isTransparent(flags);
 		final int backgroundColor = this.alpha < 255 ? convertSWTColorToSkijaColor(getBackground(), this.alpha)
@@ -643,7 +643,6 @@ public class SkiaGC implements IExternalGC {
 		yPos[0] = y;
 		for (final var text : splits) {
 
-			final var f = getSkiaFont();
 			final var cachedImage = this.resources.getTextImage(text, props, transparent, backgroundColor,
 					foregroundColor, antiAlias);
 			if (cachedImage != null && !cachedImage.isClosed()) {
@@ -652,6 +651,7 @@ public class SkiaGC implements IExternalGC {
 				continue;
 			}
 			performDraw(fgp -> {
+
 				fgp.setAntiAlias(antiAlias);
 				fgp.setMode(PaintMode.FILL);
 				f.setSubpixel(antiAlias);
@@ -690,7 +690,16 @@ public class SkiaGC implements IExternalGC {
 				final Point size = new Point((int) Math.ceil(rect.getWidth() + additionalArea),
 						(int) Math.ceil(heightI + leading));
 
+				if (size.x <= 0 || size.y <= 0) {
+					final StringBuilder sb = new StringBuilder();
+					sb.append("Calculated text image size is invalid. Text: ").append(text).append(" with font: ") //$NON-NLS-1$ //$NON-NLS-2$
+					.append(props.name).append(" size: ").append(size); //$NON-NLS-1$
+					Logger.logException(new IllegalStateException(sb.toString()));
+					return;
+				}
+
 				try (Surface supportSurface = this.skiaExtension.createSupportSurface(size.x, size.y)) {
+
 					supportSurface.getCanvas().clear(0);
 					if (!transparent) {
 
@@ -701,10 +710,15 @@ public class SkiaGC implements IExternalGC {
 						// the background color, the rest stays transparent.
 						try (Paint p = new Paint()) {
 							p.setColor(convertSWTColorToSkijaColor(getBackground(), this.alpha));
+							p.setMode(PaintMode.FILL);
 							supportSurface.getCanvas().drawRect(
 									new Rect(0, 0, (int) Math.ceil(rect.getWidth() + endOfRectangle), size.y), p);
 						}
 
+					} else {
+						// very important at text on transparent background. Blend over the source,
+						// otherwise the text won't be visible.
+						fgp.setBlendMode(BlendMode.SRC_OVER);
 					}
 
 					supportSurface.getCanvas().drawString(text, 0, ascI, f, fgp);
@@ -1144,13 +1158,13 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	/**
-	 * Scales a rectangle from logical to physical pixels using only the global
-	 * DPI scale factor (no per-canvas zoom). Suitable for stateless callers such as
+	 * Scales a rectangle from logical to physical pixels using only the global DPI
+	 * scale factor (no per-canvas zoom). Suitable for stateless callers such as
 	 * {@link org.eclipse.swt.internal.skia.SkiaCaretHandler}.
 	 */
 	public static Rect createScaledRectangleStatic(int x, int y, int width, int height) {
-		return new Rect(DpiScaler.autoScaleUp(x), DpiScaler.autoScaleUp(y),
-				DpiScaler.autoScaleUp(x + width), DpiScaler.autoScaleUp(y + height));
+		return new Rect(DpiScaler.autoScaleUp(x), DpiScaler.autoScaleUp(y), DpiScaler.autoScaleUp(x + width),
+				DpiScaler.autoScaleUp(y + height));
 	}
 
 	/**
@@ -1170,8 +1184,7 @@ public class SkiaGC implements IExternalGC {
 		if (scaledOffsetValue != 0f) {
 			final float whaOffset = DpiScaler.autoScaleUp(1) - 1.0f;
 			return new Rect(rect.getLeft() + scaledOffsetValue, rect.getTop() + scaledOffsetValue,
-					rect.getRight() + scaledOffsetValue + whaOffset,
-					rect.getBottom() + scaledOffsetValue + whaOffset);
+					rect.getRight() + scaledOffsetValue + whaOffset, rect.getBottom() + scaledOffsetValue + whaOffset);
 		}
 		return rect;
 	}
@@ -1484,8 +1497,10 @@ public class SkiaGC implements IExternalGC {
 
 		// Skija uses a canvas state stack; each save() pushes a new layer,
 		// and restore() pops it, removing the clipping region set in that layer.
-		// Since only one clip is tracked at a time, no explicit restore() is needed here
-		// because the clip will be cleared when the next setClipping call is made or on dispose.
+		// Since only one clip is tracked at a time, no explicit restore() is needed
+		// here
+		// because the clip will be cleared when the next setClipping call is made or on
+		// dispose.
 		final Canvas canvas = surface.getCanvas();
 		if (isClipSet) {
 			canvas.restore(); // pop the previously saved clip layer

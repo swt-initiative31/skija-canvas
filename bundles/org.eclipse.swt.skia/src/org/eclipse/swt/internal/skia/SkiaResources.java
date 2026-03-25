@@ -51,6 +51,7 @@ public class SkiaResources {
 	 * exceeds its capacity. Must only be accessed from the SWT UI thread.
 	 */
 	private static final class LruImageCache<K> extends LinkedHashMap<K, io.github.humbleui.skija.Image> {
+		private static final long serialVersionUID = -4958211475619287841L;
 		private final int maxSize;
 
 		LruImageCache(int maxSize) {

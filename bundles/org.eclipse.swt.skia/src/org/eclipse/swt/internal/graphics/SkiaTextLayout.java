@@ -21,7 +21,6 @@ import org.eclipse.swt.graphics.TextStyle;
 import org.eclipse.swt.internal.Callback;
 import org.eclipse.swt.internal.DPIUtil;
 import org.eclipse.swt.internal.canvasext.IExternalFontMetrics;
-import org.eclipse.swt.internal.skia.SkiaResources;
 
 import io.github.humbleui.skija.Canvas;
 import io.github.humbleui.skija.EncoderPNG;
@@ -1068,7 +1067,7 @@ public final class SkiaTextLayout {
 		FontStyle fs = FontStyle.NORMAL;
 		if (ts.font != null && ts.font.getFontData() != null
 				&& ts.font.getFontData().length >= 1) {
-			try (var skijaFont = SkiaResources.createSkiaFont(ts.font)) {
+			try (var skijaFont = createSkiaFont(ts.font)) {
 				fs = skijaFont.getTypeface().getFontStyle();
 				fontSize = skijaFont.getSize();
 			}
@@ -2681,7 +2680,7 @@ public final class SkiaTextLayout {
 		if (skijaFont != null) {
 			skijaFont.close();
 		}
-		this.skijaFont = SkiaResources.createSkiaFont(getFont());
+		this.skijaFont = createSkiaFont(getFont());
 
 		freeRuns();
 	}
@@ -3323,6 +3322,14 @@ public final class SkiaTextLayout {
 
 	public int getLineIndent(int lineIndex) {
 		return 0;
+	}
+
+	/**
+	 * Creates a Skija font from an SWT font.
+	 * TODO: implement proper SWT-to-Skija font conversion
+	 */
+	public static io.github.humbleui.skija.Font createSkiaFont(Font font) {
+		return null;
 	}
 
 }

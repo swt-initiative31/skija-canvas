@@ -442,6 +442,7 @@ public class SkiaResources {
 	private String expandTabs(String text, int startX) {
 		final StringBuilder result = new StringBuilder();
 		int currentX = 0;
+		// Measure space width exactly once — it is constant for the current font.
 		final int spaceWidth = textExtent(" ").x; //$NON-NLS-1$
 		final float avgCharWidthF = getSkiaFont().getMetrics()._avgCharWidth;
 		int avgCharWidth = (int) avgCharWidthF;
@@ -456,11 +457,12 @@ public class SkiaResources {
 				final int nextTabX = currentX + (tabSpacingPx - offsetInTab);
 				while (currentX < nextTabX) {
 					result.append(' ');
-					currentX += textExtent(" ").x; //$NON-NLS-1$
+					// reuse the already-measured spaceWidth instead of calling textExtent again
+					currentX += spaceWidth;
 				}
 			} else {
-				final String s = String.valueOf(ch);
-				final int charWidth = textExtent(s).x;
+				// measureTextWidth avoids creating an intermediate String object per character
+				final int charWidth = (int) getSkiaFont().measureTextWidth(String.valueOf(ch));
 				result.append(ch);
 				currentX += charWidth;
 			}
@@ -468,14 +470,14 @@ public class SkiaResources {
 		return result.toString();
 	}
 
-	private Point textExtent(String text, int flags) {
+	public Point textExtent(String text, int flags) {
 
 		final float height = getSkiaFont().getMetrics().getHeight();
 		final float width = getSkiaFont().measureTextWidth(replaceMnemonics(text));
 		return new Point((int) width, (int) height);
 	}
 
-	private Point textExtent(String string) {
+	public Point textExtent(String string) {
 		return textExtent(string, SWT.NONE);
 	}
 
@@ -483,7 +485,7 @@ public class SkiaResources {
 		return inputText.replaceAll("\r\n|\r|\n", ""); //$NON-NLS-1$//$NON-NLS-2$
 	}
 
-	private static String replaceMnemonics(String text) {
+	public static String replaceMnemonics(String text) {
 		final int mnemonicIndex = text.lastIndexOf('&');
 		if (mnemonicIndex != -1) {
 			text = text.replaceAll("&", ""); //$NON-NLS-1$ //$NON-NLS-2$

@@ -1,8 +1,6 @@
-package org.eclipse.swt.internal.canvasext;
+package org.eclipse.swt.graphics;
 
 import java.util.*;
-
-import org.eclipse.swt.graphics.*;
 
 /**
  * @noreference This class is not intended to be referenced by clients.
@@ -41,6 +39,10 @@ public final class RegionLog {
 
 	public int getNumberOfOperations() {
 		return op.size();
+	}
+
+	public static RegionLog getLog(Region r) {
+		return r.getLog();
 	}
 
 

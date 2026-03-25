@@ -274,14 +274,14 @@ public class SkiaGC implements IExternalGC {
 			return;
 		}
 
-		int factor = Math.round(Math.max(destWidth / srcWidth, destHeight / srcHeight));
+		int factor = Math.round(Math.max((float) destWidth / srcWidth, (float) destHeight / srcHeight));
 
 		if (factor == 0) {
 			factor = 1;
 		}
 		final Canvas canvas = surface.getCanvas();
 
-		final int fac = factor;
+		final int fac = (int)Math.ceil(factor);
 
 		performDraw(paint -> {
 			paint.setAlpha(alpha);
@@ -1024,20 +1024,11 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public Point textExtent(String text, int flags) {
-
-		final float height = getSkiaFont().getMetrics().getHeight();
-		final float width = getSkiaFont().measureTextWidth(replaceMnemonics(text));
-		return new Point((int) width, (int) height);
+		return resources.textExtent(text, flags);
 	}
 
 	private static String replaceMnemonics(String text) {
-		final int mnemonicIndex = text.lastIndexOf('&');
-		if (mnemonicIndex != -1) {
-			text = text.replaceAll("&", ""); //$NON-NLS-1$ //$NON-NLS-2$
-			// TODO Underline the mnemonic key
-			// it seems this also does not work in windows with a simple snippet.
-		}
-		return text;
+		return SkiaResources.replaceMnemonics(text);
 	}
 
 	@Override
@@ -1152,6 +1143,39 @@ public class SkiaGC implements IExternalGC {
 		return new Rect(r.x, r.y, r.width + r.x, r.height + r.y);
 	}
 
+	/**
+	 * Scales a rectangle from logical to physical pixels using only the global
+	 * DPI scale factor (no per-canvas zoom). Suitable for stateless callers such as
+	 * {@link org.eclipse.swt.internal.skia.SkiaCaretHandler}.
+	 */
+	public static Rect createScaledRectangleStatic(int x, int y, int width, int height) {
+		return new Rect(DpiScaler.autoScaleUp(x), DpiScaler.autoScaleUp(y),
+				DpiScaler.autoScaleUp(x + width), DpiScaler.autoScaleUp(y + height));
+	}
+
+	/**
+	 * Applies a sub-pixel offset to a rectangle based on a given stroke width.
+	 * Shared with stateless callers such as
+	 * {@link org.eclipse.swt.internal.skia.SkiaCaretHandler}.
+	 */
+	public static Rect offsetRectangleStatic(Rect rect, float strokeWidth) {
+		final boolean isDefaultLineWidth = strokeWidth == 0;
+		final float scaledOffsetValue;
+		if (isDefaultLineWidth) {
+			scaledOffsetValue = 0.5f;
+		} else {
+			final float effectiveLineWidth = DpiScaler.autoScaleUp(strokeWidth);
+			scaledOffsetValue = (effectiveLineWidth % 2 == 1) ? DpiScaler.autoScaleUp(0.5f) : 0f;
+		}
+		if (scaledOffsetValue != 0f) {
+			final float whaOffset = DpiScaler.autoScaleUp(1) - 1.0f;
+			return new Rect(rect.getLeft() + scaledOffsetValue, rect.getTop() + scaledOffsetValue,
+					rect.getRight() + scaledOffsetValue + whaOffset,
+					rect.getBottom() + scaledOffsetValue + whaOffset);
+		}
+		return rect;
+	}
+
 	private float getScaledOffsetValue() {
 		final boolean isDefaultLineWidth = lineWidth == 0;
 		if (isDefaultLineWidth) {
@@ -1201,7 +1225,7 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	LineAttributes getLineAttributesInPixels() {
-		return new LineAttributes(lineWidth, SWT.CAP_FLAT, SWT.JOIN_MITER, SWT.LINE_SOLID, null, 0, 10);
+		return new LineAttributes(lineWidth, lineCap, lineJoin, lineStyle, lineDashes, dashOffset, miterLimit);
 	}
 
 	@Override
@@ -1497,10 +1521,11 @@ public class SkiaGC implements IExternalGC {
 		}
 
 		final SkiaRegionCalculator calc = new SkiaRegionCalculator(region, skiaExtension);
-		final var skiaRegion = calc.getSkiaRegion();
 		// Push a new canvas layer so the clip can be undone later with restore()
 		canvas.save();
-		canvas.clipRegion(skiaRegion);
+		try (calc) {
+			canvas.clipRegion(calc.getSkiaRegion());
+		}
 		isClipSet = true;
 
 	}

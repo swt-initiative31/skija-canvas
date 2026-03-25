@@ -15,15 +15,15 @@ import java.util.HashMap;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Region;
-import org.eclipse.swt.internal.canvasext.RegionLog.OpType;
-import org.eclipse.swt.internal.canvasext.RegionLog.Operation;
-import org.eclipse.swt.internal.canvasext.RegionLogProvider;
+import org.eclipse.swt.graphics.RegionLog;
+import org.eclipse.swt.graphics.RegionLog.OpType;
+import org.eclipse.swt.graphics.RegionLog.Operation;
 import org.eclipse.swt.internal.skia.ISkiaCanvasExtension;
 
 import io.github.humbleui.skija.RegionOp;
 import io.github.humbleui.types.IRect;
 
-public class SkiaRegionCalculator {
+public class SkiaRegionCalculator implements AutoCloseable {
 
 	final static HashMap<OpType, RegionOp> operationMapping = new HashMap<OpType, RegionOp>();
 
@@ -52,14 +52,22 @@ public class SkiaRegionCalculator {
 		}
 
 		final io.github.humbleui.skija.Region reg = new io.github.humbleui.skija.Region();
-		final RegionLogProvider prov = new RegionLogProvider(region);
-		for (final var o : prov.getLog().getOperations()) {
+		final var log = RegionLog.getLog(region);
+		for (final var o : log.getOperations()) {
 			apply(o, reg);
 		}
 
 		calculatedRegion = reg;
 		return calculatedRegion;
 
+	}
+
+	@Override
+	public void close() {
+		if (calculatedRegion != null) {
+			calculatedRegion.close();
+			calculatedRegion = null;
+		}
 	}
 
 	private void apply(Operation o, io.github.humbleui.skija.Region reg) {
@@ -96,8 +104,9 @@ public class SkiaRegionCalculator {
 			final var irect = createRectRegion(rec);
 			reg.op(irect, skiaOperation);
 		} else if (ob instanceof final Region otherReg) {
-			final SkiaRegionCalculator src = new SkiaRegionCalculator(otherReg, skiaExtension);
-			reg.op(src.getSkiaRegion(), skiaOperation);
+			try (final SkiaRegionCalculator src = new SkiaRegionCalculator(otherReg, skiaExtension)) {
+				reg.op(src.getSkiaRegion(), skiaOperation);
+			}
 		}
 
 	}

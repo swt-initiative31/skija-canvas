@@ -1464,6 +1464,7 @@ public class SkiaGC implements IExternalGC {
 		// because the clip will be cleared when the next setClipping call is made or on dispose.
 		final Canvas canvas = surface.getCanvas();
 		if (isClipSet) {
+			canvas.restore(); // pop the previously saved clip layer
 			isClipSet = false;
 		}
 		if (rect == null) {

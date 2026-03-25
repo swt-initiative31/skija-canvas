@@ -369,3 +369,252 @@ usage, which bypasses the canvas extension mechanism.
 - **`logImageNullError`:** The first null-image error per JVM process is logged via
   `Logger.logException()`. Subsequent occurrences are suppressed (`logImageNullError = false`)
   to avoid log flooding.
+
+---
+
+## Architecture Analysis: Weaknesses and Improvement Proposals
+
+The following section documents architectural weaknesses identified by code review and proposes
+concrete countermeasures. Items are grouped by concern.
+
+---
+
+### 1. Thread Safety
+
+**Weakness — mixed use of `ConcurrentHashMap` and `HashMap` without a consistent threading model**
+
+`SkiaResources` uses `ConcurrentHashMap` for `fontCache` and `fontNameMapping` but plain
+`HashMap` for `imageCache`, `textImageCache`, and `cachedTextSplits`. All caches are accessed
+from the SWT UI thread only, so the `ConcurrentHashMap` instances add unnecessary overhead
+without providing real protection. Conversely, if a background thread ever touches these maps
+(e.g. via an off-thread redraw trigger), the plain `HashMap` instances are unsafe.
+
+**Proposal:** Decide on a clear threading contract. If all access is guaranteed to be on the SWT
+UI thread (which is the natural SWT contract), replace `ConcurrentHashMap` with `HashMap`
+throughout and document the constraint. If off-thread access must be supported in the future,
+protect all caches uniformly.
+
+---
+
+### 2. Cache Invalidation and Unbounded Growth
+
+**Weakness — text image cache (`textImageCache`) grows without a bound**
+
+The text image cache in `SkiaResources` caches one `io.github.humbleui.skija.Image` per unique
+`(text, font, transparent, background, foreground, antiAlias)` combination. For applications
+that render dynamically generated or user-entered text (labels with changing values, live search
+results, log viewers), the number of distinct cache keys is unbounded and the cached native
+images accumulate until the canvas is disposed.
+
+**Proposal:** Introduce an LRU eviction policy with a configurable maximum entry count (e.g.
+512 or 1024 entries). Java's `LinkedHashMap` with `accessOrder = true` and an overridden
+`removeEldestEntry()` is a straightforward, zero-dependency solution. Alternatively, expose the
+cache limit as an OSGi system property.
+
+**Related weakness — the `SplitsTextCache` key uses the processed string as key after mutation**
+
+In `getTextSplits()` the `inputText` variable is mutated (tab expansion, mnemonic stripping)
+*before* it is used as the key in `cachedTextSplits.put(...)`. This means a lookup with the
+original unprocessed string can never hit the entry that was stored under the mutated string.
+The cache effectively never yields a hit for most inputs, making it dead weight.
+
+**Proposal:** Use the *original* unprocessed `inputText` as the key, or cache the result under
+a key computed before mutation begins.
+
+---
+
+### 3. Platform Coupling inside Domain Objects
+
+**Weakness — hard-coded `"win32"` / `"linux/gtk"` platform checks inside `SkiaResources`**
+
+`createSkijaFont()` contains an `if (SWT.getPlatform().equals("win32"))` branch for font size
+conversion and an Arabic-font fallback hard-coded to `"Arial"`. Platform-specific font handling
+is valuable, but embedding it inside the general font creation method makes the code hard to
+test in isolation and will silently produce wrong results on any platform that is neither
+`"win32"` nor GTK (e.g. macOS, future platforms).
+
+**Proposal:** Extract all platform-specific font size calculations into `DpiScaler` (as already
+noted by the inline TODO comment `// TODO: move platform-specific font size calculation into the
+scaler`). Font family fallback rules should be read from a configuration table, not hardcoded.
+
+---
+
+### 4. Clipping State Inconsistency
+
+**Weakness — `setClipping(Rectangle)` does not call `canvas.restore()` when replacing an existing clip**
+
+The three `setClipping(...)` overloads behave inconsistently with respect to the canvas state
+stack:
+
+| Method | When `isClipSet == true` | Expected |
+|---|---|---|
+| `setClipping(Path)` | calls `restore()` then `save()` + clip | ✓ correct |
+| `setClipping(Region)` | calls `restore()` then `save()` + clip | ✓ correct |
+| `setClipping(Rectangle)` | **skips `restore()`**, just does `save()` + clip | ✗ leaks a save level |
+
+When `setClipping(Rectangle)` is called repeatedly, each call pushes an additional save level
+without ever popping the previous clip. Over the lifetime of a GC, this accumulates extra save
+levels that are only recovered by `restoreToCount(initialSaveCount)` on `dispose()`.
+The clip is effectively correct by accident (Skija intersects clips), but the stack depth grows
+unnecessarily and is inconsistent with the documented strategy.
+
+**Proposal:** Apply the same `restore()` + `save()` pattern to `setClipping(Rectangle)` that
+is already used for `setClipping(Path)` and `setClipping(Region)`.
+
+---
+
+### 5. Duplicated Code: `replaceMnemonics` and `textExtent`
+
+**Weakness — `replaceMnemonics()` is independently duplicated in `SkiaGC` and `SkiaResources`**
+
+Both `SkiaGC.replaceMnemonics(String)` and `SkiaResources.replaceMnemonics(String)` (called
+from `expandTabs`) are identical private static helpers. Any future fix (e.g. the incomplete
+mnemonic underline implementation) would have to be applied in two places.
+
+Similarly, `textExtent(String, int)` exists in both `SkiaGC` (as a public `@Override`) and as
+a private method in `SkiaResources` (called from `expandTabs`).
+
+**Proposal:** Move the canonical implementation into a shared utility class (e.g.
+`SkiaTextUtils`) or into `SkiaResources` as the single source of truth, and have `SkiaGC`
+delegate to it.
+
+---
+
+### 6. `textLayoutDraw` Falls Back to Native GC
+
+**Weakness — `SkiaGC.textLayoutDraw()` renders into a temporary SWT `Image` via a native GC**
+
+`textLayoutDraw()` creates a native `Image`, opens a native `GC` on it, asks `TextLayout` to
+render natively into it, and then blits the result back onto the Skia surface via
+`drawImage(...)`. This defeats the purpose of GPU-accelerated rendering for any caller that uses
+`TextLayout` (e.g. `StyledText`). The round-trip also incurs a CPU-side pixel readback
+(`makeImageSnapshot` → `convertSkijaImageToImageData`) for every text layout draw call.
+
+**Proposal:** Once `SkiaTextLayout` is complete, route `textLayoutDraw()` through it. As an
+intermediate step, document the performance cost explicitly and consider caching the blit result
+with the same key as the text image cache.
+
+---
+
+### 7. `drawImage` Integer Zoom Factor
+
+**Weakness — zoom factor calculation uses integer rounding, losing precision**
+
+In `SkiaGC.drawImage(Image, int, int, int, int, int, int, int, int)`:
+
+```java
+int factor = Math.round(Math.max(destWidth / srcWidth, destHeight / srcHeight));
+```
+
+Both `destWidth / srcWidth` and `destHeight / srcHeight` are integer divisions, so fractional
+scale factors (e.g. 1.5×) are truncated to 1 before `Math.round()` is called. The result is
+that scaled images are fetched at 1× zoom even when the display DPI requires 2× or higher,
+causing blurry rendering.
+
+**Proposal:** Cast operands to `float` before division:
+
+```java
+float factor = Math.max((float) destWidth / srcWidth, (float) destHeight / srcHeight);
+int zoom = Math.max(1, Math.round(factor * 100)); // zoom as percentage, like the rest of the API
+```
+
+---
+
+### 8. `SkiaCaretHandler` Code Duplication
+
+**Weakness — `SkiaCaretHandler` re-implements `createScaledRectangle` and `offsetRectangle`**
+
+`SkiaCaretHandler` contains private copies of `createScaledRectangle()` and
+`offsetRectangle()` that are already present in `SkiaGC`. If the coordinate scaling logic
+changes (e.g. for a new platform), it must be updated in two places.
+
+**Proposal:** Move the scaling helpers into `DpiScaler` or a shared `SkiaCoordinateUtils`
+class so all callers share a single implementation.
+
+---
+
+### 9. `SkiaRegionCalculator` is not `AutoCloseable`
+
+**Weakness — `SkiaRegionCalculator.getSkiaRegion()` returns a `Region` that is never closed**
+
+`io.github.humbleui.skija.Region` is a native Skija object. `SkiaRegionCalculator` caches the
+calculated region in the `calculatedRegion` field but never closes it — there is no `dispose()`
+method and `SkiaRegionCalculator` is not `AutoCloseable`. The `setClipping(Region)` call in
+`SkiaGC` creates a new `SkiaRegionCalculator` on every call, so the native region leaks every
+time clipping is changed.
+
+**Proposal:** Make `SkiaRegionCalculator` implement `AutoCloseable`, close the `calculatedRegion`
+in `close()`, and use it with try-with-resources in `SkiaGC.setClipping(Region)`.
+
+---
+
+### 10. `expandTabs` Performance
+
+**Weakness — `expandTabs()` calls `textExtent(" ")` in a tight loop**
+
+The tab expansion loop in `SkiaResources.expandTabs()` calls `textExtent(" ")` once per
+non-tab character and `textExtent(" ")` repeatedly inside the tab-filling inner loop. Each call
+to `textExtent` invokes `getSkiaFont().measureTextWidth(...)`, which incurs a Skija JNI round-
+trip. For a string with many characters, this means hundreds of JNI calls per string.
+
+**Proposal:** Call `textExtent(" ")` exactly once before the loop and reuse the result. Since
+the font does not change during the expansion, the space width is constant.
+
+---
+
+### 11. `getLineAttributesInPixels` Returns Hardcoded Values
+
+**Weakness — `getLineAttributesInPixels()` ignores the actual GC line state**
+
+`SkiaGC.getLineAttributesInPixels()` always returns:
+
+```java
+new LineAttributes(lineWidth, SWT.CAP_FLAT, SWT.JOIN_MITER, SWT.LINE_SOLID, null, 0, 10);
+```
+
+The `cap`, `join`, `style`, `dash`, and `miterLimit` values are hardcoded regardless of what
+was previously set via `setLineCap()`, `setLineJoin()`, `setLineStyle()`, etc. Any caller that
+reads back line attributes after setting them (e.g. code that saves and restores GC state) will
+see wrong values.
+
+**Proposal:** Return the actual field values:
+
+```java
+return new LineAttributes(lineWidth, lineCap, lineJoin, lineStyle, lineDashes, dashOffset, miterLimit);
+```
+
+---
+
+### 12. `USE_TEXT_CACHE` is a Public Static Mutable Field
+
+**Weakness — `SkiaGC.USE_TEXT_CACHE` is `public static final` but semantically acts as a toggle**
+
+The field is declared `public final static boolean USE_TEXT_CACHE = true`. Because it is
+`final`, the compiler inlines the value at all call sites, so changing it requires a recompile.
+The documentation says "Set to `false` to disable caching", implying it is intended as a
+runtime toggle. Its `public` visibility also means any code in the same bundle can read (and, if
+it were non-final, write) it directly.
+
+**Proposal:** Introduce it as an OSGi bundle configuration property or a system property
+(`System.getProperty("org.eclipse.swt.skia.useTextCache", "true")`), read once at class
+initialization. This allows toggling without recompilation and makes the intent explicit.
+
+---
+
+### Summary Table
+
+| # | Area | Severity | Effort |
+|---|---|---|---|
+| 1 | Thread safety / cache map types | Low | Low |
+| 2 | Unbounded text image cache growth | **High** | Medium |
+| 2b | `SplitsTextCache` key mutation bug | **High** | Low |
+| 3 | Platform coupling in `SkiaResources` | Medium | Medium |
+| 4 | Clip state stack leak in `setClipping(Rectangle)` | Medium | Low |
+| 5 | Duplicated `replaceMnemonics` / `textExtent` | Low | Low |
+| 6 | `textLayoutDraw` native GC fallback | **High** | High |
+| 7 | Integer division in zoom factor | Medium | Low |
+| 8 | `SkiaCaretHandler` coordinate helper duplication | Low | Low |
+| 9 | `SkiaRegionCalculator` native region leak | **High** | Low |
+| 10 | `expandTabs` JNI call per character | Medium | Low |
+| 11 | `getLineAttributesInPixels` ignores actual state | Medium | Low |
+| 12 | `USE_TEXT_CACHE` compile-time constant vs runtime toggle | Low | Low |

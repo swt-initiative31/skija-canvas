@@ -76,7 +76,7 @@ public class DpiScaler {
 	}
 
 	public int getZoomedFontSize(int fontSize) {
-		return fontSize;
+		return (fontSize * Display.getDefault().getDPI().y) / 72;
 	}
 
 	public int scaleTextMargin(int margin) {

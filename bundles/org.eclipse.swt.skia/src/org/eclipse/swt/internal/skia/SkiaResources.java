@@ -12,9 +12,9 @@ package org.eclipse.swt.internal.skia;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
@@ -29,7 +29,6 @@ import org.eclipse.swt.internal.skia.cache.ImageKey;
 import org.eclipse.swt.internal.skia.cache.ImageTextKey;
 import org.eclipse.swt.internal.skia.cache.SplitsTextCache;
 import org.eclipse.swt.widgets.Canvas;
-import org.eclipse.swt.widgets.Display;
 
 import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.FontHinting;
@@ -41,19 +40,53 @@ import io.github.humbleui.skija.Typeface;
 public class SkiaResources {
 	private final static boolean USE_IMAGE_CACHE = true;
 
+	/** Maximum number of entries kept in the text-image LRU cache. */
+	private static final int TEXT_IMAGE_CACHE_MAX = 512;
+
+	/** Maximum number of entries kept in the SWT→Skija image LRU cache. */
+	private static final int IMAGE_CACHE_MAX = 256;
+
+	/**
+	 * LRU cache that automatically closes the evicted Skija image when the cache
+	 * exceeds its capacity. Must only be accessed from the SWT UI thread.
+	 */
+	private static final class LruImageCache<K> extends LinkedHashMap<K, io.github.humbleui.skija.Image> {
+		private final int maxSize;
+
+		LruImageCache(int maxSize) {
+			super(maxSize + 1, 0.75f, /* accessOrder= */ true);
+			this.maxSize = maxSize;
+		}
+
+		@Override
+		protected boolean removeEldestEntry(Map.Entry<K, io.github.humbleui.skija.Image> eldest) {
+			if (size() > maxSize) {
+				// Close the native Skija image before evicting it from the cache.
+				final io.github.humbleui.skija.Image image = eldest.getValue();
+				if (image != null && !image.isClosed()) {
+					image.close();
+				}
+				return true;
+			}
+			return false;
+		}
+	}
+
 	private Color background;
 	private Color foreground;
 	private final Canvas canvas;
 	private Font swtFont;
 	private io.github.humbleui.skija.Font skiaFont;
 
-	private final Map<String, String> fontNameMapping = new ConcurrentHashMap<>();
+	// cache access only from UI thread, so no need for concurrent map
+	private final Map<String, String> fontNameMapping = new HashMap<>();
 	private final Set<String> unknownFonts = new HashSet<>();
-
-	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
-	private final Map<ImageKey, io.github.humbleui.skija.Image> imageCache = new HashMap<>();
-	private final Map<ImageTextKey, io.github.humbleui.skija.Image> textImageCache = new HashMap<>();
+	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new HashMap<>();
+	private final LruImageCache<ImageKey> imageCache = new LruImageCache<>(IMAGE_CACHE_MAX);
+	private final LruImageCache<ImageTextKey> textImageCache = new LruImageCache<>(TEXT_IMAGE_CACHE_MAX);
 	private final Map<SplitsTextCache, String[]> cachedTextSplits = new HashMap<>();
+
+	// ---------------------------------------------------------------------------------
 
 	private final ISkiaCanvasExtension skiaExtension;
 
@@ -144,13 +177,15 @@ public class SkiaResources {
 		}
 
 		int fontSize = (props.lfHeight);
-		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
-			fontSize = skiaExtension.getScaler().getZoomedFontSize(fontSize);
-		}else { // currently the other system is linux/gtk
-			// Convert font size from points to pixels using the device DPI
-			// TODO: move platform-specific font size calculation into the scaler
-			fontSize = (fontSize * Display.getDefault().getDPI().y) / 72;
-		}
+		fontSize = skiaExtension.getScaler().getZoomedFontSize(fontSize);
+
+		//		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
+		//			fontSize = skiaExtension.getScaler().getZoomedFontSize(fontSize);
+		//		}else { // currently the other system is linux/gtk
+		//			// Convert font size from points to pixels using the device DPI
+		//			// TODO: move platform-specific font size calculation into the scaler
+		//			fontSize = (fontSize * Display.getDefault().getDPI().y) / 72;
+		//		}
 		skijaFont.setSize(fontSize);
 		skijaFont.setEdging(FontEdging.SUBPIXEL_ANTI_ALIAS);
 		skijaFont.setSubpixel(true);
@@ -360,26 +395,29 @@ public class SkiaResources {
 					.get(new SplitsTextCache(inputText, replaceAmpersand, delimiter, tabulatorExpansion));
 		}
 
+		String workInputText = inputText;
+
+
 		if (splits == null) {
 			if (tabulatorExpansion) {
-				inputText = expandTabs(inputText, 0);
+				workInputText = expandTabs(workInputText, 0);
 			} else {
-				inputText = inputText.replaceAll("\\t", ""); //$NON-NLS-1$ //$NON-NLS-2$
+				workInputText = workInputText.replaceAll("\\t", ""); //$NON-NLS-1$ //$NON-NLS-2$
 			}
 
 			if (replaceAmpersand) {
-				inputText = replaceMnemonics(inputText);
+				workInputText = replaceMnemonics(workInputText);
 			}
 
 			// replace form feed characters with "\u240C" this is the unicode standard sign
 			// for form feed.
 			// unfortunately skia does not even render these form feed characters...
-			inputText = inputText.replace("\f", "\u240C"); //$NON-NLS-1$//$NON-NLS-2$
+			workInputText = workInputText.replace("\f", "\u240C"); //$NON-NLS-1$//$NON-NLS-2$
 
 			if (delimiter) {
-				splits = splitString(inputText);
+				splits = splitString(workInputText);
 			} else {
-				splits = new String[] { removeDelimiter(inputText) };
+				splits = new String[] { removeDelimiter(workInputText) };
 			}
 		}
 

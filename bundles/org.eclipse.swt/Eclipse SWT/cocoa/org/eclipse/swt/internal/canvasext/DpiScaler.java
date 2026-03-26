@@ -9,11 +9,11 @@ import org.eclipse.swt.widgets.*;
  * internal use only
  *
  */
-public class DPIScaler {
+public class DpiScaler {
 
 	private Canvas canvas;
 
-	public DPIScaler(Canvas canvas) {
+	public DpiScaler(Canvas canvas) {
 		this.canvas = canvas;
 	}
 

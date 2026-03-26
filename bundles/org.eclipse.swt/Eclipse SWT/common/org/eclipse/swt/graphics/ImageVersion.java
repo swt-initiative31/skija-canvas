@@ -1,9 +1,7 @@
-package org.eclipse.swt.internal.canvasext;
-
-import org.eclipse.swt.graphics.*;
+package org.eclipse.swt.graphics;
 
 /**
- * This class is used to track the version of an image. Whenever a GC is created on an image, its version will be incremented.
+ * @noreference This class is not intended to be referenced by clients.
  */
 public class ImageVersion {
 

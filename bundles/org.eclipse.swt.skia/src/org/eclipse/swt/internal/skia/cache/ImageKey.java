@@ -10,7 +10,7 @@
  *******************************************************************************/
 package org.eclipse.swt.internal.skia.cache;
 
-import org.eclipse.swt.internal.canvasext.ImageVersion;
+import org.eclipse.swt.graphics.ImageVersion;
 
 public class ImageKey {
 

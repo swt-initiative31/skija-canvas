@@ -1,5 +1,6 @@
 package org.eclipse.swt.internal.canvasext;
 
+import org.eclipse.swt.internal.canvasext.DpiScaler;
 import org.eclipse.swt.widgets.Canvas;
 /**
  * Scaling utility for canvases.

@@ -5,9 +5,8 @@ import org.eclipse.swt.internal.*;
 import org.eclipse.swt.widgets.*;
 
 /**
- *
  * internal use only
- *
+ * @noreference This class is not intended to be referenced by clients.
  */
 public class DpiScaler {
 

@@ -41,6 +41,9 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Rectangle {
 	@Test
 	public void test_org_eclipse_swt_skia_fillRectangle() {
 
+		if(!SupportedTestPlatform.isSupported())
+			return;
+
 		for (var zoom : DpiScalerUtil.getSupportedZooms()) {
 
 			CanvasCompareTool t = new CanvasCompareTool();

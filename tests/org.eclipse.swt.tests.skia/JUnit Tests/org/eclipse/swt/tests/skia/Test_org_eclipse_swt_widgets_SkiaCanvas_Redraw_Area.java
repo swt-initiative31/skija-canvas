@@ -83,6 +83,9 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Redraw_Area {
 	@Test
 	public void test_org_eclipse_swt_skia_redraw_rectangle() {
 
+		if(!SupportedTestPlatform.isSupported())
+			return;
+
 		for (var zoom : DpiScalerUtil.getSupportedZooms()) {
 
 			this.r = null;
@@ -121,6 +124,9 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Redraw_Area {
 
 	@Test
 	public void test_org_eclipse_swt_skia_redraw_rectangle2() {
+
+		if(!SupportedTestPlatform.isSupported())
+			return;
 
 		for (var zoom : DpiScalerUtil.getSupportedZooms()) {
 

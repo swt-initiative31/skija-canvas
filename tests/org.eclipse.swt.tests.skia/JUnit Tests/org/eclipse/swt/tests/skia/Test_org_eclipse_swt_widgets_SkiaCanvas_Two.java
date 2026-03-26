@@ -42,6 +42,9 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Two {
 	@Test
 	public void test_org_eclipse_swt_skia_fillRectangle() {
 
+		if(!SupportedTestPlatform.isSupported())
+			return;
+
 		int zoom = 100;
 		CanvasCompareTool t = new CanvasCompareTool();
 

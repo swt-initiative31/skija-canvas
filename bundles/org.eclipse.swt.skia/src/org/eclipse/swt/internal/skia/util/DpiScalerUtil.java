@@ -1,4 +1,4 @@
-package org.eclipse.swt.internal.canvasext;
+package org.eclipse.swt.internal.skia.util;
 
 import org.eclipse.swt.internal.canvasext.DpiScaler;
 import org.eclipse.swt.widgets.Canvas;
@@ -13,6 +13,7 @@ public class DpiScalerUtil {
 
 	public static void setNativeZoom(Canvas classicalCanvas, int zoom) {
 		DpiScaler.setNativeZoom(classicalCanvas, zoom);
+
 	}
 
 }

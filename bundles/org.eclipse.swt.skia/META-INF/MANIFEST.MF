@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-SymbolicName: org.eclipse.swt.skia
 Bundle-Version: 3.133.100.qualifier
-Export-Package: org.eclipse.swt.internal.canvasext;x-friends:="org.eclipse.swt.tests.skia"
+Export-Package: org.eclipse.swt.internal.skia.util;x-internal:=true
 Automatic-Module-Name: org.eclipse.swt.skia
 Bundle-ClassPath: lib/skija-linux-x64-0.143.11.jar,
  lib/skija-shared-0.143.11.jar,

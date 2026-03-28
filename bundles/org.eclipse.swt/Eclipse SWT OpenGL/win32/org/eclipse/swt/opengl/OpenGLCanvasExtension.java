@@ -70,9 +70,5 @@ public abstract class OpenGLCanvasExtension extends GLCanvasExtension {
 	 * @noreference This method is not intended to be referenced by clients.
 	 */
 	public abstract void doPaint(Consumer<Event> paintEventSender);
-	
-	public void setCurrent() {
-		
-	}
 
 }

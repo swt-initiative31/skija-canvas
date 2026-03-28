@@ -690,15 +690,23 @@ public class SkiaGC implements IExternalGC {
 				final Point size = new Point((int) Math.ceil(rect.getWidth() + additionalArea),
 						(int) Math.ceil(heightI + leading));
 
-				if (size.x <= 0 || size.y <= 0) {
+				final int MAX_SURFACE_WIDTH = 8192; // Documented practical limit
+				int surfaceWidth = size.x;
+				if (surfaceWidth > MAX_SURFACE_WIDTH) {
+					Logger.logException(new IllegalStateException(
+							"Surface width restricted: calculated=" + surfaceWidth + ", max=" + MAX_SURFACE_WIDTH +
+							", font=" + props.name + ", size=" + size + ", backgroundColor=" + backgroundColor + ", foregroundColor=" + foregroundColor + ", antiAlias=" + antiAlias + ", transparent=" + transparent + ", text='" + text + "'"));
+					surfaceWidth = MAX_SURFACE_WIDTH;
+				}
+				if (surfaceWidth <= 0 || size.y <= 0) {
 					final StringBuilder sb = new StringBuilder();
-					sb.append("Calculated text image size is invalid. Text: ").append(text).append(" with font: ") //$NON-NLS-1$ //$NON-NLS-2$
-					.append(props.name).append(" size: ").append(size); //$NON-NLS-1$
+					sb.append("Calculated text image size is invalid. font=").append(props.name)
+					.append(", size=").append(size)
+					.append(", text='").append(text).append("'");
 					Logger.logException(new IllegalStateException(sb.toString()));
 					return;
 				}
-
-				try (Surface supportSurface = this.skiaExtension.createSupportSurface(size.x, size.y)) {
+				try (Surface supportSurface = this.skiaExtension.createSupportSurface(surfaceWidth, size.y)) {
 
 					supportSurface.getCanvas().clear(0);
 					if (!transparent) {
@@ -1937,3 +1945,5 @@ public class SkiaGC implements IExternalGC {
 	}
 
 }
+
+

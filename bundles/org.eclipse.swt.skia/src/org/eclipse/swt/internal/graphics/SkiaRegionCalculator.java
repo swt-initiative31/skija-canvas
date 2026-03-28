@@ -79,14 +79,7 @@ public class SkiaRegionCalculator implements AutoCloseable {
 
 		if (OpType.TRANSLATE.equals(o.type())) {
 			if (o.executionObject() instanceof final Point p) {
-
-				if (this.skiaExtension != null && this.skiaExtension.getTransformation() != null) {
-					// in this case we only expect the standard transformation for mac
-					reg.translate(p.x, -p.y);
-				} else {
-					reg.translate(p.x, p.y);
-				}
-
+				reg.translate(p.x, p.y);
 				return;
 			}
 		}
@@ -131,14 +124,7 @@ public class SkiaRegionCalculator implements AutoCloseable {
 
 			final Point maxV = getMax(polygon);
 
-			if (this.skiaExtension != null && this.skiaExtension.getTransformation() != null) {
-				p.transform(this.skiaExtension.getTransformation());
-				final int width = this.skiaExtension.getSurface().getWidth();
-				final int height = this.skiaExtension.getSurface().getHeight();
-				r.setRect(new IRect(0, 0, width, height));
-			} else {
-				r.setRect(new IRect(0, 0, maxV.x, maxV.y));
-			}
+			r.setRect(new IRect(0, 0, maxV.x, maxV.y));
 
 			// a path has to be set for a clipping region.
 			// so first we have to create a region big enough for the path and then set the

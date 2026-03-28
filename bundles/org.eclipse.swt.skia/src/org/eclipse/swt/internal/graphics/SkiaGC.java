@@ -15,7 +15,6 @@ package org.eclipse.swt.internal.graphics;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,13 +40,15 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Region;
+import org.eclipse.swt.graphics.TextLayout;
 import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.internal.DPIUtil;
 import org.eclipse.swt.internal.canvasext.DpiScaler;
+import org.eclipse.swt.internal.canvasext.FontProperties;
 import org.eclipse.swt.internal.canvasext.IExternalGC;
+import org.eclipse.swt.internal.canvasext.Logger;
 import org.eclipse.swt.internal.skia.ISkiaCanvasExtension;
 import org.eclipse.swt.internal.skia.SkiaResources;
-import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 
 import io.github.humbleui.skija.Bitmap;
@@ -79,13 +80,9 @@ import io.github.humbleui.types.Rect;
 
 public class SkiaGC implements IExternalGC {
 
-	static boolean logImageNullError = true;
+	public final static boolean USE_TEXT_CACHE = true;
 
-	static final float[] LINE_DOT_PATTERN = new float[] { 3, 3 };
-	static final float[] LINE_DASH_PATTERN = new float[] { 18, 6 };
-	static final float[] LINE_DASHDOT_PATTERN = new float[] { 9, 6, 3, 6 };
-	static final float[] LINE_DASHDOTDOT_PATTERN = new float[] { 9, 3, 3, 3, 3, 3 };
-
+	public static boolean logImageNullError = true;
 	private final Surface surface;
 	private int lineWidth = 1;
 	private int lineStyle;
@@ -100,7 +97,6 @@ public class SkiaGC implements IExternalGC {
 	private Pattern foregroundPattern;
 	private Pattern backgroundPattern;
 
-	private final Point originalDrawingSize;
 	private final org.eclipse.swt.widgets.Canvas canvas;
 	private final Display device;
 
@@ -115,75 +111,47 @@ public class SkiaGC implements IExternalGC {
 
 	private final ISkiaCanvasExtension skiaExtension;
 	private final SkiaResources resources;
-	private boolean XORModeActive;
+	private boolean xorModeActive;
 	private final int style;
 	private int textAntiAlias = SWT.ON;
 
-	private final int saveCount;
+	private final int initialSaveCount;
 
 	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvasExtension exst, int style) {
 		this.canvas = canvas;
 		device = canvas.getDisplay();
-		originalDrawingSize = extractSize(canvas);
-		currentClipBounds = new Rectangle(0, 0, originalDrawingSize.x, originalDrawingSize.y);
 		this.surface = exst.getSurface();
 		this.skiaExtension = exst;
 		this.resources = skiaExtension.getResources();
 		this.style = style;
-
-		this.saveCount = surface.getCanvas().getSaveCount();
-	}
-
-	private static Point extractSize(Drawable drawable) {
-		Point size = new Point(0, 0);
-		if (drawable instanceof final Image image) {
-			final var imageBounds = image.getBounds();
-			size.x = imageBounds.width;
-			size.y = imageBounds.height;
-		} else if (drawable instanceof final Control control) {
-			size = control.getSize();
-		} else if (drawable instanceof final Device device) {
-			final var deviceBounds = device.getBounds();
-			size.x = deviceBounds.width;
-			size.y = deviceBounds.height;
-		}
-		return size;
+		// Save the initial canvas state so it can be fully restored on dispose()
+		this.initialSaveCount = this.surface.getCanvas().save();
 	}
 
 	@Override
 	public void dispose() {
 
 		resources.resetBaseColors();
-		surface.getCanvas().restoreToCount(0);
-		surface.getCanvas().resetMatrix();
+		// Restore all canvas state changes made during the lifetime of this GC,
+		// including any clipping or transform layers pushed after construction
+		surface.getCanvas().restoreToCount(initialSaveCount);
 
 	}
 
 	private void performDraw(Consumer<Paint> operations) {
 		try (final Paint paint = new Paint()) {
+			// Set up all paint properties first
 			paint.setAlpha(alpha);
 			paint.setColor(convertSWTColorToSkijaColor(getForeground(), this.alpha));
-
-			paint.setAntiAlias(this.antialias == SWT.OFF);
-			if (this.XORModeActive) {
+			paint.setAntiAlias(this.antialias != SWT.OFF);
+			if (this.xorModeActive) {
 				paint.setBlendMode(BlendMode.DIFFERENCE);
 			} else {
 				paint.setBlendMode(BlendMode.SRC_OVER);
 			}
 			paint.setMode(PaintMode.STROKE);
-
-			if (this.foregroundPattern != null && !this.foregroundPattern.isDisposed()) {
-				final Shader shader = convertSWTPatternToSkijaShader(this.foregroundPattern);
-				if (shader != null) {
-					paint.setShader(shader);
-				}
-			}
-
 			paint.setStrokeWidth(lineWidth);
-
-			final PaintStrokeCap cap = getSkijaLineCap();
-			paint.setStrokeCap(cap);
-
+			paint.setStrokeCap(getSkijaLineCap());
 			switch (this.lineStyle) {
 			case SWT.LINE_DOT ->
 			paint.setPathEffect(PathEffect.makeDash(new float[] { 1f * lineWidth, 1f * lineWidth }, 0.0f));
@@ -195,9 +163,17 @@ public class SkiaGC implements IExternalGC {
 					1f * lineWidth, 1f * lineWidth, 1f * lineWidth, 1f * lineWidth, 1f * lineWidth }, 0.0f));
 			default -> paint.setPathEffect(null);
 			}
-			;
-
-			operations.accept(paint);
+			// Set shader last and use try-with-resources to prevent resource leaks
+			if (this.foregroundPattern != null && !this.foregroundPattern.isDisposed()) {
+				try (Shader shader = convertSWTPatternToSkijaShader(this.foregroundPattern)) {
+					if (shader != null) {
+						paint.setShader(shader);
+					}
+					operations.accept(paint);
+				}
+			} else {
+				operations.accept(paint);
+			}
 		}
 	}
 
@@ -212,33 +188,27 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private void performDrawFilled(Consumer<Paint> operations) {
-		performDraw(paint -> {
+		try (final Paint paint = new Paint()) {
 			paint.setMode(PaintMode.FILL);
-			paint.setAntiAlias(true);
-			applyBackgroundPattern(paint);
-			operations.accept(paint);
-		});
-	}
-
-	private void applyBackgroundPattern(Paint paint) {
-		if (backgroundPattern != null && !backgroundPattern.isDisposed()) {
-			final Shader shader = convertSWTPatternToSkijaShader(backgroundPattern);
-			if (shader != null) {
-				paint.setShader(shader);
-				return;
+			// Set background color by default
+			if (this.alpha < 255) {
+				paint.setColor(convertSWTColorToSkijaColor(getBackground(), this.alpha));
+			} else {
+				paint.setColor(convertSWTColorToSkijaColor(getBackground()));
+			}
+			// If a background pattern is set, override color with shader using
+			// try-with-resources to prevent resource leaks
+			if (backgroundPattern != null && !backgroundPattern.isDisposed()) {
+				try (Shader shader = convertSWTPatternToSkijaShader(backgroundPattern)) {
+					if (shader != null) {
+						paint.setShader(shader);
+					}
+					operations.accept(paint);
+				}
+			} else {
+				operations.accept(paint);
 			}
 		}
-		// Fallback to backGround color if no pattern or pattern conversion failed
-		if (this.alpha < 255) {
-			paint.setColor(convertSWTColorToSkijaColor(getBackground(), this.alpha));
-		} else {
-			paint.setColor(convertSWTColorToSkijaColor(getBackground()));
-		}
-
-	}
-
-	private static String[] splitString(String text) {
-		return text.split("\r\n|\n|\r"); //$NON-NLS-1$
 	}
 
 	@Override
@@ -262,11 +232,11 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private static void logImageNull(int[] positionData) {
+
 		if (logImageNullError) {
-			final StringBuilder sb = new StringBuilder();
-			sb.append("SkijaGC.drawImage(..) Error: image is null! Postition parameters (as array):  "); //$NON-NLS-1$
-			sb.append(Arrays.toString(positionData));
-			new IllegalArgumentException(sb.toString()).printStackTrace(System.err);
+
+			Logger.logException(new IllegalArgumentException(
+					"Image argument is null. Position and size data: " + java.util.Arrays.toString(positionData))); //$NON-NLS-1$
 			logImageNullError = false;
 		}
 	}
@@ -304,14 +274,14 @@ public class SkiaGC implements IExternalGC {
 			return;
 		}
 
-		int factor = Math.round(Math.max(destWidth / srcWidth, destHeight / srcHeight));
+		int factor = Math.round(Math.max((float) destWidth / srcWidth, (float) destHeight / srcHeight));
 
 		if (factor == 0) {
 			factor = 1;
 		}
 		final Canvas canvas = surface.getCanvas();
 
-		final int fac = factor;
+		final int fac = (int) Math.ceil(factor);
 
 		performDraw(paint -> {
 			paint.setAlpha(alpha);
@@ -390,23 +360,18 @@ public class SkiaGC implements IExternalGC {
 		}
 
 		return ColorType.UNKNOWN;
-
-		// throw new UnsupportedOperationException("Unsupported SWT ColorType: " +
-		// Integer.toBinaryString(palette.redMask)
-		// + "__" + Integer.toBinaryString(palette.greenMask) + "__" +
-		// Integer.toBinaryString(palette.blueMask));
 	}
 
 	private io.github.humbleui.skija.Image convertSWTImageToSkijaImage(Image swtImage, int zoom) {
 
 		var img = resources.getCachedImage(swtImage, zoom);
 
-		if(img != null  && !img.isClosed()) {
+		if (img != null && !img.isClosed()) {
 			return img;
 		}
 
 		final ImageData imageData = swtImage.getImageData(zoom);
-		img =  convertSWTImageToSkijaImage(imageData);
+		img = convertSWTImageToSkijaImage(imageData);
 
 		resources.cacheImage(swtImage, zoom, img);
 
@@ -491,7 +456,7 @@ public class SkiaGC implements IExternalGC {
 		try (FileOutputStream fis = new FileOutputStream(f)) {
 			fis.write(imageBytes);
 		} catch (final Exception e) {
-			e.printStackTrace();
+			Logger.logException(e);
 		}
 	}
 
@@ -582,46 +547,6 @@ public class SkiaGC implements IExternalGC {
 		drawTextBlob(text, flags, x, y);
 	}
 
-	/**
-	 * Expands tab characters (\t) in the text to position-dependent spaces, so that
-	 * the next character aligns to the next tab stop (every 8 average character
-	 * widths by default). The expansion is based on the current x position and the
-	 * average character width of the font.
-	 *
-	 * @param text   The input text containing tab characters
-	 * @param startX The starting x position in pixels (used to calculate tab
-	 *               alignment)
-	 * @return The text with tabs expanded to spaces, aligned to the next tab stop
-	 */
-	private String expandTabs(String text, int startX) {
-		final StringBuilder result = new StringBuilder();
-		int currentX = 0;
-		final int spaceWidth = textExtent(" ").x; //$NON-NLS-1$
-		final float _avgCharWidth = getSkiaFont().getMetrics()._avgCharWidth;
-		int avgCharWidth = (int) _avgCharWidth;
-		if (avgCharWidth <= 0) {
-			avgCharWidth = spaceWidth > 0 ? spaceWidth : 1;
-		}
-		final int tabSpacingPx = 8 * avgCharWidth;
-		for (int i = 0; i < text.length(); i++) {
-			final char ch = text.charAt(i);
-			if (ch == '\t') {
-				final int offsetInTab = tabSpacingPx > 0 ? (currentX - startX) % tabSpacingPx : 0;
-				final int nextTabX = currentX + (tabSpacingPx - offsetInTab);
-				while (currentX < nextTabX) {
-					result.append(' ');
-					currentX += textExtent(" ").x; //$NON-NLS-1$
-				}
-			} else {
-				final String s = String.valueOf(ch);
-				final int charWidth = textExtent(s).x;
-				result.append(ch);
-				currentX += charWidth;
-			}
-		}
-		return result.toString();
-	}
-
 	private io.github.humbleui.skija.Font getSkiaFont() {
 		return this.resources.getSkiaFont();
 	}
@@ -632,54 +557,34 @@ public class SkiaGC implements IExternalGC {
 			return;
 		}
 
+		final String splits[] = this.resources.getTextSplits(inputText, flags);
+
+		if (USE_TEXT_CACHE) {
+			drawTextBlobWithCache(splits, flags, x, y);
+			return;
+		}
+
+		drawTextBlobNoCache(splits, flags, x, y);
+	}
+
+	private void drawTextBlobNoCache(String[] splits, int flags, int x, int y) {
+
 		final boolean transparent = isTransparent(flags);
-		final boolean replaceAmpersand = (flags & SWT.DRAW_MNEMONIC) != 0;
-		final boolean delimiter = (flags & SWT.DRAW_DELIMITER) != 0;
-		final boolean tabulatorExpansion = (flags & SWT.DRAW_TAB) != 0;
-
-		if (tabulatorExpansion) {
-			inputText = expandTabs(inputText, x);
-		} else {
-			inputText = inputText.replaceAll("\\t", ""); //$NON-NLS-1$ //$NON-NLS-2$
-		}
-
-		if (replaceAmpersand) {
-			inputText = replaceMnemonics(inputText);
-		}
-
-		// replace form feed characters with "\u240C" this is the unicode standard sign
-		// for form feed.
-		// unfortunately skia does not even render these form feed characters...
-		inputText = inputText.replace("\f", "\u240C"); //$NON-NLS-1$//$NON-NLS-2$
-
-		String[] splits;
-		if (delimiter) {
-			splits = splitString(inputText);
-		} else {
-			splits = new String[] { removeDelimiter(inputText) };
-		}
-
-		final var splitsToDraw = splits;
-
+		final boolean antiAlias = this.textAntiAlias == SWT.ON || this.textAntiAlias == SWT.DEFAULT;
+		final int[] yPos = new int[1];
+		yPos[0] = y;
 		final var f = getSkiaFont();
+
 		performDraw(fgp -> {
-
-			int yPos = y;
-
-			final boolean antiAlias = this.textAntiAlias == SWT.ON || this.textAntiAlias == SWT.DEFAULT;
 			fgp.setAntiAlias(antiAlias);
 			fgp.setMode(PaintMode.FILL);
-
 			f.setSubpixel(antiAlias);
 			f.setEdging(antiAlias ? FontEdging.SUBPIXEL_ANTI_ALIAS : FontEdging.ALIAS);
 
 			fgp.setStrokeWidth(1);
 			fgp.setStrokeCap(PaintStrokeCap.BUTT);
 			fgp.setPathEffect(null);
-
-			for (final var text : splitsToDraw) { // $NON-NLS-1$
-
-				final var rect = f.measureText(text, fgp);
+			for (final var text : splits) {
 
 				final var metric = f.getMetrics();
 				final var asc = metric.getAscent();
@@ -689,40 +594,157 @@ public class SkiaGC implements IExternalGC {
 				final var ascI = (int) Math.ceil(Math.abs(asc));
 				final var desI = (int) Math.ceil(Math.abs(des));
 				final var heightI = ascI + desI;
-				final var r = resources.getScaler().scaleSize(x, yPos);
+				final var r = resources.getScaler().scaleSize(x, yPos[0]);
 
 				if (!transparent) {
 
+					// draw rectangle background for the text.
+
+					// Skia draws a text with a slightly right shift. So textExtent is insufficient
+					// in the width to make sure, the background area is big enough
+					// So make the area a little bit wider.
+
+					// The background rectangle can be a little bit smaller, and in the worst
+					// case a small part of the text is not covered.
+					// Similar in windows. Actually for some fonts and sizes this solution is
+					// already better than windows.
+
+					// heuristic number. After 0.12 of the ascent, the text is usually sufficiently
+					// in the rectangle area.
+					final double endOfRectangle = Math.abs(asc) * 0.12;
+					final var rect = f.measureText(text, fgp);
+
+					final Point size = new Point((int) Math.ceil(rect.getWidth() + endOfRectangle),
+							(int) Math.ceil(heightI + leading));
+
 					performDrawFilled(paint -> {
-						surface.getCanvas().drawRect(new Rect(r.x, r.y, r.x + rect.getWidth(), r.y + heightI + leading),
-								paint);
+						surface.getCanvas().drawRect(new Rect(r.x, r.y, r.x + size.x, r.y + size.y), paint);
 					});
 
 				}
-
 				surface.getCanvas().drawString(text, r.x, r.y + ascI, f, fgp);
-				yPos += heightI + leading;
+				yPos[0] += heightI + leading;
 			}
 		});
 
 	}
 
-	private static String removeDelimiter(String inputText) {
-		return inputText.replaceAll("\r\n|\r|\n", ""); //$NON-NLS-1$//$NON-NLS-2$
+	private void drawTextBlobWithCache(String[] splits, int flags, int x, int y) {
+
+		final var f = getSkiaFont();
+		final FontProperties props = FontProperties.getFontProperties(getFont());
+		final boolean transparent = isTransparent(flags);
+		final int backgroundColor = this.alpha < 255 ? convertSWTColorToSkijaColor(getBackground(), this.alpha)
+				: convertSWTColorToSkijaColor(getBackground());
+		final int foregroundColor = convertSWTColorToSkijaColor(getForeground(), this.alpha);
+		final boolean antiAlias = this.textAntiAlias == SWT.ON || this.textAntiAlias == SWT.DEFAULT;
+
+		final int[] yPos = new int[1];
+		yPos[0] = y;
+		for (final var text : splits) {
+
+			final var cachedImage = this.resources.getTextImage(text, props, transparent, backgroundColor,
+					foregroundColor, antiAlias);
+			if (cachedImage != null && !cachedImage.isClosed()) {
+				surface.getCanvas().drawImage(cachedImage, x, yPos[0]);
+				yPos[0] += Math.ceil(cachedImage.getHeight());
+				continue;
+			}
+			performDraw(fgp -> {
+
+				fgp.setAntiAlias(antiAlias);
+				fgp.setMode(PaintMode.FILL);
+				f.setSubpixel(antiAlias);
+				f.setEdging(antiAlias ? FontEdging.SUBPIXEL_ANTI_ALIAS : FontEdging.ALIAS);
+
+				fgp.setStrokeWidth(1);
+				fgp.setStrokeCap(PaintStrokeCap.BUTT);
+				fgp.setPathEffect(null);
+				fgp.setBlendMode(BlendMode.SRC_IN);
+
+				final var rect = f.measureText(text, fgp);
+				final var metric = f.getMetrics();
+				final var asc = metric.getAscent();
+				final var des = metric.getDescent();
+				final var leading = metric.getLeading();
+
+				final var ascI = (int) Math.ceil(Math.abs(asc));
+				final var desI = (int) Math.ceil(Math.abs(des));
+				final var heightI = ascI + desI;
+				final var r = resources.getScaler().scaleSize(x, yPos[0]);
+
+				// skija draws a text with a slightly right shift. So textExtent is insufficient
+				// in
+				// the width. So make the background area a little bit wider.
+
+				// Idea:
+				// 1. the support surface should always be wide enough to contain the complete
+				// text.
+				// 2. the background rectangle can be a little bit smaller, and in the worst
+				// case a small part of the text is not covered.
+				// Similar in windows. Actually for some fonts and sizes this solution is
+				// already better than windows.
+
+				final double additionalArea = Math.abs(asc) * 2;
+
+				final Point size = new Point((int) Math.ceil(rect.getWidth() + additionalArea),
+						(int) Math.ceil(heightI + leading));
+
+				final int MAX_SURFACE_WIDTH = 8192; // Documented practical limit
+				int surfaceWidth = size.x;
+				if (surfaceWidth > MAX_SURFACE_WIDTH) {
+					Logger.logException(new IllegalStateException(
+							"Surface width restricted: calculated=" + surfaceWidth + ", max=" + MAX_SURFACE_WIDTH +
+							", font=" + props.name + ", size=" + size + ", backgroundColor=" + backgroundColor + ", foregroundColor=" + foregroundColor + ", antiAlias=" + antiAlias + ", transparent=" + transparent + ", text='" + text + "'"));
+					surfaceWidth = MAX_SURFACE_WIDTH;
+				}
+				if (surfaceWidth <= 0 || size.y <= 0) {
+					final StringBuilder sb = new StringBuilder();
+					sb.append("Calculated text image size is invalid. font=").append(props.name)
+					.append(", size=").append(size)
+					.append(", text='").append(text).append("'");
+					Logger.logException(new IllegalStateException(sb.toString()));
+					return;
+				}
+				try (Surface supportSurface = this.skiaExtension.createSupportSurface(surfaceWidth, size.y)) {
+
+					supportSurface.getCanvas().clear(0);
+					if (!transparent) {
+
+						// heuristic number. After 0.12 of the ascent, the text is usually sufficiently
+						// in the rectangle area.
+						final double endOfRectangle = Math.abs(asc) * 0.12;
+						// always clear the support surface, then fill a specific rectangle area with
+						// the background color, the rest stays transparent.
+						try (Paint p = new Paint()) {
+							p.setColor(convertSWTColorToSkijaColor(getBackground(), this.alpha));
+							p.setMode(PaintMode.FILL);
+							supportSurface.getCanvas().drawRect(
+									new Rect(0, 0, (int) Math.ceil(rect.getWidth() + endOfRectangle), size.y), p);
+						}
+
+					} else {
+						// very important at text on transparent background. Blend over the source,
+						// otherwise the text won't be visible.
+						fgp.setBlendMode(BlendMode.SRC_OVER);
+					}
+
+					supportSurface.getCanvas().drawString(text, 0, ascI, f, fgp);
+					final var image = supportSurface.makeImageSnapshot();
+					this.resources.cacheTextImage(text, props, transparent, backgroundColor, foregroundColor, antiAlias,
+							image);
+					surface.getCanvas().drawImage(image, r.x, r.y);
+					yPos[0] += Math.ceil(image.getHeight());
+
+				}
+
+			});
+		}
+
 	}
 
 	private static boolean isTransparent(int flags) {
 		return (SWT.DRAW_TRANSPARENT & flags) != 0;
-	}
-
-	private static String replaceMnemonics(String text) {
-		final int mnemonicIndex = text.lastIndexOf('&');
-		if (mnemonicIndex != -1) {
-			text = text.replaceAll("&", ""); //$NON-NLS-1$ //$NON-NLS-2$
-			// TODO Underline the mnemonic key
-			// it seems this also does not work in windows with a simple snippet.
-		}
-		return text;
 	}
 
 	@Override
@@ -817,36 +839,38 @@ public class SkiaGC implements IExternalGC {
 			return null;
 		}
 		final PathData data = swtPath.getPathData();
-		final io.github.humbleui.skija.PathBuilder skijaPath = new io.github.humbleui.skija.PathBuilder();
-		final float[] pts = data.points;
-		final byte[] types = data.types;
-		int pi = 0;
-		for (final byte type : types) {
-			switch (type) {
-			case SWT.PATH_MOVE_TO:
-				skijaPath.moveTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
-				break;
-			case SWT.PATH_LINE_TO:
-				skijaPath.lineTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
-				break;
-			case SWT.PATH_CUBIC_TO:
-				skijaPath.cubicTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
-						DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
-						DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
-				break;
-			case SWT.PATH_QUAD_TO:
-				skijaPath.quadTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
-						DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
-				break;
-			case SWT.PATH_CLOSE:
-				skijaPath.closePath();
-				break;
-			default:
+
+		try (final io.github.humbleui.skija.PathBuilder skijaPath = new io.github.humbleui.skija.PathBuilder()) {
+
+			final float[] pts = data.points;
+			final byte[] types = data.types;
+			int pi = 0;
+			for (final byte type : types) {
+				switch (type) {
+				case SWT.PATH_MOVE_TO:
+					skijaPath.moveTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
+					break;
+				case SWT.PATH_LINE_TO:
+					skijaPath.lineTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
+					break;
+				case SWT.PATH_CUBIC_TO:
+					skijaPath.cubicTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
+							DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
+							DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
+					break;
+				case SWT.PATH_QUAD_TO:
+					skijaPath.quadTo(DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]),
+							DpiScaler.autoScaleUp(pts[pi++]), DpiScaler.autoScaleUp(pts[pi++]));
+					break;
+				case SWT.PATH_CLOSE:
+					skijaPath.closePath();
+					break;
+				default:
+				}
 			}
+			final var p = skijaPath.build();
+			return p;
 		}
-		final var p = skijaPath.build();
-		skijaPath.close();
-		return p;
 	}
 
 	@Override
@@ -994,7 +1018,8 @@ public class SkiaGC implements IExternalGC {
 		}
 
 		// Create Skija path for the polygon
-		try (io.github.humbleui.skija.PathBuilder path = new io.github.humbleui.skija.PathBuilder()) { // Move to first point
+		try (io.github.humbleui.skija.PathBuilder path = new io.github.humbleui.skija.PathBuilder()) { // Move to first
+			// point
 			path.moveTo(DpiScaler.autoScaleUp(pointArray[0]), DpiScaler.autoScaleUp(pointArray[1]));
 			// Add lines to subsequent points
 			for (int i = 2; i < pointArray.length; i += 2) {
@@ -1010,23 +1035,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void fillRectangle(int x, int y, int width, int height) {
-
-		// final Paint p = new Paint();
-		// p.setAlpha(255);
-
-		// final Shader s = Shader.makeLinearGradient(0,0, 100 , 100 , new int[] {
-		// 0xFF00FFFF, 0x00FF00FF} );
-		// p.setShader(s);
-		//
-
-		// final var s = convertSWTPatternToSkijaShader(backgroundPattern);
-		//
-		// p.setShader(s);
-		// surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), p);
 		performDrawFilled(paint -> surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height), paint));
-
-		// surface.getCanvas().drawRect(createScaledRectangle(x, y, width, height),
-		// getBackgroundPaint());
 	}
 
 	@Override
@@ -1037,10 +1046,11 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public Point textExtent(String text, int flags) {
+		return resources.textExtent(text, flags);
+	}
 
-		final float height = getSkiaFont().getMetrics().getHeight();
-		final float width = getSkiaFont().measureTextWidth(replaceMnemonics(text));
-		return new Point((int) width, (int) height);
+	private static String replaceMnemonics(String text) {
+		return SkiaResources.replaceMnemonics(text);
 	}
 
 	@Override
@@ -1055,8 +1065,6 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setTransform(Transform transform) {
-
-		surface.getCanvas().restoreToCount(saveCount);
 
 		if (transform == null) {
 			currentTransform = Matrix33.IDENTITY;
@@ -1083,6 +1091,8 @@ public class SkiaGC implements IExternalGC {
 			surface.getCanvas().setMatrix(currentTransform);
 		}
 
+		// Save the canvas state after applying the new transform, so subsequent
+		// operations (e.g. clipping) can be stacked and later restored independently
 		surface.getCanvas().save();
 
 	}
@@ -1090,26 +1100,10 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void setAlpha(int alpha) {
 		alpha = alpha & 0xFF;
-
 		if (alpha < 0 || alpha > 255) {
 			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 		}
 		this.alpha = alpha;
-		// if (this.alpha != alpha) {
-		// if (hasAlphaLayer) {
-		// surface.getCanvas().restore();
-		// hasAlphaLayer = false;
-		// }
-		// this.alpha = alpha;
-		// if (alpha < 255) {
-		// try (Paint layerPaint = new Paint()) {
-		// layerPaint.setAlphaf(alpha / 255.0f);
-		// surface.getCanvas().saveLayer(null, layerPaint);
-		// layerPaint.close();
-		// }
-		// hasAlphaLayer = true;
-		// }
-		// }
 	}
 
 	@Override
@@ -1171,6 +1165,38 @@ public class SkiaGC implements IExternalGC {
 		return new Rect(r.x, r.y, r.width + r.x, r.height + r.y);
 	}
 
+	/**
+	 * Scales a rectangle from logical to physical pixels using only the global DPI
+	 * scale factor (no per-canvas zoom). Suitable for stateless callers such as
+	 * {@link org.eclipse.swt.internal.skia.SkiaCaretHandler}.
+	 */
+	public static Rect createScaledRectangleStatic(int x, int y, int width, int height) {
+		return new Rect(DpiScaler.autoScaleUp(x), DpiScaler.autoScaleUp(y), DpiScaler.autoScaleUp(x + width),
+				DpiScaler.autoScaleUp(y + height));
+	}
+
+	/**
+	 * Applies a sub-pixel offset to a rectangle based on a given stroke width.
+	 * Shared with stateless callers such as
+	 * {@link org.eclipse.swt.internal.skia.SkiaCaretHandler}.
+	 */
+	public static Rect offsetRectangleStatic(Rect rect, float strokeWidth) {
+		final boolean isDefaultLineWidth = strokeWidth == 0;
+		final float scaledOffsetValue;
+		if (isDefaultLineWidth) {
+			scaledOffsetValue = 0.5f;
+		} else {
+			final float effectiveLineWidth = DpiScaler.autoScaleUp(strokeWidth);
+			scaledOffsetValue = (effectiveLineWidth % 2 == 1) ? DpiScaler.autoScaleUp(0.5f) : 0f;
+		}
+		if (scaledOffsetValue != 0f) {
+			final float whaOffset = DpiScaler.autoScaleUp(1) - 1.0f;
+			return new Rect(rect.getLeft() + scaledOffsetValue, rect.getTop() + scaledOffsetValue,
+					rect.getRight() + scaledOffsetValue + whaOffset, rect.getBottom() + scaledOffsetValue + whaOffset);
+		}
+		return rect;
+	}
+
 	private float getScaledOffsetValue() {
 		final boolean isDefaultLineWidth = lineWidth == 0;
 		if (isDefaultLineWidth) {
@@ -1220,7 +1246,7 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	LineAttributes getLineAttributesInPixels() {
-		return new LineAttributes(lineWidth, SWT.CAP_FLAT, SWT.JOIN_MITER, SWT.LINE_SOLID, null, 0, 10);
+		return new LineAttributes(lineWidth, lineCap, lineJoin, lineStyle, lineDashes, dashOffset, miterLimit);
 	}
 
 	@Override
@@ -1245,33 +1271,43 @@ public class SkiaGC implements IExternalGC {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
 
-		io.github.humbleui.skija.Image skijaImage = convertSWTImageToSkijaImage(image, DpiScaler.getDeviceZoom());
-		final io.github.humbleui.skija.Image copiedArea = surface.makeImageSnapshot(
-				createScaledRectangle(x, y, skijaImage.getWidth(), skijaImage.getHeight()).toIRect());
+		final io.github.humbleui.skija.Image skijaImage = convertSWTImageToSkijaImage(image, DpiScaler.getDeviceZoom());
+		try (final io.github.humbleui.skija.Image copiedArea = surface.makeImageSnapshot(
+				createScaledRectangle(x, y, skijaImage.getWidth(), skijaImage.getHeight()).toIRect())) {
 
-		if (copiedArea == null) {
-			new IllegalArgumentException("Copied area is null: ").printStackTrace(System.err);
-			return;
+			if (copiedArea == null) {
+				SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+			}
+
+			try (final Surface imageSurface = surface.makeSurface(skijaImage.getWidth(), skijaImage.getHeight())) {
+				imageSurface.getCanvas().drawImage(copiedArea, 0, 0);
+				try (final io.github.humbleui.skija.Image snapshot = imageSurface.makeImageSnapshot()) {
+					final ImageData imgData = convertSkijaImageToImageData(snapshot);
+					Image i = null;
+					GC gc = null;
+					try {
+						i = new Image(device, imgData);
+						gc = new GC(image);
+						gc.drawImage(i, 0, 0);
+					} finally {
+						if (gc != null) {
+							gc.dispose();
+						}
+						if (i != null) {
+							i.dispose();
+						}
+					}
+				}
+			}
 		}
-
-		final Surface imageSurface = surface.makeSurface(skijaImage.getWidth(), skijaImage.getHeight());
-		final Canvas imageCanvas = imageSurface.getCanvas();
-		imageCanvas.drawImage(copiedArea, 0, 0);
-		skijaImage = imageSurface.makeImageSnapshot();
-		final ImageData imgData = convertSkijaImageToImageData(skijaImage);
-		final Image i = new Image(device, imgData);
-
-		final GC gc = new GC(image);
-		gc.drawImage(i, 0, 0);
-		gc.dispose();
-		i.dispose();
 	}
 
 	@Override
 	public void copyArea(int srcX, int srcY, int width, int height, int destX, int destY) {
-		final io.github.humbleui.skija.Image copiedArea = surface
-				.makeImageSnapshot(createScaledRectangle(srcX, srcY, width, height).toIRect());
-		surface.getCanvas().drawImage(copiedArea, DpiScaler.autoScaleUp(destX), DpiScaler.autoScaleUp(destY));
+		try (io.github.humbleui.skija.Image copiedArea = surface
+				.makeImageSnapshot(createScaledRectangle(srcX, srcY, width, height).toIRect())) {
+			surface.getCanvas().drawImage(copiedArea, DpiScaler.autoScaleUp(destX), DpiScaler.autoScaleUp(destY));
+		}
 	}
 
 	@Override
@@ -1428,7 +1464,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public boolean getXORMode() {
-		return XORModeActive;
+		return xorModeActive;
 	}
 
 	@Override
@@ -1443,7 +1479,7 @@ public class SkiaGC implements IExternalGC {
 	public void setClipping(Path path) {
 		final Canvas canvas = surface.getCanvas();
 		if (isClipSet) {
-			canvas.restore();
+			canvas.restore(); // pop the previously saved clip layer
 			isClipSet = false;
 		}
 		if (path == null) {
@@ -1452,35 +1488,38 @@ public class SkiaGC implements IExternalGC {
 		if (path.isDisposed()) {
 			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 		}
-		final io.github.humbleui.skija.Path skijaPath = convertSWTPathToSkijaPath(path);
-		if (skijaPath == null) {
-			return;
+		try (final io.github.humbleui.skija.Path skijaPath = convertSWTPathToSkijaPath(path)) {
+			if (skijaPath == null) {
+				return;
+			}
+			skijaPath.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
+			// Push a new canvas layer so the clip can be undone later with restore()
+			canvas.save();
+			isClipSet = true;
+			canvas.clipPath(skijaPath, ClipMode.INTERSECT, true);
 		}
-		skijaPath.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
-		canvas.save();
-		isClipSet = true;
-		canvas.clipPath(skijaPath, ClipMode.INTERSECT, true);
 	}
 
 	@Override
 	public void setClipping(Rectangle rect) {
 
-		/**
-		 * this is a minimal implementation for set clipping with skija.
-		 */
-
-		// skija seems to work with state layer which will be set on top of each other.
-		// if more layers will be used a more complex handling is necessary
+		// Skija uses a canvas state stack; each save() pushes a new layer,
+		// and restore() pops it, removing the clipping region set in that layer.
+		// Since only one clip is tracked at a time, no explicit restore() is needed
+		// here
+		// because the clip will be cleared when the next setClipping call is made or on
+		// dispose.
 		final Canvas canvas = surface.getCanvas();
 		if (isClipSet) {
-			canvas.restoreToCount(saveCount);
+			canvas.restore(); // pop the previously saved clip layer
 			isClipSet = false;
 		}
 		if (rect == null) {
-			currentClipBounds = new Rectangle(0, 0, originalDrawingSize.x, originalDrawingSize.y);
+			currentClipBounds = null;
 			return;
 		}
 		currentClipBounds = new Rectangle(rect.x, rect.y, rect.width, rect.height);
+		// Push a new canvas layer so the clip can be undone later with restore()
 		canvas.save();
 		canvas.clipRect(createScaledRectangle(rect));
 		isClipSet = true;
@@ -1490,18 +1529,14 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void setClipping(Region region) {
 
-		/**
-		 * this is a minimal implementation for set clipping with skija.
-		 */
-
-		// skija seems to work with state layer which will be set on top of each other.
-		// if more layers will be used a more complex handling is necessary
+		// Skija uses a canvas state stack; each save() pushes a new layer,
+		// and restore() pops it, removing the clipping region set in that layer.
 		final Canvas canvas = surface.getCanvas();
 		if (isClipSet) {
-			canvas.restore();
+			canvas.restore(); // pop the previously saved clip layer
 			isClipSet = false;
 		}
-		currentClipBounds = new Rectangle(0, 0, originalDrawingSize.x, originalDrawingSize.y);
+		currentClipBounds = null;
 		currentClipRegion = region;
 
 		if (region == null) {
@@ -1509,9 +1544,11 @@ public class SkiaGC implements IExternalGC {
 		}
 
 		final SkiaRegionCalculator calc = new SkiaRegionCalculator(region, skiaExtension);
-		final var skiaRegion = calc.getSkiaRegion();
+		// Push a new canvas layer so the clip can be undone later with restore()
 		canvas.save();
-		canvas.clipRegion(skiaRegion);
+		try (calc) {
+			canvas.clipRegion(calc.getSkiaRegion());
+		}
 		isClipSet = true;
 
 	}
@@ -1543,19 +1580,11 @@ public class SkiaGC implements IExternalGC {
 		// interpolation
 
 		switch (interpolation) {
-		case SWT.NONE:
-			this.interpolationMode = SamplingMode.DEFAULT; // Nearest neighbor
-			break;
-		case SWT.LOW:
-			this.interpolationMode = SamplingMode.LINEAR;
-			break;
-		case SWT.DEFAULT:
-			this.interpolationMode = SamplingMode.MITCHELL;
-		case SWT.HIGH:
-			this.interpolationMode = SamplingMode.CATMULL_ROM;
-			break;
-		default:
-			SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+		case SWT.NONE -> this.interpolationMode = SamplingMode.DEFAULT; // Nearest neighbor
+		case SWT.LOW -> this.interpolationMode = SamplingMode.LINEAR;
+		case SWT.DEFAULT -> this.interpolationMode = SamplingMode.MITCHELL;
+		case SWT.HIGH -> this.interpolationMode = SamplingMode.CATMULL_ROM;
+		default -> SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 		}
 	}
 
@@ -1723,7 +1752,7 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public void setXORMode(boolean xor) {
 
-		this.XORModeActive = xor;
+		this.xorModeActive = xor;
 
 	}
 
@@ -1882,4 +1911,39 @@ public class SkiaGC implements IExternalGC {
 		return fe;
 	}
 
+	@Override
+	public Drawable getDrawable() {
+		return canvas;
+	}
+
+	@Override
+	public void textLayoutDraw(TextLayout textLayout, GC gc, int xInPoints, int yInPoints, int selectionStart,
+			int selectionEnd, Color selectionForeground, Color selectionBackground, int flags) {
+
+		final var rectangle = textLayout.getBounds();
+
+		Image i = null;
+		GC nativeGC = null;
+		try {
+			i = new Image(device, rectangle.width, rectangle.height);
+			nativeGC = new GC(i);
+
+			textLayout.draw(nativeGC, 0, 0, selectionStart, selectionEnd, selectionForeground, selectionBackground,
+					flags);
+
+			drawImage(i, rectangle.x, rectangle.y, rectangle.width, rectangle.height, xInPoints, yInPoints,
+					rectangle.width, rectangle.height);
+		} finally {
+			if (nativeGC != null) {
+				nativeGC.dispose();
+			}
+			if (i != null) {
+				i.dispose();
+			}
+		}
+
+	}
+
 }
+
+

@@ -1,21 +1,34 @@
+/*******************************************************************************
+ * Copyright (c) 2025 SAP SE and others.
+ *
+ * This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
 package org.eclipse.swt.internal.skia;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageVersion;
+import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.internal.canvasext.DpiScaler;
 import org.eclipse.swt.internal.canvasext.FontProperties;
-import org.eclipse.swt.internal.canvasext.ImageVersion;
+import org.eclipse.swt.internal.graphics.SkiaGC;
 import org.eclipse.swt.internal.skia.cache.ImageKey;
+import org.eclipse.swt.internal.skia.cache.ImageTextKey;
+import org.eclipse.swt.internal.skia.cache.SplitsTextCache;
 import org.eclipse.swt.widgets.Canvas;
-import org.eclipse.swt.widgets.Display;
 
 import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.FontHinting;
@@ -27,17 +40,55 @@ import io.github.humbleui.skija.Typeface;
 public class SkiaResources {
 	private final static boolean USE_IMAGE_CACHE = true;
 
+	/** Maximum number of entries kept in the text-image LRU cache. */
+	private static final int TEXT_IMAGE_CACHE_MAX = 512;
+
+	/** Maximum number of entries kept in the SWT→Skija image LRU cache. */
+	private static final int IMAGE_CACHE_MAX = 256;
+
+	/**
+	 * LRU cache that automatically closes the evicted Skija image when the cache
+	 * exceeds its capacity. Must only be accessed from the SWT UI thread.
+	 */
+	private static final class LruImageCache<K> extends LinkedHashMap<K, io.github.humbleui.skija.Image> {
+		private static final long serialVersionUID = -4958211475619287841L;
+		private final int maxSize;
+
+		LruImageCache(int maxSize) {
+			super(maxSize + 1, 0.75f, /* accessOrder= */ true);
+			this.maxSize = maxSize;
+		}
+
+		@Override
+		protected boolean removeEldestEntry(Map.Entry<K, io.github.humbleui.skija.Image> eldest) {
+			if (size() > maxSize) {
+				// Close the native Skija image before evicting it from the cache.
+				final io.github.humbleui.skija.Image image = eldest.getValue();
+				if (image != null && !image.isClosed()) {
+					image.close();
+				}
+				return true;
+			}
+			return false;
+		}
+	}
+
 	private Color background;
 	private Color foreground;
 	private final Canvas canvas;
 	private Font swtFont;
 	private io.github.humbleui.skija.Font skiaFont;
 
-	private final Map<String, String> fontNameMapping = new ConcurrentHashMap<>();
-	private final Set<String> unkownFonts = new HashSet<>();
+	// cache access only from UI thread, so no need for concurrent map
+	private final Map<String, String> fontNameMapping = new HashMap<>();
+	private final Set<String> unknownFonts = new HashSet<>();
+	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new HashMap<>();
+	private final LruImageCache<ImageKey> imageCache = new LruImageCache<>(IMAGE_CACHE_MAX);
+	private final LruImageCache<ImageTextKey> textImageCache = new LruImageCache<>(TEXT_IMAGE_CACHE_MAX);
+	private final Map<SplitsTextCache, String[]> cachedTextSplits = new HashMap<>();
 
-	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new ConcurrentHashMap<>();
-	private final Map<ImageKey, io.github.humbleui.skija.Image> imageCache = new HashMap<>();
+	// ---------------------------------------------------------------------------------
+
 	private final ISkiaCanvasExtension skiaExtension;
 
 	public SkiaResources(Canvas canvas, ISkiaCanvasExtension skiaExtension) {
@@ -118,7 +169,8 @@ public class SkiaResources {
 		}
 
 		final FontStyle style = new FontStyle(props.lfWeight, 5, slant);
-		final io.github.humbleui.skija.Font skijaFont = new io.github.humbleui.skija.Font(extractTypeface(props, style));
+		final io.github.humbleui.skija.Font skijaFont = new io.github.humbleui.skija.Font(
+				extractTypeface(props, style));
 
 		if (props.lfWidth != 0) {
 			final float stretch = (float) ((props.lfWidth / 10.0) + 0.5);
@@ -126,17 +178,16 @@ public class SkiaResources {
 		}
 
 		int fontSize = (props.lfHeight);
-		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
-			fontSize = skiaExtension.getScaler().getZoomedFontSize(fontSize);
-		}
-		if (SWT.getPlatform().equals("gtk") || true) { //$NON-NLS-1$
-			// TODO move this to the local font size calculation in gtk
-			// this should be done in the scaler.
-			fontSize = (fontSize * Display.getDefault().getDPI().y) / 72;
-		}
+		fontSize = skiaExtension.getScaler().getZoomedFontSize(fontSize);
+
+		//		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
+		//			fontSize = skiaExtension.getScaler().getZoomedFontSize(fontSize);
+		//		}else { // currently the other system is linux/gtk
+		//			// Convert font size from points to pixels using the device DPI
+		//			// TODO: move platform-specific font size calculation into the scaler
+		//			fontSize = (fontSize * Display.getDefault().getDPI().y) / 72;
+		//		}
 		skijaFont.setSize(fontSize);
-		// --------------------------------------------------
-		// This might be the same option like the windows gdi text antialias option.
 		skijaFont.setEdging(FontEdging.SUBPIXEL_ANTI_ALIAS);
 		skijaFont.setSubpixel(true);
 		skijaFont.setHinting(FontHinting.NORMAL);
@@ -151,34 +202,35 @@ public class SkiaResources {
 		var name = props.name;
 		name = name.trim();
 
-		if(fontNameMapping.containsKey(name)) {
+		if (fontNameMapping.containsKey(name)) {
 			return fm.matchFamilyStyle(fontNameMapping.get(name), style);
 		}
 
-		if(unkownFonts.contains(name)) {
+		if (unknownFonts.contains(name)) {
 			return fm.matchFamilyStyle(null, style);
 		}
 
 		var bestMatch = findBestFit(name);
 
-		if(bestMatch == null) {
+		if (bestMatch == null) {
 			bestMatch = findBestFit(name.replaceAll("[^\\p{L}\\p{N}]+", " ")); //$NON-NLS-1$ //$NON-NLS-2$
 		}
 
-		if(bestMatch != null) {
+		if (bestMatch != null) {
 			fontNameMapping.put(name, bestMatch);
 			return fm.matchFamilyStyle(bestMatch, style);
 		}
 
 		if (SWT.getPlatform().equals("win32")) { //$NON-NLS-1$
-			//arabic fonts are no longer supported on windows. Also windows falls back to arial
-			if(name.toLowerCase().startsWith("arabic ")) { //$NON-NLS-1$
+			// arabic fonts are no longer supported on windows. Also windows falls back to
+			// arial
+			if (name.toLowerCase().startsWith("arabic ")) { //$NON-NLS-1$
 				fontNameMapping.put(name, "Arial");
 				return fm.matchFamilyStyle("Arial", style); //$NON-NLS-1$
 			}
 		}
-		// no font found, fallback to arial and cache
-		unkownFonts.add(name);
+		// No matching font found, use system default
+		unknownFonts.add(name);
 		return fm.matchFamilyStyle(null, style);
 
 	}
@@ -186,10 +238,9 @@ public class SkiaResources {
 	private static String findBestFit(String name) {
 		final String[] parts = name.split(" "); //$NON-NLS-1$
 
-		for(int i = 0; i < parts.length; i++) {
+		for (int i = 0; i < parts.length; i++) {
 			parts[i] = parts[i].trim();
 		}
-
 
 		final FontMgr fm = FontMgr.getDefault();
 		final var count = fm.getFamiliesCount();
@@ -197,18 +248,18 @@ public class SkiaResources {
 		String bestMatch = null;
 		int bestMatchScore = 0;
 
-		for(int i = 0; i < count; i++) {
+		for (int i = 0; i < count; i++) {
 
 			final var f = fm.getFamilyName(i);
 
 			int score = 0;
 			for (final String part : parts) {
-				if(f.toLowerCase().contains(part.toLowerCase())) {
+				if (f.toLowerCase().contains(part.toLowerCase())) {
 					score++;
 				}
 			}
 
-			if(score > bestMatchScore) {
+			if (score > bestMatchScore) {
 				bestMatchScore = score;
 				bestMatch = f;
 			}
@@ -258,8 +309,17 @@ public class SkiaResources {
 
 		imageCache.clear();
 
+		textImageCache.values().forEach(i -> {
+			if (!i.isClosed()) {
+				i.close();
+			}
+		});
+
+		textImageCache.clear();
+		cachedTextSplits.clear();
+
 		fontNameMapping.clear();
-		unkownFonts.clear();
+		unknownFonts.clear();
 
 	}
 
@@ -280,7 +340,7 @@ public class SkiaResources {
 	}
 
 	public void cacheImage(Image swtImage, int zoom, io.github.humbleui.skija.Image skijaImage) {
-		if (USE_IMAGE_CACHE ) {
+		if (USE_IMAGE_CACHE) {
 			final var key = new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom);
 			final var old = imageCache.get(key);
 			if (old != null && !old.isClosed()) {
@@ -294,4 +354,145 @@ public class SkiaResources {
 		return this.imageCache.get(new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom));
 	}
 
+	/**
+	 * Creates a Skija font from an SWT font.
+	 * TODO: implement proper SWT-to-Skija font conversion
+	 */
+	public static io.github.humbleui.skija.Font createSkiaFont(Font font) {
+		return null;
+	}
+
+	public void cacheTextImage(String text, FontProperties fontProperties, boolean transparent, int background,
+			int foreground, boolean antiAlias, io.github.humbleui.skija.Image skijaImage) {
+		if (USE_IMAGE_CACHE) {
+			final var key = new ImageTextKey(text, fontProperties, transparent, background, foreground, antiAlias);
+			final var old = textImageCache.get(key);
+			if (old != null && !old.isClosed()) {
+				old.close();
+			}
+			this.textImageCache.put(key, skijaImage);
+		}
+	}
+
+	public io.github.humbleui.skija.Image getTextImage(String text, FontProperties fontProperties, boolean transparent,
+			int background, int foreground, boolean antialias) {
+		return this.textImageCache.get(new ImageTextKey(text, fontProperties, transparent, background, foreground, antialias));
+	}
+
+	private static String[] splitString(String text) {
+		return text.split("\r\n|\n|\r"); //$NON-NLS-1$
+	}
+
+	public String[] getTextSplits(String inputText, int flags) {
+
+		final boolean replaceAmpersand = (flags & SWT.DRAW_MNEMONIC) != 0;
+		final boolean delimiter = (flags & SWT.DRAW_DELIMITER) != 0;
+		final boolean tabulatorExpansion = (flags & SWT.DRAW_TAB) != 0;
+
+		String[] splits = null;
+
+		if (SkiaGC.USE_TEXT_CACHE) {
+			splits = cachedTextSplits
+					.get(new SplitsTextCache(inputText, replaceAmpersand, delimiter, tabulatorExpansion));
+		}
+
+		String workInputText = inputText;
+
+
+		if (splits == null) {
+			if (tabulatorExpansion) {
+				workInputText = expandTabs(workInputText, 0);
+			} else {
+				workInputText = workInputText.replaceAll("\\t", ""); //$NON-NLS-1$ //$NON-NLS-2$
+			}
+
+			if (replaceAmpersand) {
+				workInputText = replaceMnemonics(workInputText);
+			}
+
+			// replace form feed characters with "\u240C" this is the unicode standard sign
+			// for form feed.
+			// unfortunately skia does not even render these form feed characters...
+			workInputText = workInputText.replace("\f", "\u240C"); //$NON-NLS-1$//$NON-NLS-2$
+
+			if (delimiter) {
+				splits = splitString(workInputText);
+			} else {
+				splits = new String[] { removeDelimiter(workInputText) };
+			}
+		}
+
+		if (SkiaGC.USE_TEXT_CACHE) {
+			cachedTextSplits.put(new SplitsTextCache(inputText, replaceAmpersand, delimiter, tabulatorExpansion),
+					splits);
+		}
+		return splits;
+	}
+
+	/**
+	 * Expands tab characters (\t) in the text to position-dependent spaces, so that
+	 * the next character aligns to the next tab stop (every 8 average character
+	 * widths by default). The expansion is based on the current x position and the
+	 * average character width of the font.
+	 *
+	 * @param text   The input text containing tab characters
+	 * @param startX The starting x position in pixels (used to calculate tab
+	 *               alignment)
+	 * @return The text with tabs expanded to spaces, aligned to the next tab stop
+	 */
+	private String expandTabs(String text, int startX) {
+		final StringBuilder result = new StringBuilder();
+		int currentX = 0;
+		// Measure space width exactly once — it is constant for the current font.
+		final int spaceWidth = textExtent(" ").x; //$NON-NLS-1$
+		final float avgCharWidthF = getSkiaFont().getMetrics()._avgCharWidth;
+		int avgCharWidth = (int) avgCharWidthF;
+		if (avgCharWidth <= 0) {
+			avgCharWidth = spaceWidth > 0 ? spaceWidth : 1;
+		}
+		final int tabSpacingPx = 8 * avgCharWidth;
+		for (int i = 0; i < text.length(); i++) {
+			final char ch = text.charAt(i);
+			if (ch == '\t') {
+				final int offsetInTab = tabSpacingPx > 0 ? (currentX - startX) % tabSpacingPx : 0;
+				final int nextTabX = currentX + (tabSpacingPx - offsetInTab);
+				while (currentX < nextTabX) {
+					result.append(' ');
+					// reuse the already-measured spaceWidth instead of calling textExtent again
+					currentX += spaceWidth;
+				}
+			} else {
+				// measureTextWidth avoids creating an intermediate String object per character
+				final int charWidth = (int) getSkiaFont().measureTextWidth(String.valueOf(ch));
+				result.append(ch);
+				currentX += charWidth;
+			}
+		}
+		return result.toString();
+	}
+
+	public Point textExtent(String text, int flags) {
+
+		final float height = getSkiaFont().getMetrics().getHeight();
+		final float width = getSkiaFont().measureTextWidth(replaceMnemonics(text));
+		return new Point((int) width, (int) height);
+	}
+
+	public Point textExtent(String string) {
+		return textExtent(string, SWT.NONE);
+	}
+
+	private static String removeDelimiter(String inputText) {
+		return inputText.replaceAll("\r\n|\r|\n", ""); //$NON-NLS-1$//$NON-NLS-2$
+	}
+
+	public static String replaceMnemonics(String text) {
+		final int mnemonicIndex = text.lastIndexOf('&');
+		if (mnemonicIndex != -1) {
+			text = text.replaceAll("&", ""); //$NON-NLS-1$ //$NON-NLS-2$
+			// TODO Underline the mnemonic key
+			// it seems this also does not work in windows with a simple snippet.
+		}
+		return text;
+	}
 }

@@ -112,4 +112,28 @@ public class FontProperties {
 	private record FontName(String baseName, String detectedStretch) {
 	}
 
+	@Override
+	public int hashCode() {
+		return Objects.hash(lfEscapement, lfHeight, lfItalic, lfOrientation, lfStrikeOut, lfUnderline, lfWeight,
+				lfWidth, name);
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		FontProperties other = (FontProperties) obj;
+		return lfEscapement == other.lfEscapement && lfHeight == other.lfHeight && lfItalic == other.lfItalic
+				&& lfOrientation == other.lfOrientation && lfStrikeOut == other.lfStrikeOut
+				&& lfUnderline == other.lfUnderline && lfWeight == other.lfWeight && lfWidth == other.lfWidth
+				&& Objects.equals(name, other.name);
+	}
+
+
+
+
 }

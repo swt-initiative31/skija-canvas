@@ -9,12 +9,16 @@
  * SPDX-License-Identifier: EPL-2.0
  *******************************************************************************/
 package org.eclipse.swt.internal.canvasext;
+
+import java.util.function.*;
+import org.eclipse.swt.widgets.*;
+
 /**
  * Interface with features necessary for external canvas handling.
  */
 public interface IExternalCanvasHandler {
 
-	Object paint(PaintEventSender s, long wParam, long lParam);
+	Object paint(Consumer<Event> consumer, long wParam, long lParam);
 
 	void redrawTriggered();
 

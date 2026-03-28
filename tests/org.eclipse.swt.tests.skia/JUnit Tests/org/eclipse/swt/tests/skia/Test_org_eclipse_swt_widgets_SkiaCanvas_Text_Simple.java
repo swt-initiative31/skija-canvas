@@ -21,7 +21,6 @@ import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Rectangle;
-import org.eclipse.swt.internal.canvasext.DpiScalerUtil;
 import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.widgets.Display;
 import org.junit.jupiter.api.AfterEach;
@@ -50,14 +49,8 @@ public class Test_org_eclipse_swt_widgets_SkiaCanvas_Text_Simple {
 	}
 
 	@Test
-	@Disabled("This test does not seem to work on linux/gtk4. It works locally on linux/gtk3.")
+	@Disabled("This test does not seem to work on linux/gtk4 and win32. It works locally on linux/gtk3.")
 	public void test_org_eclipse_swt_skia_drawText() {
-
-		if (SWT.getPlatform().startsWith("win32")) {
-			// This test does not seem to work on windows.
-			return;
-		}
-
 		executeTextCompareTest(letter, zoom, size);
 	}
 

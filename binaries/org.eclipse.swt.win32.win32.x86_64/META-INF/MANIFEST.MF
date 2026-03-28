@@ -16,7 +16,6 @@ Export-Package:
  org.eclipse.swt.events,
  org.eclipse.swt.graphics,
  org.eclipse.swt.internal;x-friends:="org.eclipse.ui",
- org.eclipse.swt.internal.canvasext;x-friends:="org.eclipse.swt.tests.skia",
  org.eclipse.swt.internal.gdip;x-internal:=true,
  org.eclipse.swt.internal.image;x-internal:=true,
  org.eclipse.swt.internal.ole.win32;x-internal:=true,

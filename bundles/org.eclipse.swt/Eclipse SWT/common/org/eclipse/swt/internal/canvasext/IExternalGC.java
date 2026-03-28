@@ -177,4 +177,9 @@ public interface IExternalGC {
 
 	FontMetrics getFontMetrics();
 
+	Drawable getDrawable();
+
+	void textLayoutDraw(TextLayout textLayout, GC gc, int xInPoints, int yInPoints, int selectionStart,
+			int selectionEnd, Color selectionForeground, Color selectionBackground, int flags);
+
 }

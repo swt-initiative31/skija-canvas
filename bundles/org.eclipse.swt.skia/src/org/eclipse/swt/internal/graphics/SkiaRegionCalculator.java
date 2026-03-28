@@ -1,3 +1,13 @@
+/*******************************************************************************
+ * Copyright (c) 2025 SAP SE and others.
+ *
+ * This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License 2.0
+ * which accompanies this distribution, and is available at
+ * https://www.eclipse.org/legal/epl-2.0/
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ *******************************************************************************/
 package org.eclipse.swt.internal.graphics;
 
 import java.util.HashMap;
@@ -5,15 +15,15 @@ import java.util.HashMap;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.graphics.Region;
-import org.eclipse.swt.internal.canvasext.RegionLog.OpType;
-import org.eclipse.swt.internal.canvasext.RegionLog.Operation;
-import org.eclipse.swt.internal.canvasext.RegionLogProvider;
+import org.eclipse.swt.graphics.RegionLog;
+import org.eclipse.swt.graphics.RegionLog.OpType;
+import org.eclipse.swt.graphics.RegionLog.Operation;
 import org.eclipse.swt.internal.skia.ISkiaCanvasExtension;
 
 import io.github.humbleui.skija.RegionOp;
 import io.github.humbleui.types.IRect;
 
-public class SkiaRegionCalculator {
+public class SkiaRegionCalculator implements AutoCloseable {
 
 	final static HashMap<OpType, RegionOp> operationMapping = new HashMap<OpType, RegionOp>();
 
@@ -42,14 +52,22 @@ public class SkiaRegionCalculator {
 		}
 
 		final io.github.humbleui.skija.Region reg = new io.github.humbleui.skija.Region();
-		final RegionLogProvider prov = new RegionLogProvider(region);
-		for (final var o : prov.getLog().getOperations()) {
+		final var log = RegionLog.getLog(region);
+		for (final var o : log.getOperations()) {
 			apply(o, reg);
 		}
 
 		calculatedRegion = reg;
 		return calculatedRegion;
 
+	}
+
+	@Override
+	public void close() {
+		if (calculatedRegion != null) {
+			calculatedRegion.close();
+			calculatedRegion = null;
+		}
 	}
 
 	private void apply(Operation o, io.github.humbleui.skija.Region reg) {
@@ -61,14 +79,7 @@ public class SkiaRegionCalculator {
 
 		if (OpType.TRANSLATE.equals(o.type())) {
 			if (o.executionObject() instanceof final Point p) {
-
-				if (this.skiaExtension != null && this.skiaExtension.getTransformation() != null) {
-					// in this case we only expect the standard transformation for mac
-					reg.translate(p.x, -p.y);
-				} else {
-					reg.translate(p.x, p.y);
-				}
-
+				reg.translate(p.x, p.y);
 				return;
 			}
 		}
@@ -83,16 +94,20 @@ public class SkiaRegionCalculator {
 			final var tempReg = createPolygonSkiaRegion(polygon);
 			reg.op(tempReg, skiaOperation);
 		} else if (ob instanceof final Rectangle rec) {
-			final var irect = createIRect(rec);
+			final var irect = createRectRegion(rec);
 			reg.op(irect, skiaOperation);
 		} else if (ob instanceof final Region otherReg) {
-			final SkiaRegionCalculator src = new SkiaRegionCalculator(otherReg, skiaExtension);
-			reg.op(src.getSkiaRegion(), skiaOperation);
+			try (final SkiaRegionCalculator src = new SkiaRegionCalculator(otherReg, skiaExtension)) {
+				reg.op(src.getSkiaRegion(), skiaOperation);
+			}
 		}
 
 	}
 
-	private io.github.humbleui.skija.Region createIRect(Rectangle rec) {
+	/**
+	 * Creates a Skija region from an SWT rectangle by converting it to a polygon.
+	 */
+	private io.github.humbleui.skija.Region createRectRegion(Rectangle rec) {
 		final var rect = new IRect(rec.x, rec.y, rec.x + rec.width, rec.y + rec.height);
 
 		return createPolygonSkiaRegion(new int[] { rect.getLeft(), rect.getTop(), rect.getRight(), rect.getTop(),
@@ -109,14 +124,7 @@ public class SkiaRegionCalculator {
 
 			final Point maxV = getMax(polygon);
 
-			if (this.skiaExtension != null && this.skiaExtension.getTransformation() != null) {
-				p.transform(this.skiaExtension.getTransformation());
-				final int width = this.skiaExtension.getSurface().getWidth();
-				final int height = this.skiaExtension.getSurface().getHeight();
-				r.setRect(new IRect(0, 0, width, height));
-			} else {
-				r.setRect(new IRect(0, 0, maxV.x, maxV.y));
-			}
+			r.setRect(new IRect(0, 0, maxV.x, maxV.y));
 
 			// a path has to be set for a clipping region.
 			// so first we have to create a region big enough for the path and then set the

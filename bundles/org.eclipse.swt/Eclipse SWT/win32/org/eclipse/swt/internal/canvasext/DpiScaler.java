@@ -80,6 +80,8 @@ public class DpiScaler {
 	}
 
 	public int getZoomedFontSize(int fontSize) {
+		// dpi to inch
+		fontSize = (fontSize * Display.getDefault().getDPI().y) / 72;
 		return (fontSize * canvas.nativeZoom) / 100;
 	}
 

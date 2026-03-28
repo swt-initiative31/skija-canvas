@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2025 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -16,6 +16,7 @@ package org.eclipse.swt.graphics;
 
 import org.eclipse.swt.*;
 import org.eclipse.swt.internal.cairo.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.internal.gtk.*;
 
 /**
@@ -45,6 +46,8 @@ public final class Region extends Resource {
 	 * @noreference This field is not intended to be referenced by clients.
 	 */
 	public long handle;
+
+	private final RegionLog log = new RegionLog();
 
 /**
  * Constructs a new empty region.
@@ -91,6 +94,14 @@ public Region(Device device) {
 Region(Device device, long handle) {
 	super(device);
 	this.handle = handle;
+}
+
+/**
+* @noreference This method is not intended to be referenced by clients.
+* @return a log characterizing the region
+*/
+public RegionLog getLog() {
+	return log;
 }
 
 static long gdk_region_polygon(int[] pointArray, int npoints, int fill_rule) {
@@ -161,6 +172,7 @@ public void add (int[] pointArray) {
 	* with enough points for a polygon.
 	*/
 	if (pointArray.length < 6) return;
+	log.add(pointArray);
 	long polyRgn = gdk_region_polygon(pointArray, pointArray.length / 2, GDK.GDK_EVEN_ODD_RULE);
 	Cairo.cairo_region_union(handle, polyRgn);
 	Cairo.cairo_region_destroy(polyRgn);
@@ -207,6 +219,7 @@ public void add(Rectangle rect) {
 public void add(int x, int y, int width, int height) {
 	if (isDisposed()) SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
 	if (width < 0 || height < 0) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+	log.add(new Rectangle(x, y, width, height));
 	cairo_rectangle_int_t rect = new cairo_rectangle_int_t();
 	rect.x = x;
 	rect.y = y;
@@ -234,6 +247,7 @@ public void add(Region region) {
 	if (isDisposed()) SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
 	if (region == null) SWT.error(SWT.ERROR_NULL_ARGUMENT);
 	if (region.isDisposed()) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+	log.add(region);
 	Cairo.cairo_region_union(handle, region.handle);
 }
 
@@ -395,6 +409,7 @@ public void intersect(Rectangle rect) {
 public void intersect(int x, int y, int width, int height) {
 	if (isDisposed()) SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
 	if (width < 0 || height < 0) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+	log.intersect(new Rectangle(x,y,width,height));
 	cairo_rectangle_int_t rect = new cairo_rectangle_int_t();
 	rect.x = x;
 	rect.y = y;
@@ -426,6 +441,7 @@ public void intersect(Region region) {
 	if (isDisposed()) SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
 	if (region == null) SWT.error(SWT.ERROR_NULL_ARGUMENT);
 	if (region.isDisposed()) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+	log.intersect(region);
 	Cairo.cairo_region_intersect(handle, region.handle);
 }
 
@@ -448,10 +464,6 @@ public void intersect(Region region) {
  */
 public boolean intersects (int x, int y, int width, int height) {
 	if (isDisposed()) SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
-	return intersects(new Rectangle(x, y, width, height));
-}
-
-boolean intersectsInPixels (int x, int y, int width, int height) {
 	cairo_rectangle_int_t rect = new cairo_rectangle_int_t();
 	rect.x = x;
 	rect.y = y;
@@ -478,12 +490,7 @@ boolean intersectsInPixels (int x, int y, int width, int height) {
  */
 public boolean intersects(Rectangle rect) {
 	if (rect == null) SWT.error(SWT.ERROR_NULL_ARGUMENT);
-	if (isDisposed()) SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
-	return intersectsInPixels(rect);
-}
-
-boolean intersectsInPixels(Rectangle rect) {
-	return intersectsInPixels(rect.x, rect.y, rect.width, rect.height);
+	return intersects(rect.x, rect.y, rect.width, rect.height);
 }
 
 /**
@@ -541,6 +548,7 @@ public void subtract (int[] pointArray) {
 	* with enough points for a polygon.
 	*/
 	if (pointArray.length < 6) return;
+	log.subtract(pointArray);
 	long polyRgn = gdk_region_polygon(pointArray, pointArray.length / 2, GDK.GDK_EVEN_ODD_RULE);
 	Cairo.cairo_region_subtract(handle, polyRgn);
 	Cairo.cairo_region_destroy(polyRgn);
@@ -588,6 +596,7 @@ public void subtract(Rectangle rect) {
 public void subtract(int x, int y, int width, int height) {
 	if (isDisposed()) SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
 	if (width < 0 || height < 0) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+	log.subtract(new Rectangle(x,y,width,height));
 	cairo_rectangle_int_t rect = new cairo_rectangle_int_t ();
 	rect.x = x;
 	rect.y = y;
@@ -619,6 +628,7 @@ public void subtract(Region region) {
 	if (isDisposed()) SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
 	if (region == null) SWT.error(SWT.ERROR_NULL_ARGUMENT);
 	if (region.isDisposed()) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+	log.subtract(region);
 	Cairo.cairo_region_subtract(handle, region.handle);
 }
 
@@ -637,6 +647,7 @@ public void subtract(Region region) {
  */
 public void translate (int x, int y) {
 	if (isDisposed()) SWT.error(SWT.ERROR_GRAPHIC_DISPOSED);
+	log.translate(new Point(x,y));
 	Cairo.cairo_region_translate (handle, x, y);
 }
 

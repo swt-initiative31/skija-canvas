@@ -119,12 +119,12 @@ long defaultFont () {
  */
 public Rectangle getBounds () {
 	checkWidget();
-	return Win32DPIUtils.pixelToPoint(getBoundsInPixels(), getZoom());
+	return Win32DPIUtils.pixelToPoint(getBoundsInPixels(), getAutoscalingZoom());
 }
 
 Rectangle getBoundsInPixels () {
 	if (image != null) {
-		Rectangle rect = Win32DPIUtils.pointToPixel(image.getBounds(), getZoom());
+		Rectangle rect = Win32DPIUtils.pointToPixel(image.getBounds(), getAutoscalingZoom());
 		return new Rectangle (getXInPixels(), getYInPixels(), rect.width, rect.height);
 	}
 	if (width == 0) {
@@ -140,7 +140,7 @@ private OptionalInt getSystemCaretWidthInPixelsForCurrentMonitor() {
 	int [] buffer = new int [1];
 	if (OS.SystemParametersInfo (OS.SPI_GETCARETWIDTH, 0, buffer, 0)) {
 		int width = DPIUtil.pixelToPoint(buffer [0], Win32DPIUtils.getPrimaryMonitorZoomAtStartup());
-		int widthInPixels = DPIUtil.pointToPixel(width, getNativeZoom());
+		int widthInPixels = DPIUtil.pointToPixel(width, nativeZoom);
 		return OptionalInt.of(widthInPixels);
 	}
 	return OptionalInt.empty();
@@ -160,7 +160,7 @@ public Font getFont () {
 	checkWidget();
 	if (font == null) {
 		long hFont = defaultFont ();
-		return Font.win32_new (display, hFont, getNativeZoom());
+		return Font.win32_new (display, hFont, nativeZoom);
 	}
 	return font;
 }
@@ -223,12 +223,12 @@ public Canvas getParent () {
  */
 public Point getSize () {
 	checkWidget();
-	return Win32DPIUtils.pixelToPointAsSize(getSizeInPixels(), getZoom());
+	return Win32DPIUtils.pixelToPointAsSize(getSizeInPixels(), getAutoscalingZoom());
 }
 
 Point getSizeInPixels () {
 	if (image != null) {
-		Rectangle rect = Win32DPIUtils.pointToPixel(image.getBounds(), getZoom());
+		Rectangle rect = Win32DPIUtils.pointToPixel(image.getBounds(), getAutoscalingZoom());
 		return new Point (rect.width, rect.height);
 	}
 	if (width == 0) {
@@ -241,19 +241,19 @@ Point getSizeInPixels () {
 }
 
 private int getWidthInPixels() {
-	return DPIUtil.pointToPixel(width, getZoom());
+	return DPIUtil.pointToPixel(width, getAutoscalingZoom());
 }
 
 private int getHeightInPixels() {
-	return DPIUtil.pointToPixel(height, getZoom());
+	return DPIUtil.pointToPixel(height, getAutoscalingZoom());
 }
 
 private int getXInPixels() {
-	return DPIUtil.pointToPixel(x, getZoom());
+	return DPIUtil.pointToPixel(x, getAutoscalingZoom());
 }
 
 private int getYInPixels() {
-	return DPIUtil.pointToPixel(y, getZoom());
+	return DPIUtil.pointToPixel(y, getAutoscalingZoom());
 }
 
 /**
@@ -373,7 +373,7 @@ void resize () {
 	resized = false;
 	long hwnd = parent.handle;
 	OS.DestroyCaret ();
-	long hBitmap = image != null ? Image.win32_getHandle(image, getZoom()) : 0;
+	long hBitmap = image != null ? Image.win32_getHandle(image, getAutoscalingZoom()) : 0;
 	int widthInPixels = this.getWidthInPixels();
 	if (image == null && widthInPixels == 0) {
 		OptionalInt systemCaretWidthInPixelsForCurrentMonitor = getSystemCaretWidthInPixelsForCurrentMonitor();
@@ -452,7 +452,7 @@ public void setBounds (Rectangle rect) {
 void setFocus () {
 	long hwnd = parent.handle;
 	long hBitmap = 0;
-	if (image != null) hBitmap = Image.win32_getHandle(image, getZoom());
+	if (image != null) hBitmap = Image.win32_getHandle(image, getAutoscalingZoom());
 	int widthInPixels = this.getWidthInPixels();
 	if (image == null && widthInPixels == 0) {
 		OptionalInt systemCaretWidthInPixelsForCurrentMonitor = getSystemCaretWidthInPixelsForCurrentMonitor();
@@ -486,7 +486,7 @@ public void setFont (Font font) {
 	if (font != null && font.isDisposed ()) {
 		error (SWT.ERROR_INVALID_ARGUMENT);
 	}
-	this.font = font == null ? null : Font.win32_new(font, getNativeZoom());
+	this.font = font == null ? null : Font.win32_new(font, nativeZoom);
 	if (hasFocus ()) setIMEFont ();
 }
 
@@ -517,7 +517,7 @@ public void setImage (Image image) {
 void setIMEFont () {
 	if (!OS.IsDBLocale) return;
 	long hFont = 0;
-	if (font != null) hFont = SWTFontProvider.getFontHandle(font, getNativeZoom());
+	if (font != null) hFont = SWTFontProvider.getFontHandle(font, nativeZoom);
 	if (hFont == 0) hFont = defaultFont ();
 	long hwnd = parent.handle;
 	long hIMC = OS.ImmGetContext (hwnd);
@@ -665,7 +665,9 @@ void handleDPIChange(Event event, float scalingFactor) {
 	if (font != null) {
 		setFont(font);
 	}
-	if (isVisible && hasFocus ()) resize();
+	if (isFocusCaret()) {
+		setFocus();
+	}
 }
 }
 

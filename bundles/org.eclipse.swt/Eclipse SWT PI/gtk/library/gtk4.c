@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2025 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -601,6 +601,16 @@ JNIEXPORT void JNICALL GTK4_NATIVE(gdk_1content_1serializer_1set_1task_1data)
 }
 #endif
 
+#ifndef NO_gdk_1paintable_1snapshot
+JNIEXPORT void JNICALL GTK4_NATIVE(gdk_1paintable_1snapshot)
+	(JNIEnv *env, jclass that, jlong arg0, jlong arg1, jint arg2, jint arg3)
+{
+	GTK4_NATIVE_ENTER(env, that, gdk_1paintable_1snapshot_FUNC);
+	gdk_paintable_snapshot((GdkPaintable *)arg0, (GdkSnapshot *)arg1, (double)arg2, (double)arg3);
+	GTK4_NATIVE_EXIT(env, that, gdk_1paintable_1snapshot_FUNC);
+}
+#endif
+
 #ifndef NO_gdk_1toplevel_1focus
 JNIEXPORT void JNICALL GTK4_NATIVE(gdk_1toplevel_1focus)
 	(JNIEnv *env, jclass that, jlong arg0, jint arg1)
@@ -682,6 +692,26 @@ JNIEXPORT void JNICALL GTK4_NATIVE(gdk_1toplevel_1size_1set_1size)
 }
 #endif
 
+#ifndef NO_gsk_1render_1node_1draw
+JNIEXPORT void JNICALL GTK4_NATIVE(gsk_1render_1node_1draw)
+	(JNIEnv *env, jclass that, jlong arg0, jlong arg1)
+{
+	GTK4_NATIVE_ENTER(env, that, gsk_1render_1node_1draw_FUNC);
+	gsk_render_node_draw((GskRenderNode *)arg0, (cairo_t *)arg1);
+	GTK4_NATIVE_EXIT(env, that, gsk_1render_1node_1draw_FUNC);
+}
+#endif
+
+#ifndef NO_gsk_1render_1node_1unref
+JNIEXPORT void JNICALL GTK4_NATIVE(gsk_1render_1node_1unref)
+	(JNIEnv *env, jclass that, jlong arg0)
+{
+	GTK4_NATIVE_ENTER(env, that, gsk_1render_1node_1unref_FUNC);
+	gsk_render_node_unref((GskRenderNode *)arg0);
+	GTK4_NATIVE_EXIT(env, that, gsk_1render_1node_1unref_FUNC);
+}
+#endif
+
 #ifndef NO_gtk_1box_1append
 JNIEXPORT void JNICALL GTK4_NATIVE(gtk_1box_1append)
 	(JNIEnv *env, jclass that, jlong arg0, jlong arg1)
@@ -751,12 +781,32 @@ JNIEXPORT jlong JNICALL GTK4_NATIVE(gtk_1calendar_1get_1date)
 #endif
 
 #ifndef NO_gtk_1calendar_1select_1day
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 JNIEXPORT void JNICALL GTK4_NATIVE(gtk_1calendar_1select_1day)
 	(JNIEnv *env, jclass that, jlong arg0, jlong arg1)
 {
 	GTK4_NATIVE_ENTER(env, that, gtk_1calendar_1select_1day_FUNC);
 	gtk_calendar_select_day((GtkCalendar *)arg0, (GDateTime *)arg1);
 	GTK4_NATIVE_EXIT(env, that, gtk_1calendar_1select_1day_FUNC);
+}
+G_GNUC_END_IGNORE_DEPRECATIONS
+#endif
+
+#ifndef NO_gtk_1calendar_1set_1date
+JNIEXPORT void JNICALL GTK4_NATIVE(gtk_1calendar_1set_1date)
+	(JNIEnv *env, jclass that, jlong arg0, jlong arg1)
+{
+	GTK4_NATIVE_ENTER(env, that, gtk_1calendar_1set_1date_FUNC);
+/*
+	gtk_calendar_set_date((GtkCalendar *)arg0, (GDateTime *)arg1);
+*/
+	{
+		GTK4_LOAD_FUNCTION(fp, gtk_calendar_set_date)
+		if (fp) {
+			((void (CALLING_CONVENTION*)(GtkCalendar *, GDateTime *))fp)((GtkCalendar *)arg0, (GDateTime *)arg1);
+		}
+	}
+	GTK4_NATIVE_EXIT(env, that, gtk_1calendar_1set_1date_FUNC);
 }
 #endif
 
@@ -1844,6 +1894,18 @@ JNIEXPORT jlong JNICALL GTK4_NATIVE(gtk_1gesture_1zoom_1new)
 }
 #endif
 
+#ifndef NO_gtk_1header_1bar_1new
+JNIEXPORT jlong JNICALL GTK4_NATIVE(gtk_1header_1bar_1new)
+	(JNIEnv *env, jclass that)
+{
+	jlong rc = 0;
+	GTK4_NATIVE_ENTER(env, that, gtk_1header_1bar_1new_FUNC);
+	rc = (jlong)gtk_header_bar_new();
+	GTK4_NATIVE_EXIT(env, that, gtk_1header_1bar_1new_FUNC);
+	return rc;
+}
+#endif
+
 #ifndef NO_gtk_1hsv_1to_1rgb
 JNIEXPORT void JNICALL GTK4_NATIVE(gtk_1hsv_1to_1rgb)
 	(JNIEnv *env, jclass that, jfloat arg0, jfloat arg1, jfloat arg2, jfloatArray arg3, jfloatArray arg4, jfloatArray arg5)
@@ -2290,6 +2352,30 @@ JNIEXPORT jlong JNICALL GTK4_NATIVE(gtk_1snapshot_1append_1cairo)
 }
 #endif
 
+#ifndef NO_gtk_1snapshot_1free_1to_1node
+JNIEXPORT jlong JNICALL GTK4_NATIVE(gtk_1snapshot_1free_1to_1node)
+	(JNIEnv *env, jclass that, jlong arg0)
+{
+	jlong rc = 0;
+	GTK4_NATIVE_ENTER(env, that, gtk_1snapshot_1free_1to_1node_FUNC);
+	rc = (jlong)gtk_snapshot_free_to_node((GtkSnapshot *)arg0);
+	GTK4_NATIVE_EXIT(env, that, gtk_1snapshot_1free_1to_1node_FUNC);
+	return rc;
+}
+#endif
+
+#ifndef NO_gtk_1snapshot_1new
+JNIEXPORT jlong JNICALL GTK4_NATIVE(gtk_1snapshot_1new)
+	(JNIEnv *env, jclass that)
+{
+	jlong rc = 0;
+	GTK4_NATIVE_ENTER(env, that, gtk_1snapshot_1new_FUNC);
+	rc = (jlong)gtk_snapshot_new();
+	GTK4_NATIVE_EXIT(env, that, gtk_1snapshot_1new_FUNC);
+	return rc;
+}
+#endif
+
 #ifndef NO_gtk_1style_1context_1add_1provider_1for_1display
 JNIEXPORT void JNICALL GTK4_NATIVE(gtk_1style_1context_1add_1provider_1for_1display)
 	(JNIEnv *env, jclass that, jlong arg0, jlong arg1, jint arg2)
@@ -2509,6 +2595,18 @@ JNIEXPORT jlong JNICALL GTK4_NATIVE(gtk_1widget_1get_1first_1child)
 }
 #endif
 
+#ifndef NO_gtk_1widget_1get_1height
+JNIEXPORT jint JNICALL GTK4_NATIVE(gtk_1widget_1get_1height)
+	(JNIEnv *env, jclass that, jlong arg0)
+{
+	jint rc = 0;
+	GTK4_NATIVE_ENTER(env, that, gtk_1widget_1get_1height_FUNC);
+	rc = (jint)gtk_widget_get_height((GtkWidget *)arg0);
+	GTK4_NATIVE_EXIT(env, that, gtk_1widget_1get_1height_FUNC);
+	return rc;
+}
+#endif
+
 #ifndef NO_gtk_1widget_1get_1last_1child
 JNIEXPORT jlong JNICALL GTK4_NATIVE(gtk_1widget_1get_1last_1child)
 	(JNIEnv *env, jclass that, jlong arg0)
@@ -2598,6 +2696,18 @@ fail:
 }
 #endif
 
+#ifndef NO_gtk_1widget_1get_1width
+JNIEXPORT jint JNICALL GTK4_NATIVE(gtk_1widget_1get_1width)
+	(JNIEnv *env, jclass that, jlong arg0)
+{
+	jint rc = 0;
+	GTK4_NATIVE_ENTER(env, that, gtk_1widget_1get_1width_FUNC);
+	rc = (jint)gtk_widget_get_width((GtkWidget *)arg0);
+	GTK4_NATIVE_EXIT(env, that, gtk_1widget_1get_1width_FUNC);
+	return rc;
+}
+#endif
+
 #ifndef NO_gtk_1widget_1insert_1after
 JNIEXPORT void JNICALL GTK4_NATIVE(gtk_1widget_1insert_1after)
 	(JNIEnv *env, jclass that, jlong arg0, jlong arg1, jlong arg2)
@@ -2638,6 +2748,18 @@ fail:
 	if (arg4 && lparg4) (*env)->ReleaseIntArrayElements(env, arg4, lparg4, 0);
 	if (arg3 && lparg3) (*env)->ReleaseIntArrayElements(env, arg3, lparg3, 0);
 	GTK4_NATIVE_EXIT(env, that, gtk_1widget_1measure_FUNC);
+}
+#endif
+
+#ifndef NO_gtk_1widget_1paintable_1new
+JNIEXPORT jlong JNICALL GTK4_NATIVE(gtk_1widget_1paintable_1new)
+	(JNIEnv *env, jclass that, jlong arg0)
+{
+	jlong rc = 0;
+	GTK4_NATIVE_ENTER(env, that, gtk_1widget_1paintable_1new_FUNC);
+	rc = (jlong)gtk_widget_paintable_new((GtkWidget *)arg0);
+	GTK4_NATIVE_EXIT(env, that, gtk_1widget_1paintable_1new_FUNC);
+	return rc;
 }
 #endif
 
@@ -2840,6 +2962,16 @@ JNIEXPORT void JNICALL GTK4_NATIVE(gtk_1window_1set_1icon_1name)
 	GTK4_NATIVE_ENTER(env, that, gtk_1window_1set_1icon_1name_FUNC);
 	gtk_window_set_icon_name((GtkWindow *)arg0, (const char *)arg1);
 	GTK4_NATIVE_EXIT(env, that, gtk_1window_1set_1icon_1name_FUNC);
+}
+#endif
+
+#ifndef NO_gtk_1window_1set_1titlebar
+JNIEXPORT void JNICALL GTK4_NATIVE(gtk_1window_1set_1titlebar)
+	(JNIEnv *env, jclass that, jlong arg0, jlong arg1)
+{
+	GTK4_NATIVE_ENTER(env, that, gtk_1window_1set_1titlebar_FUNC);
+	gtk_window_set_titlebar((GtkWindow *)arg0, (GtkWidget *)arg1);
+	GTK4_NATIVE_EXIT(env, that, gtk_1window_1set_1titlebar_FUNC);
 }
 #endif
 

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2025 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -17,6 +17,7 @@ package org.eclipse.swt.widgets;
 import org.eclipse.swt.*;
 import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.internal.cairo.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.internal.gtk.*;
 
 /**
@@ -45,6 +46,7 @@ public class Canvas extends Composite {
 	Caret caret;
 	IME ime;
 	boolean blink, drawFlag;
+	private IExternalCanvasHandler externalCanvasHandler;
 
 Canvas () {}
 
@@ -76,6 +78,28 @@ Canvas () {}
  */
 public Canvas (Composite parent, int style) {
 	super (parent, checkStyle (style));
+	if( ExternalCanvasHandler.isActive(this,style))
+		externalCanvasHandler = ExternalCanvasHandler.createHandler(this);
+}
+
+@Override
+public void redraw () {
+
+	if(externalCanvasHandler != null) {
+		externalCanvasHandler.redrawTriggered();
+	}
+	super.redraw();
+}
+
+@Override
+public void redraw (int x, int y, int width, int height, boolean all) {
+	if(externalCanvasHandler != null) {
+		externalCanvasHandler.redrawTriggered(x,y,width,height,all);
+		super.redraw();
+	}
+	else {
+		super.redraw(x,y,width,height,all);
+	}
 }
 
 /**
@@ -170,8 +194,14 @@ long gtk_commit (long imcontext, long text) {
 @Override
 long gtk_draw (long widget, long cairo) {
 	if ((state & OBSCURED) != 0) return 0;
+
+	if(externalCanvasHandler != null) {
+		externalCanvasHandler.paint((e)-> sendEvent(SWT.Paint, e),widget, cairo);
+		return 0;
+	}
+
 	long result = super.gtk_draw (widget, cairo);
-	drawCaretInFocus(widget, cairo);
+	drawCaretInFocus(cairo);
 	return result;
 }
 
@@ -179,10 +209,10 @@ long gtk_draw (long widget, long cairo) {
 void gtk4_draw (long widget, long cairo, Rectangle bounds) {
 	if ((state & OBSCURED) != 0) return;
 	super.gtk4_draw (widget, cairo, bounds);
-	drawCaretInFocus(widget, cairo);
+	drawCaretInFocus(cairo);
 }
 
-void drawCaretInFocus(long widget, long cairo) {
+void drawCaretInFocus(long cairo) {
 	/*
 	 *  blink is needed to be checked as gtk_draw() signals sent from other parts of the canvas
 	 *  can interfere with the blinking state. This will ensure that we are only draw/redrawing the
@@ -191,12 +221,12 @@ void drawCaretInFocus(long widget, long cairo) {
 	 *  Additionally, only draw the caret if it has focus. See bug 528819.
 	 */
 	if (caret != null && blink == true && caret.isFocusCaret()) {
-		drawCaret(widget,cairo);
+		drawCaret(cairo);
 		blink = false;
 	}
 }
 
-private void drawCaret(long widget, long cairo) {
+private void drawCaret(long cairo) {
 	if(this.isDisposed()) return;
 	if (cairo == 0) error(SWT.ERROR_NO_HANDLES);
 
@@ -452,7 +482,7 @@ public void scroll (int destX, int destY, int x, int y, int width, int height, b
 			Rectangle rect = child.getBoundsInPixels ();
 			if (Math.min(x + width, rect.x + rect.width) >= Math.max (x, rect.x) &&
 				Math.min(y + height, rect.y + rect.height) >= Math.max (y, rect.y)) {
-					child.setLocationInPixels (rect.x + deltaX, rect.y + deltaY);
+					child.setLocation (rect.x + deltaX, rect.y + deltaY);
 			}
 		}
 	}
@@ -544,6 +574,16 @@ void updateCaret () {
 	rect.width = caret.width;
 	rect.height = caret.height;
 	GTK.gtk_im_context_set_cursor_location (imHandle, rect);
+}
+
+@Override
+void snapshotToDraw(long handle, long snapshot) {
+	// Skip drawing if this is being called on fixedHandle to prevent double draws
+	// making carret not visible at all
+	if (fixedHandle != 0 && handle == fixedHandle) {
+		return;
+	}
+	super.snapshotToDraw(handle, snapshot);
 }
 
 }

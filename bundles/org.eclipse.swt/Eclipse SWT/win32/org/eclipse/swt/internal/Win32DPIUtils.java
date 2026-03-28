@@ -34,11 +34,37 @@ import org.eclipse.swt.widgets.*;
  */
 public class Win32DPIUtils {
 
-	static {
-		DPIUtil.setUseSmoothScalingByDefaultProvider(() -> DPIUtil.isMonitorSpecificScalingActive());
+	/**
+	 * This property allows to customize the DPI awareness of the application's UI
+	 * thread, such that different DPI awareness modes are supported via
+	 * configuration and not only via the application's executable manifest.
+	 * Supported modes are "System", "PerMonitor", and "PerMonitorV2".
+	 */
+	public static final String CUSTOM_DPI_AWARENESS_PROPERTY = "org.eclipse.swt.internal.win32.dpiAwareness";
+
+	private static long customDpiAwareness = -1;
+
+	public static boolean initializeCustomDpiAwareness() {
+		String customDpiAwareness = System.getProperty(CUSTOM_DPI_AWARENESS_PROPERTY);
+		if (customDpiAwareness != null) {
+			switch (customDpiAwareness.toLowerCase()) {
+			case "permonitorv2":
+				setDPIAwareness(OS.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+				return true;
+			case "permonitor":
+				setDPIAwareness(OS.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE);
+				return true;
+			case "system":
+				setDPIAwareness(OS.DPI_AWARENESS_CONTEXT_SYSTEM_AWARE);
+				return true;
+			default:
+				System.err.println("Invalid DPI awareness specified: " + customDpiAwareness);
+			}
+		}
+		return false;
 	}
 
-	public static boolean setDPIAwareness(int desiredDpiAwareness) {
+	public static boolean setDPIAwareness(long desiredDpiAwareness) {
 		if (desiredDpiAwareness == OS.GetThreadDpiAwarenessContext()) {
 			return true;
 		}
@@ -55,17 +81,21 @@ public class Win32DPIUtils {
 			System.err.println("***WARNING: setting DPI awareness failed.");
 			return false;
 		}
+		customDpiAwareness = desiredDpiAwareness;
 		return true;
 	}
 
+	public static boolean hasProperDpiAwarenessForMonitorSpecificScaling() {
+		return OS.AreDpiAwarenessContextsEqual(OS.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2, OS.GetThreadDpiAwarenessContext());
+	}
+
 	public static <T> T runWithProperDPIAwareness(Display display, Supplier<T> operation) {
-		// only with monitor-specific scaling enabled, the main thread's DPI awareness may be adapted
-		if (!display.isRescalingAtRuntime()) {
+		if (customDpiAwareness == -1) {
 			return operation.get();
 		}
 		long previousDPIAwareness = OS.GetThreadDpiAwarenessContext();
 		try {
-			if (!setDPIAwareness(OS.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2)) {
+			if (!setDPIAwareness(customDpiAwareness)) {
 				// awareness was not changed, so no need to reset it
 				previousDPIAwareness = 0;
 			}
@@ -105,6 +135,11 @@ public class Win32DPIUtils {
 	public static Point pixelToPointAsSize(Drawable drawable, Point point, int zoom) {
 		if (drawable != null && !drawable.isAutoScalable()) return point;
 		return pixelToPointAsSize (point, zoom);
+	}
+
+	public static Point pixelToPointAsSufficientlyLargeSize(Drawable drawable, Point point, int zoom) {
+		if (drawable != null && !drawable.isAutoScalable()) return point;
+		return pixelToPointAsSufficientlyLargeSize (point, zoom);
 	}
 
 	public static Point pixelToPointAsLocation(Drawable drawable, Point point, int zoom) {
@@ -294,21 +329,6 @@ public class Win32DPIUtils {
 	public static Rectangle pointToPixel(Drawable drawable, Rectangle rect, int zoom) {
 		if (drawable != null && !drawable.isAutoScalable()) return rect;
 		return pointToPixel (rect, zoom);
-	}
-
-	public static void setMonitorSpecificScaling(boolean activate) {
-		System.setProperty(DPIUtil.SWT_AUTOSCALE_UPDATE_ON_RUNTIME, Boolean.toString(activate));
-	}
-
-	public static void setAutoScaleForMonitorSpecificScaling() {
-		boolean isDefaultAutoScale = DPIUtil.getAutoScaleValue() == null;
-		if (isDefaultAutoScale) {
-			DPIUtil.setAutoScaleValue("quarter");
-		} else if (!DPIUtil.isSetupCompatibleToMonitorSpecificScaling()) {
-			throw new SWTError(SWT.ERROR_NOT_IMPLEMENTED,
-					"monitor-specific scaling is only implemented for auto-scale values \"quarter\", \"exact\", \"false\" or a concrete zoom value, but \""
-							+ DPIUtil.getAutoScaleValue() + "\" has been specified");
-		}
 	}
 
 	public static int getPrimaryMonitorZoomAtStartup() {

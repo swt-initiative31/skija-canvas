@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2025 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -24,6 +24,7 @@ import org.eclipse.swt.*;
 import org.eclipse.swt.internal.*;
 import org.eclipse.swt.internal.DPIUtil.*;
 import org.eclipse.swt.internal.cairo.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.internal.gtk.*;
 import org.eclipse.swt.internal.image.*;
 
@@ -172,6 +173,11 @@ public final class Image extends Resource implements Drawable {
 	 * Attribute to cache current device zoom level
 	 */
 	private int currentDeviceZoom = 100;
+
+	/**
+	 * versions for an image cache
+	 */
+	private int version;
 
 Image(Device device) {
 	super(device);
@@ -440,7 +446,7 @@ public Image(Device device, Rectangle bounds) {
  * @see #dispose()
  */
 public Image(Device device, ImageData data) {
-	this(device, GtkDPIUtil.pointToPixel(device, data), DPIUtil.getDeviceZoom());
+	this(device, DPIUtil.autoScaleImageData(device, data, 100), DPIUtil.getDeviceZoom());
 }
 
 private Image(Device device, ImageData data, int zoom) {
@@ -489,8 +495,8 @@ public Image(Device device, ImageData source, ImageData mask) {
 		SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 	}
 	currentDeviceZoom = DPIUtil.getDeviceZoom();
-	source = GtkDPIUtil.pointToPixel (device, source);
-	mask = GtkDPIUtil.pointToPixel (device, mask);
+	source = DPIUtil.autoScaleImageData(device, source, 100);
+	mask = DPIUtil.autoScaleImageData(device, mask, 100);
 	mask = ImageData.convertMask (mask);
 	ImageData image = new ImageData(source.width, source.height, source.depth, source.palette, source.scanlinePad, source.data);
 	image.maskPad = mask.scanlinePad;
@@ -554,11 +560,17 @@ public Image(Device device, ImageData source, ImageData mask) {
  */
 public Image(Device device, InputStream stream) {
 	super(device);
-	currentDeviceZoom = DPIUtil.getDeviceZoom();
-	ElementAtZoom<ImageData> image = ImageDataLoader.loadByZoom(stream, FileFormat.DEFAULT_ZOOM, currentDeviceZoom);
-	ImageData data = DPIUtil.scaleImageData(device, image, currentDeviceZoom);
-	init(data);
-	init();
+	if (stream == null) {
+		SWT.error(SWT.ERROR_NULL_ARGUMENT);
+	}
+	try {
+		currentDeviceZoom = DPIUtil.getDeviceZoom();
+		this.imageDataProvider = createImageDataProvider(stream);
+		initFromImageDataProvider(currentDeviceZoom);
+		init();
+	} catch (IOException e) {
+		SWT.error(SWT.ERROR_IO, e);
+	}
 }
 
 /**
@@ -596,10 +608,9 @@ public Image(Device device, InputStream stream) {
 public Image(Device device, String filename) {
 	super(device);
 	if (filename == null) SWT.error(SWT.ERROR_NULL_ARGUMENT);
+	this.imageFileNameProvider = zoom -> zoom == 100 ? filename : null;
 	currentDeviceZoom = DPIUtil.getDeviceZoom();
-	ElementAtZoom<ImageData> image = ImageDataLoader.loadByZoom(filename, FileFormat.DEFAULT_ZOOM, currentDeviceZoom);
-	ImageData data = DPIUtil.scaleImageData(device, image, currentDeviceZoom);
-	init(data);
+	initFromFileNameProvider(currentDeviceZoom);
 	init();
 }
 
@@ -803,6 +814,31 @@ private void initFromImageDataProvider(int zoom) {
 	init(resizedData);
 }
 
+private static ImageDataProvider createImageDataProvider(InputStream stream) throws IOException {
+	byte[] streamData = stream.readAllBytes();
+	if (ImageDataLoader.isDynamicallySizable(new ByteArrayInputStream(streamData))) {
+		ImageDataAtSizeProvider imageDataAtSizeProvider = new ImageDataAtSizeProvider() {
+			@Override
+			public ImageData getImageData(int zoom) {
+				return ImageDataLoader
+						.loadByZoom(new ByteArrayInputStream(streamData), FileFormat.DEFAULT_ZOOM, zoom)
+						.element();
+			}
+
+			@Override
+			public ImageData getImageData(int width, int height) {
+				return ImageDataLoader.loadBySize(new ByteArrayInputStream(streamData), width, height);
+			}
+		};
+		return imageDataAtSizeProvider;
+	}
+
+	ImageData imageData = ImageDataLoader
+			.loadByZoom(new ByteArrayInputStream(streamData), FileFormat.DEFAULT_ZOOM, 100)
+			.element();
+	return zoom -> zoom == 100 ? imageData : null;
+}
+
 void createFromPixbuf(int type, long pixbuf) {
 	this.type = type;
 
@@ -995,7 +1031,7 @@ private class CachedImageAtSize {
 }
 
 void executeOnImageAtSize(Consumer<Image> imageAtBestFittingSizeConsumer, int destWidth, int destHeight) {
-	Optional<Image> imageAtSize = cachedImageAtSize.refresh(destWidth, destHeight);
+	Optional<Image> imageAtSize = cachedImageAtSize.refresh(Math.max(1, destWidth), Math.max(1, destHeight));
 	imageAtBestFittingSizeConsumer.accept(imageAtSize.orElse(this));
 }
 
@@ -1664,6 +1700,22 @@ public static void drawAtSize(GC gc, ImageData imageData, int width, int height)
 				0, 0, width, height);
 		imageToDraw.dispose();
 	});
+}
+
+void increaseVersion() {
+	if(this.version == Integer.MAX_VALUE) {
+		this.version = 0;
+	} else {
+		this.version++;
+	}
+}
+
+/**
+ * @noreference This field is not intended to be referenced by clients.
+ * @return The current version of the image, which is incremented each time the image data changes.
+ */
+public ImageVersion getImageVersion() {
+	return new ImageVersion(this.version);
 }
 
 }

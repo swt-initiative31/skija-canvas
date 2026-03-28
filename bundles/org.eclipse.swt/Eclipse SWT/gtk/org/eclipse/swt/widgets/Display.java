@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2025 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -1305,9 +1305,11 @@ void createDisplay (DeviceData data) {
 	GTK.gtk_widget_realize (shellHandle);
 
 	/* Initialize the filter and event callback */
-	eventCallback = new Callback (this, "eventProc", 2); //$NON-NLS-1$
-	eventProc = eventCallback.getAddress ();
-	GDK.gdk_event_handler_set (eventProc, 0, 0);
+	if (!GTK.GTK4) {
+		eventCallback = new Callback (this, "eventProc", 2); //$NON-NLS-1$
+		eventProc = eventCallback.getAddress ();
+		GDK.gdk_event_handler_set (eventProc, 0, 0);
+	}
 
 	signalCallback = new Callback (this, "signalProc", 3); //$NON-NLS-1$
 	signalProc = signalCallback.getAddress ();
@@ -1577,6 +1579,7 @@ void error (int code) {
 	SWT.error (code);
 }
 
+// Used on GTK 3 only
 long eventProc (long event, long data) {
 	/*
 	* Use gdk_event_get_time() rather than event.time or
@@ -1589,8 +1592,7 @@ long eventProc (long event, long data) {
 	int time = GDK.gdk_event_get_time (event);
 	if (time != 0) lastEventTime = time;
 
-	int eventType = GTK.GTK4 ? GDK.gdk_event_get_event_type(event) : GDK.GDK_EVENT_TYPE (event);
-	Control.fixGdkEventTypeValues(eventType);
+	int eventType = GDK.gdk_event_get_event_type(event);
 	switch (eventType) {
 		case GDK.GDK_BUTTON_PRESS:
 		case GDK.GDK_KEY_PRESS:
@@ -1607,12 +1609,7 @@ long eventProc (long event, long data) {
 		}
 	}
 	if (!dispatch) {
-		long copiedEvent;
-		if (GTK.GTK4) {
-			copiedEvent = GDK.gdk_event_ref (event);
-		} else {
-			copiedEvent = GDK.gdk_event_copy (event);
-		}
+		long copiedEvent = GDK.gdk_event_copy (event);
 
 		addGdkEvent (copiedEvent);
 		return 0;
@@ -1719,14 +1716,15 @@ static long rendererClassInitProc (long g_class, long class_data) {
 
 void snapshotDrawProc(long handle, long snapshot) {
 	Display display = getCurrent ();
-	Widget widget = display.getWidget (handle);
-	if (widget != null) widget.snapshotToDraw(handle, snapshot);
 	long child = GTK4.gtk_widget_get_first_child(handle);
-	// Propagate the snapshot down the widget tree
+	// Propagate the snapshot down the widget tree first
 	while (child != 0) {
 		GTK4.gtk_widget_snapshot_child(handle, child, snapshot);
 		child = GTK4.gtk_widget_get_next_sibling(child);
 	}
+	// Draw custom paint on top of children
+	Widget widget = display.getWidget (handle);
+	if (widget != null) widget.snapshotToDraw(handle, snapshot);
 }
 
 static long rendererGetPreferredWidthProc (long cell, long handle, long minimun_size, long natural_size) {
@@ -4032,27 +4030,9 @@ public Point map (Control from, Control to, int x, int y) {
 	if (from != null && from.isDisposed()) error (SWT.ERROR_INVALID_ARGUMENT);
 	if (to != null && to.isDisposed()) error (SWT.ERROR_INVALID_ARGUMENT);
 	Point point = new Point (x, y);
-	if (from == to) return point;
-	if (from != null) {
-		Point origin = GTK.GTK4 ? from.getSurfaceOrigin() : from.getWindowOrigin ();
-		if ((from.style & SWT.MIRRORED) != 0) point.x = from.getClientWidth () - point.x;
-		point.x += origin.x;
-		point.y += origin.y;
+	if (GTK.GTK4 && (to == null || from == null)) {
+		return point;
 	}
-	if (to != null) {
-		Point origin = GTK.GTK4 ? to.getSurfaceOrigin() : to.getWindowOrigin ();
-		point.x -= origin.x;
-		point.y -= origin.y;
-		if ((to.style & SWT.MIRRORED) != 0) point.x = to.getClientWidth () - point.x;
-	}
-	return point;
-}
-
-Point mapInPixels (Control from, Control to, int x, int y) {
-	checkDevice ();
-	if (from != null && from.isDisposed()) error (SWT.ERROR_INVALID_ARGUMENT);
-	if (to != null && to.isDisposed()) error (SWT.ERROR_INVALID_ARGUMENT);
-	Point point = new Point (x, y);
 	if (from == to) return point;
 	if (from != null) {
 		Point origin = GTK.GTK4 ? from.getSurfaceOrigin() : from.getWindowOrigin ();
@@ -4111,12 +4091,6 @@ public Rectangle map (Control from, Control to, Rectangle rectangle) {
 	return map (from, to, rectangle.x, rectangle.y, rectangle.width, rectangle.height);
 }
 
-Rectangle mapInPixels (Control from, Control to, Rectangle rectangle) {
-	checkDevice();
-	if (rectangle == null) error (SWT.ERROR_NULL_ARGUMENT);
-	return mapInPixels (from, to, rectangle.x, rectangle.y, rectangle.width, rectangle.height);
-}
-
 /**
  * Maps a point from one coordinate system to another.
  * When the control is null, coordinates are mapped to
@@ -4161,6 +4135,9 @@ public Rectangle map (Control from, Control to, int x, int y, int width, int hei
 	if (to != null && to.isDisposed()) error (SWT.ERROR_INVALID_ARGUMENT);
 	Rectangle rect = new Rectangle (x, y, width, height);
 	if (from == to) return rect;
+	if (GTK.GTK4 && (to == null || from == null)) {
+		return rect;
+	}
 	boolean fromRTL = false, toRTL = false;
 	if (from != null) {
 		Point origin = GTK.GTK4 ? from.getSurfaceOrigin () : from.getWindowOrigin ();
@@ -4170,34 +4147,6 @@ public Rectangle map (Control from, Control to, int x, int y, int width, int hei
 	}
 	if (to != null) {
 		Point origin = GTK.GTK4 ? to.getSurfaceOrigin() : to.getWindowOrigin ();
-		rect.x -= origin.x;
-		rect.y -= origin.y;
-		if (toRTL = (to.style & SWT.MIRRORED) != 0) rect.x = to.getClientWidth () - rect.x;
-	}
-
-	if (fromRTL != toRTL) rect.x -= rect.width;
-	return rect;
-}
-
-Rectangle mapInPixels (Control from, Control to, int x, int y, int width, int height) {
-	checkDevice();
-	if (from != null && from.isDisposed()) error (SWT.ERROR_INVALID_ARGUMENT);
-	if (to != null && to.isDisposed()) error (SWT.ERROR_INVALID_ARGUMENT);
-
-	// TODO: GTK4 no longer able to retrieve surface/window origin
-	if (GTK.GTK4) return new Rectangle(x, y, 0, 0);
-
-	Rectangle rect = new Rectangle (x, y, width, height);
-	if (from == to) return rect;
-	boolean fromRTL = false, toRTL = false;
-	if (from != null) {
-		Point origin = from.getWindowOrigin ();
-		if (fromRTL = (from.style & SWT.MIRRORED) != 0) rect.x = from.getClientWidth () - rect.x;
-		rect.x += origin.x;
-		rect.y += origin.y;
-	}
-	if (to != null) {
-		Point origin = to.getWindowOrigin ();
 		rect.x -= origin.x;
 		rect.y -= origin.y;
 		if (toRTL = (to.style & SWT.MIRRORED) != 0) rect.x = to.getClientWidth () - rect.x;
@@ -4820,8 +4769,10 @@ void releaseDisplay () {
 	COLOR_TOGGLE_BUTTON_FOREGROUND_RGBA = null;
 
 	/* Dispose the event callback */
-	GDK.gdk_event_handler_set (0, 0, 0);
-	eventCallback.dispose ();  eventCallback = null;
+	if (!GTK.GTK4) {
+		GDK.gdk_event_handler_set (0, 0, 0);
+		eventCallback.dispose ();  eventCallback = null;
+	}
 
 	/* Dispose the hidden shell */
 	if (shellHandle != 0) {
@@ -5710,6 +5661,7 @@ public boolean sleep () {
  * @exception SWTException <ul>
  *    <li>ERROR_THREAD_INVALID_ACCESS - if not called from the thread that created the receiver</li>
  *    <li>ERROR_DEVICE_DISPOSED - if the receiver has been disposed</li>
+ *    <li>ERROR_NO_HANDLES if a handle could not be obtained for timer creation</li>
  * </ul>
  *
  * @see #asyncExec
@@ -5751,10 +5703,9 @@ public void timerExec (int milliseconds, Runnable runnable) {
 	} else {
 		timerId = GDK.gdk_threads_add_timeout (milliseconds, timerProc, index);
 	}
-	if (timerId != 0) {
-		timerIds [index] = timerId;
-		timerList [index] = runnable;
-	}
+	if (timerId == 0) SWT.error (SWT.ERROR_NO_HANDLES);
+	timerIds [index] = timerId;
+	timerList [index] = runnable;
 }
 
 long timerProc (long i) {

@@ -1314,7 +1314,7 @@ void updateBackground () {
 	hBrush = 0;
 
 	if (backgroundImage != null)
-		hBrush = OS.CreatePatternBrush (Image.win32_getHandle(backgroundImage, getZoom()));
+		hBrush = OS.CreatePatternBrush (Image.win32_getHandle(backgroundImage, getAutoscalingZoom()));
 	else if (background != -1)
 		hBrush = OS.CreateSolidBrush (background);
 
@@ -1366,7 +1366,9 @@ LRESULT wmTimer (long wParam, long lParam) {
 void handleDPIChange(Event event, float scalingFactor) {
 	super.handleDPIChange(event, scalingFactor);
 	for (MenuItem item : getItems()) {
-		item.notifyListeners(SWT.ZoomChanged, event);
+		if (item != null && !item.isDisposed()) {
+			item.notifyListeners(SWT.ZoomChanged, event);
+		}
 	}
 }
 }

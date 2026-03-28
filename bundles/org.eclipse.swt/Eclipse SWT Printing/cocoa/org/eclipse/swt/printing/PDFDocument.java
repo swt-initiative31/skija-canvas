@@ -31,6 +31,10 @@ import org.eclipse.swt.internal.cocoa.*;
  * when those instances are no longer required.
  * </p>
  * <p>
+ * <b>Note:</b> On Windows, this class uses the built-in "Microsoft Print to PDF"
+ * printer which is available on Windows 10 and later.
+ * </p>
+ * <p>
  * The following example demonstrates how to use PDFDocument:
  * </p>
  * <pre>
@@ -43,14 +47,15 @@ import org.eclipse.swt.internal.cocoa.*;
  *
  * @see GC
  * @since 3.133
+ *
+ * @noreference This class is provisional API and subject to change. It is being made available to gather early feedback. The API or behavior may change in future releases as the implementation evolves based on user feedback.
  */
-public class PDFDocument implements Drawable {
-	Device device;
+public final class PDFDocument extends Device {
 	long pdfContext;
 	NSGraphicsContext graphicsContext;
 	boolean isGCCreated = false;
-	boolean disposed = false;
 	boolean pageStarted = false;
+	String filename;
 
 	/**
 	 * Width of the page in points (1/72 inch)
@@ -63,72 +68,114 @@ public class PDFDocument implements Drawable {
 	double heightInPoints;
 
 	/**
-	 * Constructs a new PDFDocument with the specified filename and page dimensions.
-	 * <p>
-	 * You must dispose the PDFDocument when it is no longer required.
-	 * </p>
-	 *
-	 * @param filename the path to the PDF file to create
-	 * @param widthInPoints the width of each page in points (1/72 inch)
-	 * @param heightInPoints the height of each page in points (1/72 inch)
-	 *
-	 * @exception IllegalArgumentException <ul>
-	 *    <li>ERROR_NULL_ARGUMENT - if filename is null</li>
-	 *    <li>ERROR_INVALID_ARGUMENT - if width or height is not positive</li>
-	 * </ul>
-	 * @exception SWTError <ul>
-	 *    <li>ERROR_NO_HANDLES - if the PDF context could not be created</li>
-	 * </ul>
-	 *
-	 * @see #dispose()
+	 * Internal data class to pass PDF document parameters through
+	 * the Device constructor.
 	 */
-	public PDFDocument(String filename, double widthInPoints, double heightInPoints) {
-		this(null, filename, widthInPoints, heightInPoints);
+	static class PDFDocumentData extends DeviceData {
+		String filename;
+		double widthInPoints;
+		double heightInPoints;
 	}
 
 	/**
-	 * Constructs a new PDFDocument with the specified filename and page dimensions,
-	 * associated with the given device.
+	 * Constructs a new PDFDocument with the specified filename and page size.
+	 * <p>
+	 * The page size specifies the preferred dimensions in points (1/72 inch). On Windows,
+	 * the Microsoft Print to PDF driver only supports standard paper sizes, so the actual
+	 * page size may be larger than requested. Use {@link #getBounds()} to query the actual
+	 * page dimensions after construction.
+	 * </p>
 	 * <p>
 	 * You must dispose the PDFDocument when it is no longer required.
 	 * </p>
 	 *
-	 * @param device the device to associate with this PDFDocument
 	 * @param filename the path to the PDF file to create
-	 * @param widthInPoints the width of each page in points (1/72 inch)
-	 * @param heightInPoints the height of each page in points (1/72 inch)
+	 * @param pageSize the page size specifying width and height in points (1/72 inch)
+	 *
+	 * @exception IllegalArgumentException <ul>
+	 *    <li>ERROR_NULL_ARGUMENT - if filename or pageSize is null</li>
+	 *    <li>ERROR_INVALID_ARGUMENT - if width or height is not positive</li>
+	 * </ul>
+	 * @exception SWTError <ul>
+	 *    <li>ERROR_NO_HANDLES - if the PDF printer is not available</li>
+	 * </ul>
+	 *
+	 * @see PageSize
+	 * @see #dispose()
+	 * @see #getBounds()
+	 */
+	public PDFDocument(String filename, PageSize pageSize) {
+		super(checkData(filename, pageSize));
+	}
+
+	/**
+	 * Constructs a new PDFDocument with the specified filename and preferred page dimensions.
+	 * <p>
+	 * The dimensions specify the preferred page size in points (1/72 inch). On Windows,
+	 * the Microsoft Print to PDF driver only supports standard paper sizes, so the actual
+	 * page size may be larger than requested. Use {@link #getBounds()} to query the actual
+	 * page dimensions after construction.
+	 * </p>
+	 * <p>
+	 * You must dispose the PDFDocument when it is no longer required.
+	 * </p>
+	 *
+	 * @param filename the path to the PDF file to create
+	 * @param widthInPoints the preferred width of each page in points (1/72 inch)
+	 * @param heightInPoints the preferred height of each page in points (1/72 inch)
 	 *
 	 * @exception IllegalArgumentException <ul>
 	 *    <li>ERROR_NULL_ARGUMENT - if filename is null</li>
 	 *    <li>ERROR_INVALID_ARGUMENT - if width or height is not positive</li>
 	 * </ul>
 	 * @exception SWTError <ul>
-	 *    <li>ERROR_NO_HANDLES - if the PDF context could not be created</li>
+	 *    <li>ERROR_NO_HANDLES - if the PDF printer is not available</li>
 	 * </ul>
 	 *
 	 * @see #dispose()
+	 * @see #getBounds()
 	 */
-	public PDFDocument(Device device, String filename, double widthInPoints, double heightInPoints) {
+	public PDFDocument(String filename, double widthInPoints, double heightInPoints) {
+		this(filename, new PageSize(widthInPoints, heightInPoints));
+	}
+
+	/**
+	 * Validates and prepares the data for construction.
+	 */
+	static PDFDocumentData checkData(String filename, PageSize pageSize) {
+		if (pageSize == null) SWT.error(SWT.ERROR_NULL_ARGUMENT);
+		return checkData(filename, pageSize.width(), pageSize.height());
+	}
+
+	/**
+	 * Validates and prepares the data for construction.
+	 */
+	static PDFDocumentData checkData(String filename, double widthInPoints, double heightInPoints) {
 		if (filename == null) SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		if (widthInPoints <= 0 || heightInPoints <= 0) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+		PDFDocumentData data = new PDFDocumentData();
+		data.filename = filename;
+		data.widthInPoints = widthInPoints;
+		data.heightInPoints = heightInPoints;
+		return data;
+	}
+
+	/**
+	 * Creates the PDF device in the operating system.
+	 * This method is called before <code>init</code>.
+	 *
+	 * @param data the DeviceData which describes the receiver
+	 */
+	@Override
+	protected void create(DeviceData data) {
+		PDFDocumentData pdfData = (PDFDocumentData) data;
+		this.filename = pdfData.filename;
+		this.widthInPoints = pdfData.widthInPoints;
+		this.heightInPoints = pdfData.heightInPoints;
 
 		NSAutoreleasePool pool = null;
 		if (!NSThread.isMainThread()) pool = (NSAutoreleasePool) new NSAutoreleasePool().alloc().init();
 		try {
-			this.widthInPoints = widthInPoints;
-			this.heightInPoints = heightInPoints;
-
-			// Get device from the current display if not provided
-			if (device == null) {
-				try {
-					this.device = org.eclipse.swt.widgets.Display.getDefault();
-				} catch (Exception e) {
-					this.device = null;
-				}
-			} else {
-				this.device = device;
-			}
-
 			// Create CFURL from the filename
 			NSString path = NSString.stringWith(filename);
 			NSURL fileURL = NSURL.fileURLWithPath(path);
@@ -184,11 +231,11 @@ public class PDFDocument implements Drawable {
 	 * </p>
 	 *
 	 * @exception SWTException <ul>
-	 *    <li>ERROR_WIDGET_DISPOSED - if the receiver has been disposed</li>
+	 *    <li>ERROR_DEVICE_DISPOSED - if the receiver has been disposed</li>
 	 * </ul>
 	 */
 	public void newPage() {
-		if (disposed) SWT.error(SWT.ERROR_WIDGET_DISPOSED);
+		checkDevice();
 		NSAutoreleasePool pool = null;
 		if (!NSThread.isMainThread()) pool = (NSAutoreleasePool) new NSAutoreleasePool().alloc().init();
 		try {
@@ -208,19 +255,23 @@ public class PDFDocument implements Drawable {
 	 * This method should be called after completing the content of one page
 	 * and before starting to draw on the next page.
 	 * </p>
+	 * <p>
+	 * <b>Note:</b> On Windows, changing page dimensions after the document
+	 * has been started may not be fully supported by all printer drivers.
+	 * </p>
 	 *
-	 * @param widthInPoints the width of the new page in points (1/72 inch)
-	 * @param heightInPoints the height of the new page in points (1/72 inch)
+	 * @param widthInPoints the preferred width of the new page in points (1/72 inch)
+	 * @param heightInPoints the preferred height of the new page in points (1/72 inch)
 	 *
 	 * @exception IllegalArgumentException <ul>
 	 *    <li>ERROR_INVALID_ARGUMENT - if width or height is not positive</li>
 	 * </ul>
 	 * @exception SWTException <ul>
-	 *    <li>ERROR_WIDGET_DISPOSED - if the receiver has been disposed</li>
+	 *    <li>ERROR_DEVICE_DISPOSED - if the receiver has been disposed</li>
 	 * </ul>
 	 */
 	public void newPage(double widthInPoints, double heightInPoints) {
-		if (disposed) SWT.error(SWT.ERROR_WIDGET_DISPOSED);
+		checkDevice();
 		if (widthInPoints <= 0 || heightInPoints <= 0) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 
 		this.widthInPoints = widthInPoints;
@@ -229,31 +280,76 @@ public class PDFDocument implements Drawable {
 	}
 
 	/**
-	 * Returns the width of the current page in points.
+	 * Returns the actual width of the current page in points.
+	 * <p>
+	 * On Windows, this may be larger than the preferred width specified
+	 * in the constructor due to standard paper size constraints.
+	 * </p>
 	 *
-	 * @return the width in points (1/72 inch)
+	 * @return the actual width in points (1/72 inch)
 	 *
 	 * @exception SWTException <ul>
-	 *    <li>ERROR_WIDGET_DISPOSED - if the receiver has been disposed</li>
+	 *    <li>ERROR_DEVICE_DISPOSED - if the receiver has been disposed</li>
 	 * </ul>
 	 */
 	public double getWidth() {
-		if (disposed) SWT.error(SWT.ERROR_WIDGET_DISPOSED);
+		checkDevice();
 		return widthInPoints;
 	}
 
 	/**
-	 * Returns the height of the current page in points.
+	 * Returns the actual height of the current page in points.
+	 * <p>
+	 * On Windows, this may be larger than the preferred height specified
+	 * in the constructor due to standard paper size constraints.
+	 * </p>
 	 *
-	 * @return the height in points (1/72 inch)
+	 * @return the actual height in points (1/72 inch)
 	 *
 	 * @exception SWTException <ul>
-	 *    <li>ERROR_WIDGET_DISPOSED - if the receiver has been disposed</li>
+	 *    <li>ERROR_DEVICE_DISPOSED - if the receiver has been disposed</li>
 	 * </ul>
 	 */
 	public double getHeight() {
-		if (disposed) SWT.error(SWT.ERROR_WIDGET_DISPOSED);
+		checkDevice();
 		return heightInPoints;
+	}
+
+	/**
+	 * Returns the DPI (dots per inch) of the PDF document.
+	 * Since the coordinate system is scaled to work in points (1/72 inch),
+	 * this always returns 72 DPI, consistent with GTK and Cocoa implementations.
+	 *
+	 * @return a point whose x coordinate is the horizontal DPI and whose y coordinate is the vertical DPI
+	 *
+	 * @exception SWTException <ul>
+	 *    <li>ERROR_DEVICE_DISPOSED - if the receiver has been disposed</li>
+	 * </ul>
+	 */
+	@Override
+	public Point getDPI() {
+		checkDevice();
+		return new Point(72, 72);
+	}
+
+	/**
+	 * Returns a rectangle describing the receiver's size and location.
+	 * The rectangle dimensions are in points (1/72 inch).
+	 * <p>
+	 * On Windows, this returns the actual page size which may be larger
+	 * than the preferred size specified in the constructor.
+	 * </p>
+	 *
+	 * @return the bounding rectangle
+	 *
+	 * @exception SWTException <ul>
+	 *    <li>ERROR_DEVICE_DISPOSED - if the receiver has been disposed</li>
+	 * </ul>
+	 */
+	@Override
+	public Rectangle getBounds() {
+		checkDevice();
+		return new Rectangle(0, 0, (int) widthInPoints, (int) heightInPoints);
 	}
 
 	/**
@@ -273,7 +369,7 @@ public class PDFDocument implements Drawable {
 	 */
 	@Override
 	public long internal_new_GC(GCData data) {
-		if (disposed) SWT.error(SWT.ERROR_WIDGET_DISPOSED);
+		checkDevice();
 		if (isGCCreated) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 
 		NSAutoreleasePool pool = null;
@@ -290,18 +386,16 @@ public class PDFDocument implements Drawable {
 				if ((data.style & mask) == 0) {
 					data.style |= SWT.LEFT_TO_RIGHT;
 				}
-				data.device = device;
+				data.device = this;
 				data.flippedContext = graphicsContext;
 				data.restoreContext = true;
 				NSSize size = new NSSize();
 				size.width = widthInPoints;
 				size.height = heightInPoints;
 				data.size = size;
-				if (device != null) {
-					data.background = device.getSystemColor(SWT.COLOR_WHITE).handle;
-					data.foreground = device.getSystemColor(SWT.COLOR_BLACK).handle;
-					data.font = device.getSystemFont();
-				}
+				data.background = getSystemColor(SWT.COLOR_WHITE).handle;
+				data.foreground = getSystemColor(SWT.COLOR_BLACK).handle;
+				data.font = getSystemFont();
 			}
 			isGCCreated = true;
 			return graphicsContext.id;
@@ -350,27 +444,12 @@ public class PDFDocument implements Drawable {
 	}
 
 	/**
-	 * Returns <code>true</code> if the PDFDocument has been disposed,
-	 * and <code>false</code> otherwise.
-	 *
-	 * @return <code>true</code> when the PDFDocument is disposed and <code>false</code> otherwise
+	 * Destroys the PDF document handle.
+	 * This method is called internally by the dispose
+	 * mechanism of the <code>Device</code> class.
 	 */
-	public boolean isDisposed() {
-		return disposed;
-	}
-
-	/**
-	 * Disposes of the operating system resources associated with
-	 * the PDFDocument. Applications must dispose of all PDFDocuments
-	 * that they allocate.
-	 * <p>
-	 * This method finalizes the PDF file and writes it to disk.
-	 * </p>
-	 */
-	public void dispose() {
-		if (disposed) return;
-		disposed = true;
-
+	@Override
+	protected void destroy() {
 		NSAutoreleasePool pool = null;
 		if (!NSThread.isMainThread()) pool = (NSAutoreleasePool) new NSAutoreleasePool().alloc().init();
 		try {

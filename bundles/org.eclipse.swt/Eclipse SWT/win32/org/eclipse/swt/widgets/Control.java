@@ -15,6 +15,7 @@
 package org.eclipse.swt.widgets;
 
 
+import java.lang.reflect.*;
 import java.util.*;
 import java.util.concurrent.atomic.*;
 import java.util.stream.*;
@@ -77,12 +78,24 @@ public abstract class Control extends Widget implements Drawable {
 	Region region;
 	Font font;
 	int drawCount, foreground, background, backgroundAlpha = 255;
-	boolean autoScaleDisabled = false;
+	AutoscalingMode autoscalingMode = AutoscalingMode.ENABLED;
 
+	/**
+	 * @deprecated use {@link Shell#getZoom(AutoscalingMode)} instead to obtain the zoom of the shell.
+	 */
+	@Deprecated(since = "2026-03", forRemoval = true)
 	private static final String DATA_SHELL_ZOOM = "SHELL_ZOOM";
 
+	/**
+	 * @deprecated use {@link Control#setAutoscalingMode(AutoscalingMode)} instead to set the autoscaling mode directly.
+	 */
+	@Deprecated(since = "2026-03", forRemoval = true)
 	private static final String DATA_AUTOSCALE_DISABLED = "AUTOSCALE_DISABLED";
 
+	/**
+	 * @deprecated use {@link Control#setAutoscalingMode(AutoscalingMode)} instead to set the autoscaling mode directly.
+	 */
+	@Deprecated(since = "2026-03", forRemoval = true)
 	private static final String PROPOGATE_AUTOSCALE_DISABLED = "PROPOGATE_AUTOSCALE_DISABLED";
 /**
  * Prevents uninitialized instances from being created outside the package.
@@ -123,11 +136,11 @@ Control () {
 public Control (Composite parent, int style) {
 	super (parent, style);
 	this.parent = parent;
-	Boolean parentPropagateAutoscaleDisabled = (Boolean) parent.getData(PROPOGATE_AUTOSCALE_DISABLED);
-	if (parentPropagateAutoscaleDisabled == null || parentPropagateAutoscaleDisabled) {
-		this.autoScaleDisabled = parent.autoScaleDisabled;
+	AutoscalingMode parentAutoscaleMode = parent.autoscalingMode;
+	if (parentAutoscaleMode == AutoscalingMode.DISABLED_INHERITED) {
+		this.autoscalingMode = parent.autoscalingMode;
 	}
-	if (!autoScaleDisabled) {
+	if (!isAutoscalingDisabled()) {
 		this.nativeZoom = getShellZoom();
 	}
 	createWidget ();
@@ -736,7 +749,7 @@ int defaultBackground () {
 }
 
 long defaultFont() {
-	return SWTFontProvider.getSystemFontHandle(display, getNativeZoom());
+	return SWTFontProvider.getSystemFontHandle(display, nativeZoom);
 }
 
 int defaultForeground () {
@@ -796,7 +809,7 @@ public boolean dragDetect (Event event) {
 	checkWidget ();
 	if (event == null) error (SWT.ERROR_NULL_ARGUMENT);
 	Point loc = event.getLocation();
-	int zoom = getZoom();
+	int zoom = getAutoscalingZoom();
 	return dragDetect (event.button, event.count, event.stateMask, DPIUtil.pointToPixel(loc.x, zoom), DPIUtil.pointToPixel(loc.y, zoom));
 }
 
@@ -839,7 +852,7 @@ public boolean dragDetect (Event event) {
 public boolean dragDetect (MouseEvent event) {
 	checkWidget ();
 	if (event == null) error (SWT.ERROR_NULL_ARGUMENT);
-	int zoom = getZoom();
+	int zoom = getAutoscalingZoom();
 	return dragDetect (event.button, event.count, event.stateMask, DPIUtil.pointToPixel(event.x, zoom), DPIUtil.pointToPixel(event.y, zoom)); // To Pixels
 }
 
@@ -962,7 +975,7 @@ void fillImageBackground (long hDC, Control control, RECT rect, int tx, int ty) 
 	if (control != null) {
 		Image image = control.backgroundImage;
 		if (image != null) {
-			control.drawImageBackground (hDC, handle, Image.win32_getHandle(image, getZoom()), rect, tx, ty);
+			control.drawImageBackground (hDC, handle, Image.win32_getHandle(image, getAutoscalingZoom()), rect, tx, ty);
 		}
 	}
 }
@@ -1174,7 +1187,7 @@ int getBackgroundPixel () {
  */
 public int getBorderWidth () {
 	checkWidget ();
-	return DPIUtil.pixelToPoint(getBorderWidthInPixels (), getZoom());
+	return DPIUtil.pixelToPoint(getBorderWidthInPixels (), getAutoscalingZoom());
 }
 
 int getBorderWidthInPixels () {
@@ -1285,14 +1298,28 @@ public Object getData(String key) {
 @Override
 public void setData(String key, Object value) {
 	super.setData(key, value);
-	if (DATA_AUTOSCALE_DISABLED.equals(key)) {
-		autoScaleDisabled = Boolean.parseBoolean(value.toString());
-		if (autoScaleDisabled) {
-			this.nativeZoom = 100;
-		} else {
-			this.nativeZoom = getShellZoom();
-		}
+	if (DATA_AUTOSCALE_DISABLED.equals(key) || PROPOGATE_AUTOSCALE_DISABLED.equals(key)) {
+		updateAutoScalingModeFromData();
 	}
+}
+
+/**
+ * @deprecated use {@link Control#setAutoscalingMode(AutoscalingMode)} instead.
+ * These hidden data objects will be removed in a future release and one has to
+ * migrate to the new API for that purpose.
+ */
+@Deprecated(since = "2026-03", forRemoval = true)
+private void updateAutoScalingModeFromData() {
+	Object propagateAutoscaleDisabled = getData(PROPOGATE_AUTOSCALE_DISABLED);
+	boolean propagateAutoscaling = propagateAutoscaleDisabled == null || Boolean.parseBoolean(propagateAutoscaleDisabled.toString());
+	Object autoscaleDisabled = getData(DATA_AUTOSCALE_DISABLED);
+	boolean isAutoscaleDisabledOnControl = autoscaleDisabled != null && Boolean.parseBoolean(autoscaleDisabled.toString());
+	boolean isAutoscaleDisabledInheritedFromParent = parent != null && parent.autoscalingMode == AutoscalingMode.DISABLED_INHERITED;
+	AutoscalingMode newAutoscalingMode = AutoscalingMode.ENABLED;
+	if (isAutoscaleDisabledOnControl || isAutoscaleDisabledInheritedFromParent) {
+		newAutoscalingMode = propagateAutoscaling ? AutoscalingMode.DISABLED_INHERITED : AutoscalingMode.DISABLED;
+	}
+	setAutoscalingMode(newAutoscalingMode);
 }
 
 /**
@@ -1352,7 +1379,7 @@ public Font getFont () {
 	if (font != null) return font;
 	long hFont = OS.SendMessage (handle, OS.WM_GETFONT, 0, 0);
 	if (hFont == 0) hFont = defaultFont ();
-	return SWTFontProvider.getFont(display, hFont, getNativeZoom());
+	return SWTFontProvider.getFont(display, hFont, nativeZoom);
 }
 
 /**
@@ -1791,7 +1818,7 @@ public long internal_new_GC (GCData data) {
 			}
 		}
 		data.device = display;
-		data.nativeZoom = getNativeZoom();
+		data.nativeZoom = nativeZoom;
 		int foreground = getForegroundPixel ();
 		if (foreground != OS.GetTextColor (hDC)) data.foreground = foreground;
 		Control control = findBackgroundControl ();
@@ -2024,7 +2051,7 @@ void mapEvent (long hwnd, Event event) {
 	if (hwnd != handle) {
 		POINT point = new POINT ();
 		Point loc = event.getLocation();
-		int zoom = getZoom();
+		int zoom = getAutoscalingZoom();
 		point.x = DPIUtil.pointToPixel(loc.x, zoom);
 		point.y = DPIUtil.pointToPixel(loc.y, zoom);
 		OS.MapWindowPoints (hwnd, handle, point, 1);
@@ -2233,6 +2260,7 @@ public boolean print (GC gc) {
 	long hdc = gc.handle;
 	int state = 0;
 	long gdipGraphics = gc.getGCData().gdipGraphics;
+	float scaleFactor = 1f * gc.getGCData().nativeZoom/nativeZoom;
 	if (gdipGraphics != 0) {
 		long clipRgn = 0;
 		Gdip.Graphics_SetPixelOffsetMode(gdipGraphics, Gdip.PixelOffsetModeNone);
@@ -2248,6 +2276,7 @@ public boolean print (GC gc) {
 		long matrix = Gdip.Matrix_new(1, 0, 0, 1, 0, 0);
 		if (matrix == 0) error(SWT.ERROR_NO_HANDLES);
 		Gdip.Graphics_GetTransform(gdipGraphics, matrix);
+		Gdip.Matrix_Scale(matrix, scaleFactor, scaleFactor, Gdip.MatrixOrderPrepend);
 		if (!Gdip.Matrix_IsIdentity(matrix)) {
 			lpXform = new float[6];
 			Gdip.Matrix_GetElements(matrix, lpXform);
@@ -2257,12 +2286,16 @@ public boolean print (GC gc) {
 		state = OS.SaveDC(hdc);
 		if (lpXform != null) {
 			OS.SetGraphicsMode(hdc, OS.GM_ADVANCED);
-			OS.SetWorldTransform(hdc, lpXform);
+			OS.ModifyWorldTransform(hdc, lpXform, OS.MWT_LEFTMULTIPLY);
 		}
 		if (clipRgn != 0) {
 			OS.SelectClipRgn(hdc, clipRgn);
 			OS.DeleteObject(clipRgn);
 		}
+	} else {
+		state = OS.SaveDC(hdc);
+		float[] translateMatrix = new float[] {scaleFactor, 0, 0, scaleFactor, 0, 0};
+		OS.ModifyWorldTransform(hdc, translateMatrix, OS.MWT_LEFTMULTIPLY);
 	}
 	int flags = OS.RDW_UPDATENOW | OS.RDW_ALLCHILDREN;
 	OS.RedrawWindow (topHandle, null, 0, flags);
@@ -2273,8 +2306,8 @@ public boolean print (GC gc) {
 	 */
 	printWindowFlags |= OS.PW_RENDERFULLCONTENT;
 	printWidget (topHandle, hdc, gc, printWindowFlags);
+	OS.RestoreDC(hdc, state);
 	if (gdipGraphics != 0) {
-		OS.RestoreDC(hdc, state);
 		Gdip.Graphics_ReleaseHDC(gdipGraphics, hdc);
 	}
 	return true;
@@ -2486,7 +2519,7 @@ public void redraw () {
  */
 public void redraw (int x, int y, int width, int height, boolean all) {
 	checkWidget ();
-	int zoom = getZoom();
+	int zoom = getAutoscalingZoom();
 	if (width <= 0 || height <= 0) return;
 	Rectangle rectangle = Win32DPIUtils.pointToPixel(new Rectangle(x, y, width, height), zoom);
 
@@ -2989,7 +3022,7 @@ boolean sendGestureEvent (GESTUREINFO gi) {
 	int type = 0;
 	Point globalPt = new Point(gi.x, gi.y);
 	Point point = toControlInPixels(globalPt.x, globalPt.y);
-	int zoom = getZoom();
+	int zoom = getAutoscalingZoom();
 	event.setLocation(DPIUtil.pixelToPoint(point.x, zoom), DPIUtil.pixelToPoint(point.y, zoom));
 	switch (gi.dwID) {
 		case OS.GID_ZOOM:
@@ -3070,7 +3103,7 @@ void sendTouchEvent (TOUCHINPUT touchInput []) {
 	POINT pt = new POINT ();
 	OS.GetCursorPos (pt);
 	OS.ScreenToClient (handle, pt);
-	int zoom = getZoom();
+	int zoom = getAutoscalingZoom();
 	event.setLocation(DPIUtil.pixelToPoint(pt.x, zoom), DPIUtil.pixelToPoint(pt.y, zoom));
 	Touch [] touches = new Touch [touchInput.length];
 	Monitor monitor = getMonitor ();
@@ -3097,7 +3130,7 @@ void setBackground () {
 	if (control.backgroundImage != null) {
 		Shell shell = getShell ();
 		shell.releaseBrushes ();
-		setBackgroundImage (Image.win32_getHandle(control.backgroundImage, getZoom()));
+		setBackgroundImage (Image.win32_getHandle(control.backgroundImage, getAutoscalingZoom()));
 	} else {
 		setBackgroundPixel (control.background == -1 ? control.defaultBackground() : control.background);
 	}
@@ -3352,6 +3385,33 @@ private void fitInParentBounds(Rectangle boundsInPixels, int zoom) {
 	}
 }
 
+/**
+ * Sets the autoscaling mode for this widget. The capability is not supported on
+ * every platform, such that calling this method may not have an effect on
+ * unsupported platforms. The return value indicates if the autoscale mode was
+ * set properly. With {@link #isAutoScalable()}, the autoscale enablement can
+ * also be evaluated at any later point in time.
+ * <p>
+ * Currently, this is only supported on Windows.
+ * </p>
+ *
+ * @param autoscalingMode the autoscaling mode to set
+ *
+ * @return {@code false} if the operation was called on an unsupported platform
+ *
+ * @since 3.133
+ */
+public boolean setAutoscalingMode(AutoscalingMode autoscalingMode) {
+	this.autoscalingMode = autoscalingMode;
+	int newZoom = isAutoscalingDisabled() ? 100 : getShellZoom();
+	if (nativeZoom != newZoom) {
+		nativeZoom = newZoom;
+		Event zoomChangedEvent = createZoomChangedEvent(newZoom, false);
+		notifyListeners(SWT.ZoomChanged, zoomChangedEvent);
+	}
+	return true;
+}
+
 void setBoundsInPixels (Rectangle rect) {
 	setBoundsInPixels (rect.x, rect.y, rect.width, rect.height);
 }
@@ -3424,7 +3484,7 @@ public void setCursor (Cursor cursor) {
 }
 
 void setDefaultFont () {
-	long hFont = SWTFontProvider.getSystemFontHandle(display, getNativeZoom());
+	long hFont = SWTFontProvider.getSystemFontHandle(display, nativeZoom);
 	OS.SendMessage (handle, OS.WM_SETFONT, hFont, 0);
 }
 
@@ -3526,7 +3586,7 @@ public void setFont (Font font) {
 	Font newFont = font;
 	if (newFont != null) {
 		if (newFont.isDisposed()) error(SWT.ERROR_INVALID_ARGUMENT);
-		newFont = Font.win32_new(newFont, getNativeZoom());
+		newFont = Font.win32_new(newFont, nativeZoom);
 	}
 	long hFont = 0;
 	if (newFont != null) {
@@ -3834,7 +3894,7 @@ public void setRegion (Region region) {
 	long hRegion = 0;
 	if (region != null) {
 		hRegion = OS.CreateRectRgn (0, 0, 0, 0);
-		OS.CombineRgn (hRegion, Region.win32_getHandle(region, getZoom()), hRegion, OS.RGN_OR);
+		OS.CombineRgn (hRegion, Region.win32_getHandle(region, getAutoscalingZoom()), hRegion, OS.RGN_OR);
 	}
 	OS.SetWindowRgn (handle, hRegion, true);
 	this.region = region;
@@ -4123,7 +4183,7 @@ public Point toControl (int x, int y) {
 	checkWidget ();
 	Point displayPointInPixels = getDisplay().translateToDisplayCoordinates(new Point(x, y));
 	final Point controlPointInPixels = toControlInPixels(displayPointInPixels.x, displayPointInPixels.y);
-	return Win32DPIUtils.pixelToPointAsLocation(controlPointInPixels, getZoom());
+	return Win32DPIUtils.pixelToPointAsLocation(controlPointInPixels, getAutoscalingZoom());
 }
 
 Point toControlInPixels (int x, int y) {
@@ -4181,7 +4241,7 @@ public Point toControl (Point point) {
  */
 public Point toDisplay (int x, int y) {
 	checkWidget ();
-	int zoom = getZoom();
+	int zoom = getAutoscalingZoom();
 	Point displayPointInPixels = toDisplayInPixels(DPIUtil.pointToPixel(x, zoom), DPIUtil.pointToPixel(y, zoom));
 	return getDisplay().translateFromDisplayCoordinates(displayPointInPixels);
 }
@@ -4723,7 +4783,7 @@ void updateBackgroundColor () {
 void updateBackgroundImage () {
 	Control control = findBackgroundControl ();
 	Image image = control != null ? control.backgroundImage : backgroundImage;
-	setBackgroundImage (image != null ? Image.win32_getHandle(image, getZoom()) : 0);
+	setBackgroundImage (image != null ? Image.win32_getHandle(image, getAutoscalingZoom()) : 0);
 }
 
 void updateBackgroundMode () {
@@ -4864,19 +4924,19 @@ public boolean setParent (Composite parent) {
 
 @Override
 GC createNewGC(long hDC, GCData data) {
-	data.nativeZoom = getNativeZoom();
-	if (autoScaleDisabled && data.font != null) {
+	data.nativeZoom = nativeZoom;
+	if (isAutoscalingDisabled() && data.font != null) {
 		data.font = SWTFontProvider.getFont(display, data.font.getFontData()[0], 100);
 	}
 	return GC.win32_new(hDC, data);
 }
 
 @Override
-int getZoom() {
-	if (autoScaleDisabled) {
+int getAutoscalingZoom() {
+	if (isAutoscalingDisabled()) {
 		return 100;
 	}
-	return super.getZoom();
+	return super.getAutoscalingZoom();
 }
 
 int getShellZoom() {
@@ -4887,17 +4947,17 @@ int getShellZoom() {
 }
 
 int computeGetBoundsZoom() {
-	if (parent != null && !autoScaleDisabled) {
-		return parent.getZoom();
+	if (parent != null && !isAutoscalingDisabled()) {
+		return parent.getAutoscalingZoom();
 	}
-	return getZoom();
+	return getAutoscalingZoom();
 }
 
 int computeBoundsZoom() {
 	if (parent != null) {
-		return parent.getZoom();
+		return parent.getAutoscalingZoom();
 	}
-	return getZoom();
+	return getAutoscalingZoom();
 }
 
 abstract TCHAR windowClass ();
@@ -5789,7 +5849,7 @@ LRESULT WM_TABLET_FLICK (long wParam, long lParam) {
 			event.yDirection = 1;
 			break;
 	}
-	int zoom = getZoom();
+	int zoom = getAutoscalingZoom();
 	event.setLocation(DPIUtil.pixelToPoint(fPoint.x, zoom), DPIUtil.pixelToPoint(fPoint.y, zoom));
 	event.type = SWT.Gesture;
 	event.detail = SWT.GESTURE_SWIPE;
@@ -5927,7 +5987,7 @@ LRESULT wmColorChild (long wParam, long lParam) {
 		RECT rect = new RECT ();
 		OS.GetClientRect (handle, rect);
 		long hwnd = control.handle;
-		long hBitmap = Image.win32_getHandle(control.backgroundImage, getZoom());
+		long hBitmap = Image.win32_getHandle(control.backgroundImage, getAutoscalingZoom());
 		OS.MapWindowPoints (handle, hwnd, rect, 2);
 		POINT lpPoint = new POINT ();
 		OS.GetWindowOrgEx (wParam, lpPoint);
@@ -5992,7 +6052,7 @@ static class DPIChangeExecution {
 			asyncExec &= (comp.layout != null);
 		}
 		if (asyncExec) {
-			control.getDisplay().asyncExec(operation::run);
+			DPIChangeProcessingCallback.schedule(control, operation);
 		} else {
 			operation.run();
 		}
@@ -6008,6 +6068,49 @@ static class DPIChangeExecution {
 	private boolean decrement() {
 		return taskCount.decrementAndGet() <= 0;
 	}
+}
+
+private static class DPIChangeProcessingCallback  {
+	private final Runnable operation;
+	private final long address;
+
+	private DPIChangeProcessingCallback(Control control, Runnable dpiChangeProcessing) {
+		// Has to have TIMERPROC signature, see https://learn.microsoft.com/en-us/windows/win32/api/winuser/nc-winuser-timerproc
+		Callback callback = new Callback(this, "run", void.class, new Type[] { int.class, int.class, int.class, int.class} );
+		this.operation = () -> {
+			if (!control.isDisposed()) {
+				dpiChangeProcessing.run();
+			}
+			callback.dispose();
+		};
+		this.address = callback.getAddress();
+	}
+
+	@SuppressWarnings("unused") // Executed as callback method referenced by signature description
+	public void run(int hwnd, int msg , int idEvent, int dwTime) {
+		OS.KillTimer(hwnd, idEvent);
+		operation.run();
+	}
+
+	private long getAddress() {
+		return address;
+	}
+
+	static void schedule(Control control, Runnable runnable) {
+		try {
+			DPIChangeProcessingCallback callback = new DPIChangeProcessingCallback(control, runnable);
+			OS.SetTimer(0, 0, 0, callback.getAddress());
+		} catch  (SWTError error) {
+			// In case of too many callbacks, fall back to running the operation synchronously
+			if (error.code == SWT.ERROR_NO_MORE_CALLBACKS) {
+				runnable.run();
+			} else {
+				throw error;
+			}
+		}
+
+	}
+
 }
 
 void sendZoomChangedEvent(Event event, Shell shell) {
@@ -6032,13 +6135,17 @@ void sendZoomChangedEvent(Event event, Shell shell) {
 	}
 }
 
+private boolean isAutoscalingDisabled() {
+	return autoscalingMode != AutoscalingMode.ENABLED;
+}
+
 @Override
 void handleDPIChange(Event event, float scalingFactor) {
 	super.handleDPIChange(event, scalingFactor);
-	if (this.autoScaleDisabled) {
+	if (isAutoscalingDisabled()) {
 		this.nativeZoom = 100;
 	}
-	resizeFont(this, getNativeZoom());
+	resizeFont(this, nativeZoom);
 
 	Image image = backgroundImage;
 	if (image != null) {
@@ -6051,6 +6158,19 @@ void handleDPIChange(Event event, float scalingFactor) {
 	if (getRegion() != null) {
 		setRegion(getRegion());
 	}
+}
+
+@Override
+int getSystemMetrics(int nIndex) {
+	Shell shell = getShell();
+	int zoom = shell != null ? shell.getZoom() : nativeZoom;
+	return OS.GetSystemMetricsForDpi(nIndex, DPIUtil.mapZoomToDPI(zoom));
+}
+
+boolean adjustWindowRectEx(RECT lpRect, int dwStyle, boolean bMenu, int dwExStyle) {
+	Shell shell = getShell();
+	int zoom = shell != null ? shell.getZoom() : nativeZoom;
+	return OS.AdjustWindowRectExForDpi (lpRect, dwStyle, bMenu, dwExStyle, DPIUtil.mapZoomToDPI(zoom));
 }
 
 private static void resizeFont(Control control, int newZoom) {

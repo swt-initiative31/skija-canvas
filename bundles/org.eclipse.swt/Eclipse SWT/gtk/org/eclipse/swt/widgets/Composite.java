@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2025 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -559,7 +559,7 @@ public void drawBackground (GC gc, int x, int y, int width, int height, int offs
 		long cairo = data.cairo;
 		Cairo.cairo_save (cairo);
 		if (control.backgroundImage != null) {
-			Point pt = display.mapInPixels (this, control, 0, 0);
+			Point pt = display.map (this, control, 0, 0);
 			Cairo.cairo_translate (cairo, -pt.x - offsetX, -pt.y - offsetY);
 			x += pt.x + offsetX;
 			y += pt.y + offsetY;
@@ -584,7 +584,7 @@ public void drawBackground (GC gc, int x, int y, int width, int height, int offs
 		Cairo.cairo_fill (cairo);
 		Cairo.cairo_restore (cairo);
 	} else {
-		gc.fillRectangle(new Rectangle(x, y, width, height));
+		gc.fillRectangle(x, y, width, height);
 
 	}
 }
@@ -1438,7 +1438,7 @@ void printWidget (GC gc, long drawable, int depth, int x, int y) {
 	gc.setClipping (newClip);
 	super.printWidget (gc, drawable, depth, x, y);
 	Rectangle clientRect = getClientAreaInPixels ();
-	Point pt = display.mapInPixels (this, parent, clientRect.x, clientRect.y);
+	Point pt = display.map (this, parent, clientRect.x, clientRect.y);
 	clientRect.x = x + pt.x - rect.x;
 	clientRect.y = y + pt.y - rect.y;
 	newClip.intersect (clientRect);
@@ -1447,7 +1447,7 @@ void printWidget (GC gc, long drawable, int depth, int x, int y) {
 	for (int i=children.length-1; i>=0; --i) {
 		Control child = children [i];
 		if (child.getVisible ()) {
-			Point location = child.getLocationInPixels ();
+			Point location = child.getLocation ();
 			child.printWidget (gc, drawable, depth, x + location.x, y + location.y);
 		}
 	}

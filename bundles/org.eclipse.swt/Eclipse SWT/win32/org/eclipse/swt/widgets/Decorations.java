@@ -1708,27 +1708,34 @@ LRESULT WM_WINDOWPOSCHANGING (long wParam, long lParam) {
 @Override
 void handleDPIChange(Event event, float scalingFactor) {
 	super.handleDPIChange(event, scalingFactor);
-	Image image = getImage();
-	if (image != null) {
-		setImage(image);
-	}
-
-	Image[] images = getImages();
-	if (images != null && images.length > 0) {
-		setImages(images);
-	}
 
 	Menu menuBar = getMenuBar();
-	if (menuBar != null) {
+	if (menuBar != null && !menuBar.isDisposed()) {
 		menuBar.notifyListeners(SWT.ZoomChanged, event);
 	}
 
 	if (menus != null) {
 		for (Menu menu : menus) {
-			if (menu != null) {
+			if (menu != null && !menu.isDisposed()) {
 				menu.notifyListeners(SWT.ZoomChanged, event);
 			}
 		}
 	}
+
+	display.asyncExec(() -> {
+		if (isDisposed()) {
+			return;
+		}
+
+		Image image = getImage();
+		if (image != null) {
+			setImage(image);
+		}
+
+		Image[] images = getImages();
+		if (images != null && images.length > 0) {
+			setImages(images);
+		}
+	});
 }
 }

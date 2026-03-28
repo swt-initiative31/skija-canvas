@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2025 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -28,10 +28,12 @@ import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Device;
 import org.eclipse.swt.graphics.GC;
 import org.eclipse.swt.graphics.Image;
+import org.eclipse.swt.graphics.ImageGcDrawer;
 import org.eclipse.swt.graphics.Path;
 import org.eclipse.swt.graphics.Pattern;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
+import org.eclipse.swt.internal.TransparencyColorImageGcDrawer;
 import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
@@ -68,7 +70,7 @@ public class GraphicsExample {
 	Sash hSash, vSash;
 	Canvas canvas;
 	Composite tabControlPanel;
-	ToolItem backItem, dbItem;		// background, double buffer items
+	ToolItem backItem, dbItem,skiaItem;		// background, double buffer, skia items
 	Menu backMenu;					// background menu item
 
 	List<Image> resources;			// stores resources that will be disposed
@@ -203,6 +205,7 @@ void createControls(final Composite parent) {
 void createCanvas(Composite parent) {
 	int style = SWT.NO_BACKGROUND;
 	if (dbItem.getSelection()) style |= SWT.DOUBLE_BUFFERED;
+	if(skiaItem.getSelection()) style |= SWT.SKIA;
 	canvas = new Canvas(parent, style);
 	canvas.addListener(SWT.Paint, event -> {
 		GC gc = event.gc;
@@ -231,7 +234,11 @@ void createCanvas(Composite parent) {
 }
 
 void recreateCanvas() {
-	if (dbItem.getSelection() == ((canvas.getStyle() & SWT.DOUBLE_BUFFERED) != 0)) return;
+	boolean recreate = false;
+	if (dbItem.getSelection() != ((canvas.getStyle() & SWT.DOUBLE_BUFFERED) != 0)) recreate |= true;
+	if (skiaItem.getSelection() != ((canvas.getStyle() & SWT.SKIA) != 0)) recreate |= true;
+	if(recreate == false) return;
+
 	Object data = canvas.getLayoutData();
 	if (canvas != null) canvas.dispose();
 	createCanvas(parent);
@@ -299,7 +306,7 @@ void createToolBar(final Composite parent) {
 			final ToolItem toolItem = (ToolItem) event.widget;
 			final ToolBar  toolBar = toolItem.getParent();
 			Rectangle toolItemBounds = toolItem.getBounds();
-			Point point = toolBar.toDisplay(new Point(toolItemBounds.x, toolItemBounds.y));
+			Point point = toolBar.toDisplay(toolItemBounds.x, toolItemBounds.y);
 			backMenu.setLocation(point.x, point.y + toolItemBounds.height);
 			backMenu.setVisible(true);
 		}
@@ -310,6 +317,14 @@ void createToolBar(final Composite parent) {
 	dbItem.setText(getResourceString("DoubleBuffer")); //$NON-NLS-1$
 	dbItem.setImage(loadImage(display, "db.gif")); //$NON-NLS-1$
 	dbItem.addListener(SWT.Selection, event -> setDoubleBuffered(dbItem.getSelection()));
+
+	// skia tool item
+	skiaItem = new ToolItem(toolBar, SWT.CHECK);
+	skiaItem.setText(getResourceString("Skia")); //$NON-NLS-1$
+	skiaItem.setImage(loadImage(display, "db.gif")); //$NON-NLS-1$
+	skiaItem.setSelection(true);
+	skiaItem.addListener(SWT.Selection, event -> setSkia(skiaItem.getSelection()));
+
 }
 
 /**
@@ -325,11 +340,10 @@ static Image createThumbnail(Device device, String name) {
 	Rectangle src = image.getBounds();
 	Image result = null;
 	if (src.width != 16 || src.height != 16) {
-		result = new Image(device, 16, 16);
-		GC gc = new GC(result);
-		Rectangle dest = result.getBounds();
-		gc.drawImage(image, dest.x, dest.y, dest.width, dest.height);
-		gc.dispose();
+		ImageGcDrawer igc = (gc, iwidth, iheight) -> {
+			gc.drawImage(image, src.x, src.y, src.width, src.height, 0, 0, iwidth, iheight);
+		};
+		result = new Image(device, igc, 16, 16);
 	}
 	if (result != null) {
 		image.dispose();
@@ -347,17 +361,24 @@ static Image createThumbnail(Device device, String name) {
  *
  * */
 static Image createImage(Device device, Color color1, Color color2, int width, int height) {
-	Image image = new Image(device, width, height);
-	GC gc = new GC(image);
-	Rectangle rect = image.getBounds();
-	Pattern pattern = new Pattern(device, rect.x, rect.y, rect.width - 1,
-				rect.height - 1, color1, color2);
-	gc.setBackgroundPattern(pattern);
-	gc.fillRectangle(rect);
-	gc.drawRectangle(rect.x, rect.y, rect.width - 1, rect.height - 1);
-	gc.dispose();
-	pattern.dispose();
+	ImageGcDrawer igc = (gc, iwidth, iheight) ->  {
+		Pattern pattern = new Pattern(device, 0, 0, iwidth - 1,
+				iheight - 1, color1, color2);
+		gc.setBackgroundPattern(pattern);
+		gc.fillRectangle(0,0,iwidth,iheight);
+		gc.drawRectangle(0, 0, iwidth - 1, iheight - 1);
+		pattern.dispose();
+	};
+	Image image = new Image(device, igc, width, height);
 	return image;
+}
+
+private static Color getTransparencyColor(Device device, Color color) {
+	Color transparencyColor = device.getSystemColor(SWT.COLOR_CYAN);
+	if (transparencyColor.equals(color)) {
+		transparencyColor = device.getSystemColor(SWT.COLOR_DARK_BLUE);
+	}
+	return transparencyColor;
 }
 
 /**
@@ -368,16 +389,21 @@ static Image createImage(Device device, Color color1, Color color2, int width, i
  *
  * */
 static Image createImage(Device device, Color color) {
-	Image image = new Image(device, 16, 16);
-	GC gc = new GC(image);
-	gc.setBackground(color);
-	Rectangle rect = image.getBounds();
-	gc.fillRectangle(rect);
-	if (color.equals(device.getSystemColor(SWT.COLOR_BLACK))) {
-		gc.setForeground(device.getSystemColor(SWT.COLOR_WHITE));
-	}
-	gc.drawRectangle(rect.x, rect.y, rect.width - 1, rect.height - 1);
-	gc.dispose();
+	@SuppressWarnings("restriction")
+	ImageGcDrawer iGC = new TransparencyColorImageGcDrawer(getTransparencyColor(device, color)) {
+		@Override
+		public void drawOn(GC gc, int imageWidth, int imageHeight) {
+			gc.setBackground(getTransparencyColor(device, color));
+			gc.fillRectangle(0, 0, imageWidth, imageHeight);
+			gc.setBackground(color);
+			gc.fillRectangle(0, 0, imageWidth - 1, imageHeight - 1);
+			if (color.equals(device.getSystemColor(SWT.COLOR_BLACK))) {
+				gc.setForeground(device.getSystemColor(SWT.COLOR_WHITE));
+			}
+			gc.drawRectangle(0, 0, imageWidth - 1, imageHeight - 1);
+		}
+	};
+	Image image = new Image (device, iGC, 16, 16);
 	return image;
 }
 
@@ -561,6 +587,14 @@ public void redraw() {
  */
 public void setDoubleBuffered(boolean doubleBuffered) {
 	dbItem.setSelection(doubleBuffered);
+	recreateCanvas();
+}
+
+/**
+ * Sets whether the canvas is double buffered or not.
+ */
+public void setSkia(boolean skia) {
+	skiaItem.setSelection(skia);
 	recreateCanvas();
 }
 

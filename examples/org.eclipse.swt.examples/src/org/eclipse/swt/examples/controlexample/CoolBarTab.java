@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2025 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -350,7 +350,7 @@ class CoolBarTab extends Tab {
 				menu.addMenuListener(menuHiddenAdapter(e ->	visible = false));
 				for (int i = 0; i < 9; ++i) {
 					final String text = ControlExample.getResourceString("DropDownData_" + i);
-					if (text.length() != 0) {
+					if (!text.isEmpty()) {
 						MenuItem menuItem = new MenuItem(menu, SWT.NONE);
 						menuItem.setText(text);
 						/*
@@ -383,7 +383,7 @@ class CoolBarTab extends Tab {
 					final ToolBar  toolBar = toolItem.getParent();
 
 					Rectangle toolItemBounds = toolItem.getBounds();
-					Point point = toolBar.toDisplay(new Point(toolItemBounds.x, toolItemBounds.y));
+					Point point = toolBar.toDisplay(toolItemBounds.x, toolItemBounds.y);
 					menu.setLocation(point.x, point.y + toolItemBounds.height);
 					setMenuVisible(true);
 				}
@@ -429,7 +429,7 @@ class CoolBarTab extends Tab {
 				CoolItem coolItem = (CoolItem) event.widget;
 				Rectangle itemBounds = coolItem.getBounds ();
 				itemBounds.width = event.x - itemBounds.x;
-				Point pt = coolBar.toDisplay(new Point (itemBounds.x, itemBounds.y));
+				Point pt = coolBar.toDisplay(itemBounds.x, itemBounds.y);
 				itemBounds.x = pt.x;
 				itemBounds.y = pt.y;
 
@@ -444,7 +444,7 @@ class CoolBarTab extends Tab {
 				int i = 0;
 				while (i < toolCount) {
 					Rectangle toolBounds = tools[i].getBounds ();
-					pt = toolBar.toDisplay(new Point(toolBounds.x, toolBounds.y));
+					pt = toolBar.toDisplay(toolBounds.x, toolBounds.y);
 					toolBounds.x = pt.x;
 					toolBounds.y = pt.y;
 					Rectangle intersection = itemBounds.intersection (toolBounds);
@@ -469,7 +469,7 @@ class CoolBarTab extends Tab {
 							menuItem.setMenu(m);
 							for (int k = 0; k < 9; ++k) {
 								text = ControlExample.getResourceString("DropDownData_" + k);
-								if (text.length() != 0) {
+								if (!text.isEmpty()) {
 									MenuItem mi = new MenuItem(m, SWT.NONE);
 									mi.setText(text);
 									/* Application code to perform the action for the submenu item would go here. */
@@ -490,7 +490,7 @@ class CoolBarTab extends Tab {
 				/* Display the pop-up menu at the lower left corner of the arrow button.
 				 * Dispose the menu when the user is done with it.
 				 */
-				pt = coolBar.toDisplay(new Point(event.x, event.y));
+				pt = coolBar.toDisplay(event.x, event.y);
 				menu.setLocation (pt.x, pt.y);
 				menu.setVisible (true);
 				while (menu != null && !menu.isDisposed() && menu.isVisible ()) {

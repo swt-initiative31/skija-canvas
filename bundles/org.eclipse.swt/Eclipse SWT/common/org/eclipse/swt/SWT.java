@@ -2580,6 +2580,20 @@ public class SWT {
 	@Deprecated(forRemoval = true, since = "2024-03")
 	public static final int CHROMIUM = 1 << 17;
 
+	 /**
+	 * Experimental This API is experimental and may change or be removed in future releases.
+	 * Style constant specifying that a Canvas should use Skia
+	 * for rendering its content (value is 1&lt;&lt;23).
+	 * <p><b>Used By:</b></p>
+	 * <ul>
+	 * <li><code>Canvas</code></li>
+	 * </ul>
+	 *
+	 * @noreference Still in test mode: this field is not yet to be referenced by clients.
+	 * @since 3.133
+	 */
+	public static final int SKIA = 1 << 23;
+
 	/**
 	 * Style constant specifying that a Browser should use Edge (WebView2)
 	 * for rendering its content (value is 1&lt;&lt;18).
@@ -5016,3 +5030,4 @@ static {
 	}
 }
 }
+

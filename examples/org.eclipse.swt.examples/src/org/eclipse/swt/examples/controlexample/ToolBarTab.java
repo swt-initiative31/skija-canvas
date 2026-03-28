@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2015 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -268,11 +268,6 @@ class ToolBarTab extends Tab {
 		borderButton.setText ("SWT.BORDER");
 	}
 
-	@Override
-	void disposeExampleWidgets () {
-		super.disposeExampleWidgets ();
-	}
-
 	/**
 	 * Gets the "Example" widget children's items, if any.
 	 *
@@ -355,7 +350,7 @@ class ToolBarTab extends Tab {
 				menu = new Menu(shell, style | SWT.POP_UP);
 				for (int i = 0; i < 9; ++i) {
 					final String text = ControlExample.getResourceString("DropDownData_" + i);
-					if (text.length() != 0) {
+					if (!text.isEmpty()) {
 						MenuItem menuItem = new MenuItem(menu, SWT.NONE);
 						menuItem.setText(text);
 					} else {
@@ -378,8 +373,8 @@ class ToolBarTab extends Tab {
 				final ToolItem toolItem = (ToolItem) event.widget;
 				final ToolBar  toolBar = toolItem.getParent();
 
-				Point point = toolBar.toDisplay(new Point(event.x, event.y));
-				menu.setLocation(point.x, point.y);
+				Point point = toolBar.toDisplay(event.x, event.y);
+				menu.setLocation(point);
 				menu.setVisible(true);
 			}
 		}

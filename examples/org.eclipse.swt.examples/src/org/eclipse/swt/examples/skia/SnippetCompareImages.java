@@ -27,7 +27,7 @@ public class SnippetCompareImages {
 
 	private static final String IMAGES_PATH = "images";
 	private static final int IMAGE_SPACING = 10;
-	private final static ArrayList<ImageInfo> swtImages = new ArrayList<ImageInfo>();
+	private final static ArrayList<ImageInfo> swtImages = new ArrayList<>();
 
 	public static void main(String[] args) {
 		Display display = new Display();
@@ -103,6 +103,7 @@ public class SnippetCompareImages {
 		skiaScrollBar.setThumb(600); // Initial thumb size, will resize with shell
 
 		PaintListener gcPaintListener = new PaintListener() {
+			@Override
 			public void paintControl(PaintEvent e) {
 				int y = IMAGE_SPACING - gcScrollBar.getSelection();
 				drawImages(y, e.gc);
@@ -111,6 +112,7 @@ public class SnippetCompareImages {
 		gcCanvas.addPaintListener(gcPaintListener);
 
 		PaintListener swtPaintListener = new PaintListener() {
+			@Override
 			public void paintControl(PaintEvent e) {
 				int y = IMAGE_SPACING - skiaScrollBar.getSelection();
 				drawImages(y, e.gc);
@@ -120,12 +122,14 @@ public class SnippetCompareImages {
 		skiaCanvas.addPaintListener(swtPaintListener);
 
 		gcScrollBar.addSelectionListener(new SelectionAdapter() {
+			@Override
 			public void widgetSelected(SelectionEvent e) {
 				gcCanvas.redraw();
 			}
 		});
 
 		skiaScrollBar.addSelectionListener(new SelectionAdapter() {
+			@Override
 			public void widgetSelected(SelectionEvent e) {
 				skiaCanvas.redraw();
 			}

@@ -112,7 +112,7 @@ public sealed class GC extends Resource permits GCExtension {
 /**
  * Prevents uninitialized instances from being created outside the package.
  */
-protected GC() {
+GC() {
 }
 
 /**
@@ -6164,6 +6164,5 @@ private abstract class ReplaceableOperation extends Operation {
 		return operation.getClass().equals(this.getClass());
 	}
 }
-
 }
 

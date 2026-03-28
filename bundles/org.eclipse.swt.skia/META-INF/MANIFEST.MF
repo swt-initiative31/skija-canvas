@@ -14,4 +14,3 @@ Bundle-Vendor: %providerName
 Bundle-Localization: fragment
 Bundle-RequiredExecutionEnvironment: JavaSE-21
 Fragment-Host: org.eclipse.swt;bundle-version="[3.133.100.qualifier,4.0.0)"
-Import-Package: org.eclipse.swt.internal.canvasext;resolution:=optional

@@ -107,7 +107,7 @@ public class SkiaRegionCalculator implements AutoCloseable {
 	/**
 	 * Creates a Skija region from an SWT rectangle by converting it to a polygon.
 	 */
-	private io.github.humbleui.skija.Region createRectRegion(Rectangle rec) {
+	private static io.github.humbleui.skija.Region createRectRegion(Rectangle rec) {
 		final var rect = new IRect(rec.x, rec.y, rec.x + rec.width, rec.y + rec.height);
 
 		return createPolygonSkiaRegion(new int[] { rect.getLeft(), rect.getTop(), rect.getRight(), rect.getTop(),
@@ -115,7 +115,7 @@ public class SkiaRegionCalculator implements AutoCloseable {
 
 	}
 
-	private io.github.humbleui.skija.Region createPolygonSkiaRegion(int[] polygon) {
+	private static io.github.humbleui.skija.Region createPolygonSkiaRegion(int[] polygon) {
 
 		final io.github.humbleui.skija.Region r = new io.github.humbleui.skija.Region();
 

@@ -20,7 +20,7 @@ public class SnippetImageToPNG {
 	record FormatInfo(String format, int type) {
 	}
 
-	
+
 	private final static List<FormatInfo> formats = List.of(
 //			new FormatInfo(".gif", SWT.IMAGE_GIF), // SWT does not support saving GIFs for these images
 //			new FormatInfo(".ico", SWT.IMAGE_ICO), // SWT does not support saving ICOs for these images
@@ -28,10 +28,10 @@ public class SnippetImageToPNG {
 			new FormatInfo(".jpef", SWT.IMAGE_JPEG),
 			new FormatInfo(".png", SWT.IMAGE_PNG)
 	);
-	
+
 
 	private static final String IMAGES_PATH = "images";
-	private final static ArrayList<ImageInfo> swtImages = new ArrayList<ImageInfo>();
+	private final static ArrayList<ImageInfo> swtImages = new ArrayList<>();
 
 	public static void main(String[] args) {
 		Display display = new Display();

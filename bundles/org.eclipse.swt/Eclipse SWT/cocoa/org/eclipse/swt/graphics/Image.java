@@ -1947,7 +1947,6 @@ private class CachedImageAtSize {
 
 /**
  * Not supported on Cocoa.
- * @noreference This method is not intended to be referenced by clients.
  * @return the version of the image.
  */
 ImageVersion getImageVersion() {

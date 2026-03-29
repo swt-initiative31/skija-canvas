@@ -27,7 +27,7 @@ import org.eclipse.swt.widgets.*;
  * @see <a href="http://www.eclipse.org/swt/snippets/#opengl">OpenGL snippets</a>
  * @see <a href="http://www.eclipse.org/swt/">Sample code and further information</a>
  *
- * @since 3.2
+ * @noreference This class is not intended to be referenced by clients.
  */
 
 public abstract class GLCanvasExtension {

@@ -5,6 +5,9 @@ import java.util.function.*;
 import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.widgets.*;
 
+/**
+ * @noreference This class is not intended to be referenced by clients.
+ */
 public abstract class OpenGLCanvasExtension {
 
 	public OpenGLCanvasExtension(Canvas canvas, GLData data) {

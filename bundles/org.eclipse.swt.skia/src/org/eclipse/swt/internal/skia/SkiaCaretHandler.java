@@ -46,8 +46,8 @@ public class SkiaCaretHandler {
 			p.setAntiAlias(false);
 			// for some reason, the color must be inverted.
 			p.setColor(SkiaGC.invertSWTColorToInt(c.getDisplay().getSystemColor(SWT.COLOR_BLACK)));
-			final Rect scaled = SkiaGC.createScaledRectangleStatic(b.x, b.y, b.width, b.height);
-			s.getCanvas().drawRect(SkiaGC.offsetRectangleStatic(scaled, 0), p);
+			final Rect scaled = SkiaGC.createScaledRectangleStatic(c, b.x, b.y, b.width, b.height);
+			s.getCanvas().drawRect(SkiaGC.offsetRectangleStatic(c,scaled, 0), p);
 		}
 
 	}

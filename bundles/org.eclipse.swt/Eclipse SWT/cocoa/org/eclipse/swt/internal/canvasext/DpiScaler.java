@@ -16,15 +16,6 @@ public class DpiScaler {
 		this.canvas = canvas;
 	}
 
-	/**
-	 * INTERNAL ONLY for tests only, do not use this for your applications
-	 *
-	 * @return possible zooms of the os.
-	 */
-	public static int[] getSupportedZooms() {
-		return new int[] { 100 };
-	}
-
 	public static int autoScaleUp(int o) {
 		return Math.round(o * getFactor());
 	}
@@ -98,10 +89,6 @@ public class DpiScaler {
 
 	public Point scaleSize(int x, int y) {
 		return new Point(x,y);
-	}
-
-	public static void setNativeZoom(Canvas classicalCanvas, int zoom) {
-		// set zoom not supported for linux and mac
 	}
 
 }

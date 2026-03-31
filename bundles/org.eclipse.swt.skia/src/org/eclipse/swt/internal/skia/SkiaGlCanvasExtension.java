@@ -43,7 +43,7 @@ import io.github.humbleui.skija.SurfaceProps;
 import io.github.humbleui.types.Rect;
 
 public final class SkiaGlCanvasExtension extends OpenGLCanvasExtension
-implements ISkiaCanvasExtension, IExternalCanvasHandler {
+		implements ISkiaCanvasExtension, IExternalCanvasHandler {
 
 	private final DirectContext skijaContext;
 	private BackendRenderTarget renderTarget;
@@ -88,8 +88,7 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 
 		final Rectangle rect = this.canvas.getClientArea();
 
-		final var scaled = resources.getScaler().scaleSize(rect.width, rect.height);
-
+		final var scaled = resources.getScaler().scaleSurfaceSize(rect.width, rect.height);
 		if (renderTarget != null && !renderTarget.isClosed()) {
 			renderTarget.close();
 		}
@@ -182,7 +181,7 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 			}
 
 			// scale the bounds and clip the surface.
-			final var scaledBounds = scaler.scaleBounds(bounds, 100);
+			final var scaledBounds = scaler.scaleUpRectangle(bounds);
 			// new save count for the clip, so we can restore to this point in order to stay
 			// consistent for the future.
 			this.surface.getCanvas().save();

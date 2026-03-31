@@ -36,13 +36,13 @@ import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Shell;
 
 public class SnippetPattern {
-	
+
 	final static boolean USE_SKIA = true;
-	
+
 	static int style = USE_SKIA ? SWT.SKIA : SWT.NONE;
 	final static int WIDTH = 100;
 	final static int HEIGHT = 100;
-	
+
 public static void main(String[] args) {
 
 	Display display = new Display();

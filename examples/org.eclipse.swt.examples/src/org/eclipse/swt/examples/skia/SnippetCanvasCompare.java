@@ -16,9 +16,9 @@ public class SnippetCanvasCompare {
 		final Shell shell = new Shell(display);
 		shell.setText("Snippet Canvas Compare");
 
-		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED| SWT.H_SCROLL), 1, "SWT Canvas");
-		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED | SWT.H_SCROLL| SWT.SKIA), 2, "SkiaGlCanvas");
 
+		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED| SWT.H_SCROLL | SWT.BORDER), 1, "SWT Canvas");
+		configureCanvas(shell, new Canvas(shell, SWT.DOUBLE_BUFFERED | SWT.H_SCROLL| SWT.SKIA | SWT.BORDER), 2, "SkiaGlCanvas");
 
 		shell.setSize(1500, 1000);
 
@@ -33,6 +33,7 @@ public class SnippetCanvasCompare {
 
 	private static void configureCanvas(final Shell shell, final Canvas canvas, int index, String title) {
 		canvas.setSize(100, 100);
+//		canvas.setBackground(shell.getDisplay().getSystemColor(SWT.COLOR_YELLOW));
 		shell.addListener(SWT.Resize, e -> onResize(canvas, index));
 		canvas.addListener(SWT.Paint, e -> onPaint(e, title));
 	}
@@ -40,6 +41,14 @@ public class SnippetCanvasCompare {
 	private static void onPaint(Event e, String title) {
 		final Display d = e.widget.getDisplay();
 		final GC gc = e.gc;
+
+		var bg = gc.getBackground();
+
+		gc.setBackground(d.getSystemColor(SWT.COLOR_YELLOW));
+		gc.fillRectangle(new Rectangle(-100, -100, 3000, 3000));
+
+		gc.setBackground(bg);
+
 
 		gc.setForeground(d.getSystemColor(SWT.COLOR_RED));
 		gc.drawRectangle(new Rectangle(0, 0, 100, 100));

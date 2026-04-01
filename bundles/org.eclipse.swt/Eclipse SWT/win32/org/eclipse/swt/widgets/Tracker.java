@@ -405,7 +405,7 @@ public Rectangle [] getRectangles () {
 	checkWidget();
 	Rectangle [] result = getRectanglesInPixels();
 	for (int i = 0; i < result.length; i++) {
-		result[i] = Win32DPIUtils.pixelToPoint(result[i], getZoom());
+		result[i] = Win32DPIUtils.pixelToPoint(result[i], getAutoscalingZoom());
 	}
 	return result;
 }
@@ -823,7 +823,7 @@ public void setCursor(Cursor newCursor) {
 	checkWidget();
 	clientCursor = newCursor;
 	if (newCursor != null) {
-		if (inEvent) OS.SetCursor (Cursor.win32_getHandle(clientCursor, DPIUtil.getZoomForAutoscaleProperty(parent != null ? parent.getShellZoom() : getNativeZoom())));
+		if (inEvent) OS.SetCursor (Cursor.win32_getHandle(clientCursor, DPIUtil.getZoomForAutoscaleProperty(parent != null ? parent.getShellZoom() : nativeZoom)));
 	}
 }
 
@@ -847,7 +847,7 @@ public void setRectangles (Rectangle [] rectangles) {
 	Rectangle [] rectanglesInPixels = new Rectangle [rectangles.length];
 	for (int i = 0; i < rectangles.length; i++) {
 		if (parent != null) {
-			rectanglesInPixels [i] = Win32DPIUtils.pointToPixel (rectangles [i], getZoom());
+			rectanglesInPixels [i] = Win32DPIUtils.pointToPixel (rectangles [i], getAutoscalingZoom());
 		} else {
 			rectanglesInPixels [i] = display.translateToDisplayCoordinates(rectangles[i]);
 		}
@@ -896,7 +896,7 @@ long transparentProc (long hwnd, long msg, long wParam, long lParam) {
 			break;
 		case OS.WM_SETCURSOR:
 			if (clientCursor != null) {
-				OS.SetCursor (Cursor.win32_getHandle(clientCursor, DPIUtil.getZoomForAutoscaleProperty(parent != null ? parent.getShellZoom() : getNativeZoom())));
+				OS.SetCursor (Cursor.win32_getHandle(clientCursor, DPIUtil.getZoomForAutoscaleProperty(parent != null ? parent.getShellZoom() : nativeZoom)));
 				return 1;
 			}
 			if (resizeCursor != 0) {

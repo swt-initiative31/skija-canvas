@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2024 Christoph Läubrich and others.
+ * Copyright (c) 2024, 2026 Christoph Läubrich and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -37,66 +37,68 @@ public class Test_org_eclipse_swt_custom_BusyIndicator {
 	@Test
 	@Timeout(value = 30)
 	public void testShowWhile() {
-		Shell shell = new Shell();
-		Display display = shell.getDisplay();
-		Cursor busyCursor = display.getSystemCursor(SWT.CURSOR_WAIT);
-		CountDownLatch latch = new CountDownLatch(1);
-		CompletableFuture<?> future = CompletableFuture.runAsync(() -> {
-			try {
-				latch.await(10, TimeUnit.SECONDS);
-			} catch (InterruptedException e) {
+		// Executors.newSingleThreadExecutor() hangs on some Linux configurations
+		try (ExecutorService executor = Executors.newFixedThreadPool(2)){
+			Shell shell = new Shell();
+			Display display = shell.getDisplay();
+			Cursor busyCursor = display.getSystemCursor(SWT.CURSOR_WAIT);
+			CountDownLatch latch = new CountDownLatch(1);
+			CompletableFuture<?> future = CompletableFuture.runAsync(() -> {
+				try {
+					latch.await(10, TimeUnit.SECONDS);
+				} catch (InterruptedException e) {
+				}
+			}, executor);
+
+			CountDownLatch latchNested = new CountDownLatch(1);
+			CompletableFuture<?> futureNested = CompletableFuture.runAsync(() -> {
+				try {
+					latchNested.await(10, TimeUnit.SECONDS);
+				} catch (InterruptedException e) {
+				}
+			}, executor);
+
+			assertNotEquals(busyCursor, shell.getCursor());
+
+			// This it proves that events on the display are executed
+			display.asyncExec(() -> {
+				// This will happen during the showWhile(future) from below.
+				BusyIndicator.showWhile(futureNested);
+			});
+
+			Cursor[] cursorInAsync = new Cursor[2];
+
+			// this serves two purpose:
+			// 1) it proves that events on the display are executed
+			// 2) it checks that the shell has the busy cursor during the nest showWhile.
+			display.asyncExec(() -> {
+				cursorInAsync[0] = shell.getCursor();
+				latchNested.countDown();
+			});
+
+			// this serves two purpose:
+			// 1) it proves that events on the display are executed
+			// 2) it checks that the shell has the busy cursor even after the termination of
+			// the nested showWhile.
+			display.asyncExec(() -> {
+				cursorInAsync[1] = shell.getCursor();
+				latch.countDown();
+			});
+
+			BusyIndicator.showWhile(future);
+			assertTrue(future.isDone());
+			assertEquals(busyCursor, cursorInAsync[0]);
+			assertEquals(busyCursor, cursorInAsync[1]);
+			shell.dispose();
+			while (!display.isDisposed() && display.readAndDispatch()) {
 			}
-		});
-
-		CountDownLatch latchNested = new CountDownLatch(1);
-		CompletableFuture<?> futureNested = CompletableFuture.runAsync(() -> {
-			try {
-				latchNested.await(10, TimeUnit.SECONDS);
-			} catch (InterruptedException e) {
-			}
-		});
-
-		assertNotEquals(busyCursor, shell.getCursor());
-
-		// This it proves that events on the display are executed
-		display.asyncExec(() -> {
-			// This will happen during the showWhile(future) from below.
-			BusyIndicator.showWhile(futureNested);
-		});
-
-		Cursor[] cursorInAsync = new Cursor[2];
-
-		// this serves two purpose:
-		// 1) it proves that events on the display are executed
-		// 2) it checks that the shell has the busy cursor during the nest showWhile.
-		display.asyncExec(() -> {
-			cursorInAsync[0] = shell.getCursor();
-			latchNested.countDown();
-		});
-
-		// this serves two purpose:
-		// 1) it proves that events on the display are executed
-		// 2) it checks that the shell has the busy cursor even after the termination of
-		// the nested showWhile.
-		display.asyncExec(() -> {
-			cursorInAsync[1] = shell.getCursor();
-			latch.countDown();
-		});
-
-		BusyIndicator.showWhile(future);
-		assertTrue(future.isDone());
-		assertEquals(busyCursor, cursorInAsync[0]);
-		assertEquals(busyCursor, cursorInAsync[1]);
-		shell.dispose();
-		while (!display.isDisposed() && display.readAndDispatch()) {
 		}
 	}
 
 	@Test
 	@Timeout(value = 30)
 	public void testShowWhileWithFuture() {
-		ExecutorService executor = Executors.newSingleThreadExecutor();
-		try {
+		try (ExecutorService executor = Executors.newSingleThreadExecutor()){
 			Shell shell = new Shell();
 			Display display = shell.getDisplay();
 			Cursor busyCursor = display.getSystemCursor(SWT.CURSOR_WAIT);
@@ -129,8 +131,6 @@ public class Test_org_eclipse_swt_custom_BusyIndicator {
 			shell.dispose();
 			while (!display.isDisposed() && display.readAndDispatch()) {
 			}
-		} finally {
-			executor.shutdownNow();
 		}
 	}
 

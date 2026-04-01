@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2021, 2025 Syntevo and others.
+ * Copyright (c) 2021, 2026 Syntevo and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -29,6 +29,8 @@ public class GTK4 {
 	public static final int GTK_PICK_DEFAULT = 0;
 	public static final int GTK_PICK_INSENSITIVE = 1;
 	public static final int GTK_PICK_NON_TARGETABLE = 2;
+
+	public static final native boolean GTK_IS_POPOVER_MENU(long obj);
 
 	/**
 	 * @param context cast=(GtkIMContext *)
@@ -81,10 +83,17 @@ public class GTK4 {
 	/** @param calendar cast=(GtkCalendar *) */
 	public static final native long gtk_calendar_get_date(long calendar);
 	/**
+	 * @method flags=ignore_deprecations
 	 * @param calendar cast=(GtkCalendar *)
 	 * @param date cast=(GDateTime *)
 	 */
 	public static final native void gtk_calendar_select_day(long calendar, long date);
+	/**
+	 * @method flags=dynamic
+	 * @param calendar cast=(GtkCalendar *)
+	 * @param date cast=(GDateTime *)
+	 */
+	public static final native void gtk_calendar_set_date(long calendar, long date);
 	/**
 	 * @param calendar cast=(GtkCalendar *)
 	 * @param value cast=(gboolean)
@@ -126,6 +135,11 @@ public class GTK4 {
 	public static final native int gtk_editable_get_max_width_chars(long editable);
 	/**
 	 * @param editable cast=(GtkEditable *)
+	 * @param alignment cast=(float)
+	 */
+	public static final native void gtk_editable_set_alignment(long editable, float alignment);
+	/**
+	 * @param editable cast=(GtkEditable *)
 	 * @param chars cast=(int)
 	 */
 	public static final native void gtk_editable_set_max_width_chars(long editable, int chars);
@@ -164,6 +178,7 @@ public class GTK4 {
 	public static final native boolean gdk_toplevel_lower(long toplevel);
 	/** @param surface cast=(GdkToplevel *) */
 	public static final native void gdk_toplevel_focus(long surface, int timestamp);
+
 
 	/* GtkDragSource */
 	public static final native long gtk_drag_source_new();
@@ -464,6 +479,11 @@ public class GTK4 {
 	/** @param window cast=(GtkWindow *) */
 	public static final native long gtk_window_get_titlebar(long window);
 
+	/** @param window cast=(GtkWindow *)
+	 *  @param titlebar cast=(GtkWidget *)
+	 **/
+	public static final native void gtk_window_set_titlebar(long window, long titlebar);
+
 	/** @param window cast=(GtkWindow *) */
 	public static final native void gtk_window_present(long window) ;
 
@@ -715,6 +735,10 @@ public class GTK4 {
 	public static final native void gtk_widget_insert_before(long widget, long parent, long next_sibling);
 	/**
 	 * @param widget cast=(GtkWidget *)
+	 */
+	public static final native long gtk_widget_paintable_new(long widget);
+	/**
+	 * @param widget cast=(GtkWidget *)
 	 * @param x cast=(double)
 	 * @param y cast=(double)
 	 * @param flags cast=(GtkPickFlags)
@@ -726,11 +750,18 @@ public class GTK4 {
 	public static final native long gtk_combo_box_get_child(long combo_box);
 
 	/* GtkSnapshot */
+
+	public static final native long gtk_snapshot_new();
 	/**
 	 * @param snapshot cast=(GtkSnapshot *)
 	 * @param rect cast=(const graphene_rect_t *)
 	 */
 	public static final native long gtk_snapshot_append_cairo(long snapshot, long rect);
+
+	/**
+	 * @param snapshot cast=(GtkSnapshot *)
+	 */
+	public static final native long gtk_snapshot_free_to_node(long snapshot);
 
 	/* GtkImage */
 	/**
@@ -1064,4 +1095,32 @@ public class GTK4 {
 	 */
 	public static final native long gtk_gesture_get_last_updated_sequence(long gesture);
 
+	/**
+	 * @param widget cast=(GtkWidget *)
+	 */
+	public static final native int gtk_widget_get_width(long widget);
+
+	/**
+	 * @param widget cast=(GtkWidget *)
+	 */
+	public static final native int gtk_widget_get_height(long widget);
+
+	public static final native long gtk_header_bar_new();
+	/**
+	 * @param paintable cast=(GdkPaintable *)
+	 * @param snapshot cast=(GdkSnapshot *)
+	 * @param width cast=(double)
+	 * @param height cast=(double)
+	 */
+	public static final native void gdk_paintable_snapshot(long paintable, long snapshot, int width, int height);
+
+	/**
+	 * @param renderNode cast=(GskRenderNode *)
+	 * @param cr cast=(cairo_t *)
+	 */
+	public static final native void gsk_render_node_draw(long renderNode, long cr);
+	/**
+	 * @param renderNode cast=(GskRenderNode *)
+	 */
+	public static final native void gsk_render_node_unref(long renderNode);
 }

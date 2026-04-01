@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2020 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -591,7 +591,7 @@ Rectangle[] computeControlBounds (Point size, boolean[][] position) {
 					rects[i].height = getControlHeight(ctrlSize);
 					rects[i].x = x;
 					rects[i].y = getControlY(size, rects, borderBottom, borderTop, i);
-				} else if (((alignment & (SWT.WRAP)) != 0 && ctrlSize.x < availableWidth)) {
+				} else if ((alignment & SWT.WRAP) != 0 && ctrlSize.x <= availableWidth) {
 					x -= ctrlSize.x;
 					rects[i].width = ctrlSize.x;
 					rects[i].height = getControlHeight(ctrlSize);
@@ -3911,8 +3911,7 @@ boolean updateItems (int showIndex) {
 	setButtonBounds();
 	changed |= chevronChanged;
 	if (changed && getToolTipText() != null) {
-		Point pt = getDisplay().getCursorLocation();
-		pt = toControl(pt);
+		Point pt = toControl(getDisplay().getCursorLocation());
 		_setToolTipText(pt.x, pt.y);
 	}
 	gc.dispose();
@@ -3925,7 +3924,7 @@ boolean updateTabHeight(boolean force){
 	gc.dispose();
 	if (fixedTabHeight == SWT.DEFAULT && controls != null && controls.length > 0) {
 		for (int i = 0; i < controls.length; i++) {
-			if ((controlAlignments[i] & SWT.WRAP) == 0 && !controls[i].isDisposed() && controls[i].getVisible()) {
+			if (!controls[i].isDisposed() && controls[i].getVisible()) {
 				int topHeight = controls[i].computeSize(SWT.DEFAULT, SWT.DEFAULT).y;
 				topHeight +=  renderer.computeTrim(CTabFolderRenderer.PART_HEADER, SWT.NONE, 0,0,0,0).height + 1;
 				tabHeight = Math.max(topHeight, tabHeight);

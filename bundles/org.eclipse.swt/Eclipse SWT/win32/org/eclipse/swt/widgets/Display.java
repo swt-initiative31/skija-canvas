@@ -949,10 +949,7 @@ public void close () {
 protected void create (DeviceData data) {
 	checkSubclass ();
 	checkDisplay (thread = Thread.currentThread (), true);
-	if (DPIUtil.isMonitorSpecificScalingActive()) {
-		setMonitorSpecificScaling(true);
-		Win32DPIUtils.setAutoScaleForMonitorSpecificScaling();
-	}
+	initializeAutoscaling(DPIUtil.isMonitorSpecificScalingActive());
 	createDisplay (data);
 	register (this);
 	if (Default == null) Default = this;
@@ -2048,12 +2045,9 @@ ImageList getImageList (int style, int width, int height, int zoom) {
 	while (i < length) {
 		ImageList list = imageList [i];
 		if (list == null) break;
-		Point size = list.getImageSize();
-		if (size.x == width && size.y == height) {
-			if (list.getStyle () == style) {
-				list.addRef();
-				return list;
-			}
+		if (list.isFittingFor(style, width, height, zoom)) {
+			list.addRef();
+			return list;
 		}
 		i++;
 	}
@@ -2078,12 +2072,9 @@ ImageList getImageListToolBar (int style, int width, int height, int zoom) {
 	while (i < length) {
 		ImageList list = toolImageList [i];
 		if (list == null) break;
-		Point size = list.getImageSize();
-		if (size.x == width && size.y == height) {
-			if (list.getStyle () == style) {
-				list.addRef();
-				return list;
-			}
+		if (list.isFittingFor(style, width, height, zoom)) {
+			list.addRef();
+			return list;
 		}
 		i++;
 	}
@@ -2108,12 +2099,9 @@ ImageList getImageListToolBarDisabled (int style, int width, int height, int zoo
 	while (i < length) {
 		ImageList list = toolDisabledImageList [i];
 		if (list == null) break;
-		Point size = list.getImageSize();
-		if (size.x == width && size.y == height) {
-			if (list.getStyle () == style) {
-				list.addRef();
-				return list;
-			}
+		if (list.isFittingFor(style, width, height, zoom)) {
+			list.addRef();
+			return list;
 		}
 		i++;
 	}
@@ -2138,12 +2126,9 @@ ImageList getImageListToolBarHot (int style, int width, int height, int zoom) {
 	while (i < length) {
 		ImageList list = toolHotImageList [i];
 		if (list == null) break;
-		Point size = list.getImageSize();
-		if (size.x == width && size.y == height) {
-			if (list.getStyle () == style) {
-				list.addRef();
-				return list;
-			}
+		if (list.isFittingFor(style, width, height, zoom)) {
+			list.addRef();
+			return list;
 		}
 		i++;
 	}
@@ -3643,7 +3628,7 @@ public boolean post (Event event) {
 					int y = OS.GetSystemMetrics (OS.SM_YVIRTUALSCREEN);
 					int width = OS.GetSystemMetrics (OS.SM_CXVIRTUALSCREEN);
 					int height = OS.GetSystemMetrics (OS.SM_CYVIRTUALSCREEN);
-					Point loc = Win32DPIUtils.pointToPixelAsLocation(event.getLocation(), getDeviceZoom());
+					Point loc = translateToDisplayCoordinates(event.getLocation());
 					inputs.dx = ((loc.x - x) * 65535 + width - 2) / (width - 1);
 					inputs.dy = ((loc.y - y) * 65535 + height - 2) / (height - 1);
 				} else {
@@ -4964,6 +4949,7 @@ public <T, E extends Exception> T syncCall(SwtCallable<T, E> callable) throws E 
  * @exception SWTException <ul>
  *    <li>ERROR_THREAD_INVALID_ACCESS - if not called from the thread that created the receiver</li>
  *    <li>ERROR_DEVICE_DISPOSED - if the receiver has been disposed</li>
+ *    <li>ERROR_NO_HANDLES if a handle could not be obtained for timer creation</li>
  * </ul>
  *
  * @see #asyncExec
@@ -5005,10 +4991,9 @@ public void timerExec (int milliseconds, Runnable runnable) {
 		}
 	}
 	long newTimerID = OS.SetTimer (hwndMessage, timerId, milliseconds, 0);
-	if (newTimerID != 0) {
-		timerList [index] = runnable;
-		timerIds [index] = newTimerID;
-	}
+	if (newTimerID == 0) SWT.error (SWT.ERROR_NO_HANDLES);
+	timerList [index] = runnable;
+	timerIds [index] = newTimerID;
 }
 
 boolean translateAccelerator (MSG msg, Control control) {
@@ -5403,19 +5388,25 @@ public boolean isRescalingAtRuntime() {
  */
 @Deprecated(since = "2025-03", forRemoval = true)
 public boolean setRescalingAtRuntime(boolean activate) {
-	return setMonitorSpecificScaling(activate);
+	return initializeAutoscaling(activate);
 }
 
-private boolean setMonitorSpecificScaling(boolean activate) {
-	int desiredApiAwareness = activate ? OS.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 : OS.DPI_AWARENESS_CONTEXT_SYSTEM_AWARE;
-	if (Win32DPIUtils.setDPIAwareness(desiredApiAwareness)) {
-		rescalingAtRuntime = activate;
-		coordinateSystemMapper = activate ? new MultiZoomCoordinateSystemMapper(this, this::getMonitors) : new SingleZoomCoordinateSystemMapper(this);
-		// dispose a existing font registry for the default display
-		SWTFontProvider.disposeFontRegistry(this);
-		return true;
+private boolean initializeAutoscaling(boolean useMonitorSpecificScaling) {
+	boolean successfullySetDpiAwareness = true;
+	if (!Win32DPIUtils.initializeCustomDpiAwareness() && !DPIUtil.isCustomAutoScale()) {
+		successfullySetDpiAwareness = setDpiAwareness(useMonitorSpecificScaling);
 	}
-	return false;
+	rescalingAtRuntime = useMonitorSpecificScaling && Win32DPIUtils.hasProperDpiAwarenessForMonitorSpecificScaling();
+	DPIUtil.setMonitorSpecificScaling(rescalingAtRuntime);
+	coordinateSystemMapper = rescalingAtRuntime ? new MultiZoomCoordinateSystemMapper(this, this::getMonitors) : new SingleZoomCoordinateSystemMapper(this);
+	// dispose an existing font registry for the default display
+	SWTFontProvider.disposeFontRegistry(this);
+	return successfullySetDpiAwareness;
+}
+
+private boolean setDpiAwareness(boolean useMonitorSpecificScaling) {
+	long desiredApiAwareness = useMonitorSpecificScaling ? OS.DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 : OS.DPI_AWARENESS_CONTEXT_SYSTEM_AWARE;
+	return Win32DPIUtils.setDPIAwareness(desiredApiAwareness);
 }
 
 }

@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2025 IBM Corporation and others. All rights reserved.
+ * Copyright (c) 2000, 2026 IBM Corporation and others. All rights reserved.
  * The contents of this file are made available under the terms
  * of the GNU Lesser General Public License (LGPL) Version 2.1 that
  * accompanies this distribution (lgpl-v21.txt).  The LGPL is also
@@ -76,14 +76,15 @@ public class WebKitGTK extends C {
 
 	public static final int WEBKIT_TLS_ERRORS_POLICY_IGNORE = 0;
 
-	public static final int G_TLS_CERTIFICATE_UNKNOWN_CA = 0;
-	public static final int G_TLS_CERTIFICATE_BAD_IDENTITY = 1;
-	public static final int G_TLS_CERTIFICATE_NOT_ACTIVATED = 2;
-	public static final int G_TLS_CERTIFICATE_EXPIRED = 3;
-	public static final int G_TLS_CERTIFICATE_REVOKED = 4;
-	public static final int G_TLS_CERTIFICATE_INSECURE = 5;
-	public static final int G_TLS_CERTIFICATE_GENERIC_ERROR = 6;
-	public static final int G_TLS_CERTIFICATE_VALIDATE_ALL = 7;
+	public static final int G_TLS_CERTIFICATE_NO_FLAGS = 0;
+	public static final int G_TLS_CERTIFICATE_UNKNOWN_CA = 1 << 0;
+	public static final int G_TLS_CERTIFICATE_BAD_IDENTITY = 1 << 1;
+	public static final int G_TLS_CERTIFICATE_NOT_ACTIVATED = 1 << 2;
+	public static final int G_TLS_CERTIFICATE_EXPIRED = 1 << 3;
+	public static final int G_TLS_CERTIFICATE_REVOKED = 1 << 4;
+	public static final int G_TLS_CERTIFICATE_INSECURE = 1 << 5;
+	public static final int G_TLS_CERTIFICATE_GENERIC_ERROR = 1 << 6;
+	public static final int G_TLS_CERTIFICATE_VALIDATE_ALL = 0x7f;
 
 	public static final int WEBKIT_WEBSITE_DATA_COOKIES = GTK.GTK4 ? 64 : 1 << 8;
 
@@ -370,6 +371,9 @@ public static final native void webkit_policy_decision_ignore(long decision);
 public static final native long webkit_web_context_get_default();
 
 /** @method flags=dynamic */
+public static final native long webkit_network_session_allow_tls_certificate_for_host(long session, long certificate, byte[] constGCharHost);
+
+/** @method flags=dynamic */
 public static final native long webkit_network_session_get_default();
 
 /** @method flags=dynamic */
@@ -377,6 +381,9 @@ public static final native long webkit_network_session_get_cookie_manager(long s
 
 /** @method flags=dynamic */
 public static final native long webkit_network_session_get_website_data_manager(long session);
+
+/** @method flags=dynamic */
+public static final native void webkit_network_session_set_tls_errors_policy(long session, int policy);
 
 /** @method flags=dynamic */
 public static final native long webkit_web_context_get_cookie_manager(long context);
@@ -392,6 +399,9 @@ public static final native void webkit_web_context_set_tls_errors_policy(long co
 
 /** @method flags=dynamic */
 public static final native void webkit_web_context_register_uri_scheme(long context, byte[] scheme, long callback, long user_data, long user_data_destroy_func);
+
+/** @method flags=dynamic */
+public static final native void webkit_web_context_add_path_to_sandbox(long context, byte[] path, boolean read_only);
 
 /** @method flags=dynamic */
 public static final native int webkit_web_view_can_go_back(long web_view);

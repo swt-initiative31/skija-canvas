@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2025 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -20,6 +20,7 @@
 #endif
 
 typedef enum {
+	GTK_1IS_1POPOVER_1MENU_FUNC,
 	gdk_1clipboard_1get_1content_FUNC,
 	gdk_1clipboard_1get_1formats_FUNC,
 	gdk_1clipboard_1is_1local_FUNC,
@@ -66,6 +67,7 @@ typedef enum {
 	gdk_1content_1serializer_1return_1error_FUNC,
 	gdk_1content_1serializer_1return_1success_FUNC,
 	gdk_1content_1serializer_1set_1task_1data_FUNC,
+	gdk_1paintable_1snapshot_FUNC,
 	gdk_1toplevel_1focus_FUNC,
 	gdk_1toplevel_1get_1state_FUNC,
 	gdk_1toplevel_1lower_FUNC,
@@ -73,6 +75,8 @@ typedef enum {
 	gdk_1toplevel_1size_1get_1bounds_FUNC,
 	gdk_1toplevel_1size_1set_1min_1size_FUNC,
 	gdk_1toplevel_1size_1set_1size_FUNC,
+	gsk_1render_1node_1draw_FUNC,
+	gsk_1render_1node_1unref_FUNC,
 	gtk_1box_1append_FUNC,
 	gtk_1box_1insert_1child_1after_FUNC,
 	gtk_1box_1prepend_FUNC,
@@ -80,6 +84,7 @@ typedef enum {
 	gtk_1button_1set_1child_FUNC,
 	gtk_1calendar_1get_1date_FUNC,
 	gtk_1calendar_1select_1day_FUNC,
+	gtk_1calendar_1set_1date_FUNC,
 	gtk_1calendar_1set_1show_1day_1names_FUNC,
 	gtk_1calendar_1set_1show_1heading_FUNC,
 	gtk_1calendar_1set_1show_1week_1numbers_FUNC,
@@ -106,6 +111,7 @@ typedef enum {
 	gtk_1editable_1get_1delegate_FUNC,
 	gtk_1editable_1get_1max_1width_1chars_FUNC,
 	gtk_1editable_1get_1text_FUNC,
+	gtk_1editable_1set_1alignment_FUNC,
 	gtk_1editable_1set_1max_1width_1chars_FUNC,
 	gtk_1editable_1set_1text_FUNC,
 	gtk_1entry_1buffer_1get_1text_FUNC,
@@ -151,6 +157,7 @@ typedef enum {
 	gtk_1gesture_1rotate_1new_FUNC,
 	gtk_1gesture_1set_1sequence_1state_FUNC,
 	gtk_1gesture_1zoom_1new_FUNC,
+	gtk_1header_1bar_1new_FUNC,
 	gtk_1hsv_1to_1rgb_FUNC,
 	gtk_1icon_1paintable_1get_1file_FUNC,
 	gtk_1icon_1theme_1get_1for_1display_FUNC,
@@ -188,6 +195,8 @@ typedef enum {
 	gtk_1shortcut_1controller_1set_1scope_FUNC,
 	gtk_1shortcut_1new_FUNC,
 	gtk_1snapshot_1append_1cairo_FUNC,
+	gtk_1snapshot_1free_1to_1node_FUNC,
+	gtk_1snapshot_1new_FUNC,
 	gtk_1style_1context_1add_1provider_1for_1display_FUNC,
 	gtk_1style_1context_1get_1border_FUNC,
 	gtk_1style_1context_1get_1color_FUNC,
@@ -204,6 +213,7 @@ typedef enum {
 	gtk_1widget_1class_1add_1binding_1signal_FUNC,
 	gtk_1widget_1get_1clipboard_FUNC,
 	gtk_1widget_1get_1first_1child_FUNC,
+	gtk_1widget_1get_1height_FUNC,
 	gtk_1widget_1get_1last_1child_FUNC,
 	gtk_1widget_1get_1native_FUNC,
 	gtk_1widget_1get_1next_1sibling_FUNC,
@@ -211,9 +221,11 @@ typedef enum {
 	gtk_1widget_1get_1receives_1default_FUNC,
 	gtk_1widget_1get_1root_FUNC,
 	gtk_1widget_1get_1size_1request_FUNC,
+	gtk_1widget_1get_1width_FUNC,
 	gtk_1widget_1insert_1after_FUNC,
 	gtk_1widget_1insert_1before_FUNC,
 	gtk_1widget_1measure_FUNC,
+	gtk_1widget_1paintable_1new_FUNC,
 	gtk_1widget_1pick_FUNC,
 	gtk_1widget_1set_1cursor_FUNC,
 	gtk_1widget_1set_1focusable_FUNC,
@@ -232,5 +244,6 @@ typedef enum {
 	gtk_1window_1set_1child_FUNC,
 	gtk_1window_1set_1default_1widget_FUNC,
 	gtk_1window_1set_1icon_1name_FUNC,
+	gtk_1window_1set_1titlebar_FUNC,
 	gtk_1window_1unminimize_FUNC,
 } GTK4_FUNCS;

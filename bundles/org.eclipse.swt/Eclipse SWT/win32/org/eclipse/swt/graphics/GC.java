@@ -15,16 +15,13 @@ package org.eclipse.swt.graphics;
 
 
 import java.util.*;
-import java.util.List;
 import java.util.function.*;
-import java.util.stream.*;
 
 import org.eclipse.swt.*;
 import org.eclipse.swt.graphics.Image.*;
 import org.eclipse.swt.internal.*;
 import org.eclipse.swt.internal.gdip.*;
 import org.eclipse.swt.internal.win32.*;
-import org.eclipse.swt.widgets.*;
 
 /**
  * Class <code>GC</code> is where all of the drawing capabilities that are
@@ -66,7 +63,7 @@ import org.eclipse.swt.widgets.*;
  * @see <a href="http://www.eclipse.org/swt/examples.php">SWT Examples: GraphicsExample, PaintExample</a>
  * @see <a href="http://www.eclipse.org/swt/">Sample code and further information</a>
  */
-public final class GC extends Resource {
+public sealed class GC extends Resource permits GCExtension {
 
 	/**
 	 * the handle to the OS device context
@@ -524,6 +521,7 @@ private abstract class ImageOperation extends Operation {
 		image.removeOnDisposeListener(disposeCallback);
 		super.disposeAll();
 	}
+
 }
 
 private class CopyAreaToImageOperation extends ImageOperation {
@@ -1044,7 +1042,32 @@ public void drawImage (Image image, int x, int y) {
 	checkNonDisposed();
 	if (image == null) SWT.error (SWT.ERROR_NULL_ARGUMENT);
 	if (image.isDisposed()) SWT.error(SWT.ERROR_INVALID_ARGUMENT);
-	storeAndApplyOperationForExistingHandle(new DrawImageOperation(image, new Point(x, y)));
+	Transform transform = new Transform(device);
+	try {
+		getTransform(transform);
+		if (transform.isIdentity()) {
+			storeAndApplyOperationForExistingHandle(new DrawImageOperation(image, new Point(x, y)));
+		} else {
+			Rectangle imageBounds = image.getBounds();
+			drawImage(image, x, y, imageBounds.width, imageBounds.height);
+		}
+	} finally {
+		transform.dispose();
+	}
+}
+
+private float calculateTransformationScale() {
+	Transform current = new Transform(device);
+	getTransform(current);
+	float[] m = new float[6];
+	current.getElements(m);
+	// this calculates the effective length in x and y
+	// direction without being affected by the rotation
+	// of the transformation
+	float scaleWidth = (float) Math.hypot(m[0], m[2]);
+	float scaleHeight = (float) Math.hypot(m[1], m[3]);
+	current.dispose();
+	return Math.max(scaleWidth, scaleHeight);
 }
 
 private class DrawImageOperation extends ImageOperation {
@@ -1178,18 +1201,58 @@ private class DrawScalingImageToImageOperation extends ImageOperation {
 
 	@Override
 	void apply() {
-		int gcZoom = getZoom();
-		int srcImageZoom = calculateZoomForImage(gcZoom, source.width, source.height, destination.width, destination.height);
-		drawImage(getImage(), source.x, source.y, source.width, source.height, destination.x, destination.y, destination.width, destination.height, gcZoom, srcImageZoom);
+		draw(getImage(), source.x, source.y, source.width, source.height, destination.x, destination.y, destination.width, destination.height);
 	}
 
-	private Collection<Integer> getAllCurrentMonitorZooms() {
-		if (device instanceof Display display) {
-			return Arrays.stream(display.getMonitors())
-				.map(Monitor::getZoom)
-				.collect(Collectors.toSet());
+	private void draw(Image image, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
+		int gcZoom = getZoom();
+		int requestedImageZoom = calculateZoomForImage(gcZoom, source.width, source.height, destination.width, destination.height);
+		float transformationScale = calculateTransformationScale();
+		int scaledImageZoomWithTransform = Math.round(transformationScale * requestedImageZoom);
+
+		Rectangle src =  new Rectangle(srcX, srcY, srcWidth, srcHeight);
+		Rectangle destPixels = Win32DPIUtils.pointToPixel(drawable, new Rectangle(destX, destY, destWidth, destHeight), gcZoom);
+		Rectangle fullImageBounds = image.getBounds();
+		Rectangle requestedFullImageBoundsPixels = Win32DPIUtils.pointToPixel(drawable, fullImageBounds, scaledImageZoomWithTransform);
+
+		// In case there is a memGC for the image, a handle at proper zoom can be created by reapplying the GC operation
+		if (image.memGC != null) {
+			image.getHandle(getZoom(), data.nativeZoom);
 		}
-		return Collections.emptySet();
+		image.executeOnImageHandleAtBestFittingSize((tempHandle) -> {
+			Rectangle srcPixels = computeSourceRectangle(tempHandle, fullImageBounds, src);
+			drawImage(image, srcPixels.x, srcPixels.y, srcPixels.width, srcPixels.height, destPixels.x, destPixels.y, destPixels.width,
+					destPixels.height, false, tempHandle);
+		}, requestedFullImageBoundsPixels.width, requestedFullImageBoundsPixels.height);
+	}
+
+	private Rectangle computeSourceRectangle(ImageHandle imageHandle, Rectangle fullImageBounds, Rectangle src) {
+		/*
+		 * The point values (x, y, width, height) of the source "part" in points will be
+		 * computed to pixels depending on the factor of the full image bounds to the
+		 * actual OS handle size that will be used.
+		 */
+		float scaleFactor = Math.min(1f * imageHandle.width() / fullImageBounds.width, 1f * imageHandle.height() / fullImageBounds.height);
+		int closestZoomOfHandle = Math.round(scaleFactor * 100);
+		Rectangle srcPixels = Win32DPIUtils.pointToPixel(drawable, src, closestZoomOfHandle);
+
+		if (closestZoomOfHandle != 100) {
+			/*
+			 * This is a HACK! Due to rounding errors at fractional scale factors,
+			 * the coordinates may be slightly off. The workaround is to restrict
+			 * coordinates to the allowed bounds.
+			 */
+			int errX = srcPixels.x + srcPixels.width - imageHandle.width();
+			int errY = srcPixels.y + srcPixels.height - imageHandle.height();
+			if (errX != 0 || errY != 0) {
+				if (errX <= closestZoomOfHandle / 100 && errY <= closestZoomOfHandle / 100) {
+					srcPixels.intersect(new Rectangle(0, 0, imageHandle.width(), imageHandle.height()));
+				} else {
+					SWT.error (SWT.ERROR_INVALID_ARGUMENT);
+				}
+			}
+		}
+		return srcPixels;
 	}
 
 	private int calculateZoomForImage(int gcZoom, int srcWidth, int srcHeight, int destWidth, int destHeight) {
@@ -1205,15 +1268,9 @@ private class DrawScalingImageToImageOperation extends ImageOperation {
 			return gcZoom;
 		}
 
-		float imageScaleFactor = 1f * destWidth / srcWidth;
+		float imageScaleFactor = Math.max(1f * destWidth / srcWidth, 1f * destHeight / srcHeight);
 		int imageZoom = Math.round(gcZoom * imageScaleFactor);
-		if (getAllCurrentMonitorZooms().contains(imageZoom)) {
-			return imageZoom;
-		}
-		if (imageZoom > 150) {
-			return 200;
-		}
-		return 100;
+		return imageZoom;
 	}
 }
 
@@ -1227,42 +1284,26 @@ private class DrawScaledImageOperation extends ImageOperation {
 
 	@Override
 	void apply() {
+		draw(getImage(), destination.x, destination.y, destination.width, destination.height);
+	}
+
+	private void draw(Image image, int destX, int destY, int destWidth, int destHeight) {
 		int gcZoom = getZoom();
-		drawImage(getImage(), destination.x, destination.y, destination.width, destination.height, gcZoom);
-	}
-}
+		float transformationScale = calculateTransformationScale();
+		int scaledImageZoomWithTransform = Math.round(transformationScale * gcZoom);
+		Rectangle destPixels = Win32DPIUtils.pointToPixel(drawable, new Rectangle(destX , destY, destWidth , destHeight), gcZoom);
+		Rectangle destPixelsScaledWithTransform = Win32DPIUtils.pointToPixel(drawable, new Rectangle(destX , destY, destWidth , destHeight),
+				scaledImageZoomWithTransform);
 
-private void drawImage(Image image, int destX, int destY, int destWidth, int destHeight, int imageZoom) {
-	Rectangle destPixels = Win32DPIUtils.pointToPixel(drawable, new Rectangle(destX, destY, destWidth, destHeight),
-			imageZoom);
-	image.executeOnImageHandleAtBestFittingSize(tempHandle -> {
-		drawImage(image, 0, 0, tempHandle.getWidth(), tempHandle.getHeight(), destPixels.x, destPixels.y,
-				destPixels.width, destPixels.height, false, tempHandle);
-	}, destPixels.width, destPixels.height);
-}
-
-private void drawImage(Image image, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY,
-		int destWidth, int destHeight, int imageZoom, int scaledImageZoom) {
-	Rectangle src = Win32DPIUtils.pointToPixel(drawable, new Rectangle(srcX, srcY, srcWidth, srcHeight), scaledImageZoom);
-	Rectangle dest = Win32DPIUtils.pointToPixel(drawable, new Rectangle(destX, destY, destWidth, destHeight), imageZoom);
-	if (scaledImageZoom != 100) {
-		/*
-		 * This is a HACK! Due to rounding errors at fractional scale factors,
-		 * the coordinates may be slightly off. The workaround is to restrict
-		 * coordinates to the allowed bounds.
-		 */
-		Rectangle b = image.getBounds(scaledImageZoom);
-		int errX = src.x + src.width - b.width;
-		int errY = src.y + src.height - b.height;
-		if (errX != 0 || errY != 0) {
-			if (errX <= scaledImageZoom / 100 && errY <= scaledImageZoom / 100) {
-				src.intersect(b);
-			} else {
-				SWT.error (SWT.ERROR_INVALID_ARGUMENT);
-			}
+		// In case there is a memGC for the image, a handle at proper zoom can be created by reapplying the GC operation
+		if (image.memGC != null) {
+			image.getHandle(getZoom(), data.nativeZoom);
 		}
+		image.executeOnImageHandleAtBestFittingSize(tempHandle -> {
+			drawImage(image, 0, 0, tempHandle.width(), tempHandle.height(), destPixels.x, destPixels.y,
+					destPixels.width, destPixels.height, false, tempHandle);
+		}, destPixelsScaledWithTransform.width, destPixelsScaledWithTransform.height);
 	}
-	drawImage(image, src.x, src.y, src.width, src.height, dest.x, dest.y, dest.width, dest.height, false, image.getHandle(scaledImageZoom, data.nativeZoom));
 }
 
 private class DrawImageToImageOperation extends ImageOperation {
@@ -1352,7 +1393,7 @@ private void drawImage(Image srcImage, int srcX, int srcY, int srcWidth, int src
 					simple);
 			break;
 		case SWT.ICON:
-			drawIcon(tempImageHandle.getHandle(), srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, simple);
+			drawIcon(tempImageHandle.handle(), srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, simple);
 			break;
 	}
 }
@@ -1493,7 +1534,7 @@ private void drawIcon(long imageHandle, int srcX, int srcY, int srcWidth, int sr
 
 private void drawBitmap(Image srcImage, ImageHandle imageHandle, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight, boolean simple) {
 	BITMAP bm = new BITMAP();
-	long handle = imageHandle.getHandle();
+	long handle = imageHandle.handle();
 	OS.GetObject(handle, BITMAP.sizeof, bm);
 	int imgWidth = bm.bmWidth;
 	int imgHeight = bm.bmHeight;
@@ -1527,7 +1568,7 @@ private void drawBitmap(Image srcImage, ImageHandle imageHandle, int srcX, int s
 	int depth = bm.bmPlanes * bm.bmBitsPixel;
 	if (isDib && depth == 32) {
 		drawBitmapAlpha(handle, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, simple);
-	} else if (imageHandle.transparentPixel != -1) {
+	} else if (imageHandle.transparentPixel() != -1) {
 		drawBitmapTransparent(imageHandle, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, simple, bm, imgWidth, imgHeight);
 	} else {
 		drawBitmapColor(handle, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, simple);
@@ -1792,11 +1833,11 @@ private void drawBitmapTransparent(ImageHandle imageHandle, int srcX, int srcY, 
 
 	/* Find the RGB values for the transparent pixel. */
 	boolean isDib = bm.bmBits != 0;
-	long hBitmap = imageHandle.getHandle();
+	long hBitmap = imageHandle.handle();
 	long srcHdc = OS.CreateCompatibleDC(handle);
 	long oldSrcBitmap = OS.SelectObject(srcHdc, hBitmap);
 	byte[] originalColors = null;
-	int transparentColor = imageHandle.transparentColor;
+	int transparentColor = imageHandle.transparentColor();
 	if (transparentColor == -1) {
 		int transBlue = 0, transGreen = 0, transRed = 0;
 		boolean fixPalette = false;
@@ -1805,7 +1846,7 @@ private void drawBitmapTransparent(ImageHandle imageHandle, int srcX, int srcY, 
 				int maxColors = 1 << bm.bmBitsPixel;
 				byte[] oldColors = new byte[maxColors * 4];
 				OS.GetDIBColorTable(srcHdc, 0, maxColors, oldColors);
-				int offset = imageHandle.transparentPixel * 4;
+				int offset = imageHandle.transparentPixel() * 4;
 				for (int i = 0; i < oldColors.length; i += 4) {
 					if (i != offset) {
 						if (oldColors[offset] == oldColors[i] && oldColors[offset+1] == oldColors[i+1] && oldColors[offset+2] == oldColors[i+2]) {
@@ -1837,15 +1878,15 @@ private void drawBitmapTransparent(ImageHandle imageHandle, int srcX, int srcY, 
 				bmiHeader.biBitCount = bm.bmBitsPixel;
 				byte[] bmi = new byte[BITMAPINFOHEADER.sizeof + numColors * 4];
 				OS.MoveMemory(bmi, bmiHeader, BITMAPINFOHEADER.sizeof);
-				OS.GetDIBits(srcHdc, imageHandle.getHandle(), 0, 0, null, bmi, OS.DIB_RGB_COLORS);
-				int offset = BITMAPINFOHEADER.sizeof + 4 * imageHandle.transparentPixel;
+				OS.GetDIBits(srcHdc, imageHandle.handle(), 0, 0, null, bmi, OS.DIB_RGB_COLORS);
+				int offset = BITMAPINFOHEADER.sizeof + 4 * imageHandle.transparentPixel();
 				transRed = bmi[offset + 2] & 0xFF;
 				transGreen = bmi[offset + 1] & 0xFF;
 				transBlue = bmi[offset] & 0xFF;
 			}
 		} else {
 			/* Direct color image */
-			int pixel = imageHandle.transparentPixel;
+			int pixel = imageHandle.transparentPixel();
 			switch (bm.bmBitsPixel) {
 				case 16:
 					transBlue = (pixel & 0x1F) << 3;
@@ -1865,7 +1906,7 @@ private void drawBitmapTransparent(ImageHandle imageHandle, int srcX, int srcY, 
 			}
 		}
 		transparentColor = transBlue << 16 | transGreen << 8 | transRed;
-		if (!fixPalette) imageHandle.transparentColor = transparentColor;
+		if (!fixPalette) imageHandle.setTransparentColor(transparentColor);
 	}
 
 	if (originalColors == null) {
@@ -1910,7 +1951,7 @@ private void drawBitmapTransparent(ImageHandle imageHandle, int srcX, int srcY, 
 		OS.DeleteObject(maskBitmap);
 	}
 	OS.SelectObject(srcHdc, oldSrcBitmap);
-	if (hBitmap != imageHandle.getHandle()) OS.DeleteObject(hBitmap);
+	if (hBitmap != imageHandle.handle()) OS.DeleteObject(hBitmap);
 	OS.DeleteDC(srcHdc);
 }
 
@@ -4462,6 +4503,15 @@ private long identity() {
 }
 
 private void init(Drawable drawable, GCData data, long hDC) {
+	ImageHandle imageHandle = null;
+	Image image = data.image;
+	if (image != null) {
+		imageHandle = image.getHandle(data.imageZoom, data.nativeZoom);
+	}
+	init(drawable, data, hDC, imageHandle);
+}
+
+private void init(Drawable drawable, GCData data, long hDC, ImageHandle imageHandle) {
 	int foreground = data.foreground;
 	if (foreground != -1) {
 		data.state &= ~(FOREGROUND | FOREGROUND_TEXT | PEN);
@@ -4485,8 +4535,8 @@ private void init(Drawable drawable, GCData data, long hDC) {
 		data.font = SWTFontProvider.getFont(device, OS.GetCurrentObject(hDC, OS.OBJ_FONT), data.nativeZoom);
 	}
 	Image image = data.image;
-	if (image != null) {
-		data.hNullBitmap = OS.SelectObject(hDC, image.getHandle(data.imageZoom, data.nativeZoom).getHandle());
+	if (imageHandle != null) {
+		data.hNullBitmap = OS.SelectObject(hDC, imageHandle.handle());
 		image.memGC = this;
 	}
 	int layout = data.layout;
@@ -4501,6 +4551,11 @@ private void init(Drawable drawable, GCData data, long hDC) {
 	this.drawable = drawable;
 	this.data = data;
 	handle = hDC;
+
+	if(this.drawable instanceof Image i) {
+		// it is likely that the GC modifies the image, so we increase the verion
+		i.increaseVersion();
+	}
 }
 
 private static int extractZoom(long hDC) {
@@ -5826,11 +5881,11 @@ private class SetTransformOperation extends Operation {
  * </ul>
  */
 public Point stringExtent (String string) {
-	if (string == null) SWT.error (SWT.ERROR_NULL_ARGUMENT);
-	return Win32DPIUtils.pixelToPointAsSize(drawable, stringExtentInPixels(string), getZoom());
+	return Win32DPIUtils.pixelToPointAsSufficientlyLargeSize(drawable, stringExtentInPixels(string), getZoom());
 }
 
 Point stringExtentInPixels (String string) {
+	if (string == null) SWT.error (SWT.ERROR_NULL_ARGUMENT);
 	checkNonDisposed();
 	checkGC(FONT);
 	int length = string.length();
@@ -5842,7 +5897,6 @@ Point stringExtentInPixels (String string) {
 	}
 	SIZE size = new SIZE();
 	if (length == 0) {
-//		OS.GetTextExtentPoint32(handle, SPACE, SPACE.length(), size);
 		OS.GetTextExtentPoint32(handle, new char[]{' '}, 1, size);
 		return new Point(0, size.cy);
 	} else {
@@ -5872,7 +5926,7 @@ Point stringExtentInPixels (String string) {
  * </ul>
  */
 public Point textExtent (String string) {
-	return Win32DPIUtils.pixelToPointAsSize(drawable, textExtentInPixels(string, SWT.DRAW_DELIMITER | SWT.DRAW_TAB), getZoom());
+	return textExtent(string, SWT.DRAW_DELIMITER | SWT.DRAW_TAB);
 }
 
 /**
@@ -5907,7 +5961,7 @@ public Point textExtent (String string) {
  * </ul>
  */
 public Point textExtent (String string, int flags) {
-	return Win32DPIUtils.pixelToPointAsSize(drawable, textExtentInPixels(string, flags), getZoom());
+	return Win32DPIUtils.pixelToPointAsSufficientlyLargeSize(textExtentInPixels(string, flags), getZoom());
 }
 
 Point textExtentInPixels(String string, int flags) {
@@ -5935,12 +5989,12 @@ Point textExtentInPixels(String string, int flags) {
 	return new Point(rect.right, rect.bottom);
 }
 
-void refreshFor(Drawable drawable) {
+void refreshFor(Drawable drawable, ImageHandle imageHandle) {
 	if (drawable == null) SWT.error(SWT.ERROR_NULL_ARGUMENT);
 	destroy();
 	GCData newData = new GCData();
 	originalData.copyTo(newData);
-	createGcHandle(drawable, newData);
+	createGcHandle(drawable, newData, imageHandle);
 }
 
 /**
@@ -6059,10 +6113,10 @@ private void removePreviousOperationIfSupercededBy(Operation operation) {
 	}
 }
 
-private void createGcHandle(Drawable drawable, GCData newData) {
-	long newHandle = drawable.internal_new_GC(newData);
-	if (newHandle == 0) SWT.error(SWT.ERROR_NO_HANDLES);
-	init(drawable, newData, newHandle);
+private void createGcHandle(Drawable drawable, GCData newData, ImageHandle imageHandle) {
+	long gcHandle = drawable.internal_new_GC(newData);
+	if (gcHandle == 0) SWT.error(SWT.ERROR_NO_HANDLES);
+	init(drawable, newData, gcHandle, imageHandle);
 	for (Operation operation : operations) {
 		operation.apply();
 	}

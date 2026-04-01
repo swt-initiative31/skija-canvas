@@ -17,6 +17,7 @@ package org.eclipse.swt.widgets;
 import org.eclipse.swt.*;
 import org.eclipse.swt.graphics.*;
 import org.eclipse.swt.internal.*;
+import org.eclipse.swt.internal.canvasext.*;
 import org.eclipse.swt.internal.win32.*;
 
 /**
@@ -44,6 +45,7 @@ import org.eclipse.swt.internal.win32.*;
 public class Canvas extends Composite {
 	Caret caret;
 	IME ime;
+	private IExternalCanvasHandler externalCanvasHandler;
 
 /**
  * Prevents uninitialized instances from being created outside the package.
@@ -79,6 +81,50 @@ Canvas () {
  */
 public Canvas (Composite parent, int style) {
 	super (parent, style);
+	if( ExternalCanvasHandler.isActive(this,style))
+		externalCanvasHandler = ExternalCanvasHandler.createHandler(this);
+}
+
+@Override
+public void redraw () {
+
+	if(externalCanvasHandler != null) {
+		externalCanvasHandler.redrawTriggered();
+	}
+	super.redraw();
+}
+
+@Override
+public void redraw (int x, int y, int width, int height, boolean all) {
+
+	if(externalCanvasHandler != null) {
+		externalCanvasHandler.redrawTriggered( x,  y,  width,  height,  all);
+		super.redraw();
+	}
+	else
+		super.redraw( x,  y,  width,  height,  all);
+}
+
+@Override
+LRESULT WM_PAINT (long wParam, long lParam) {
+	if(externalCanvasHandler != null)
+	{
+
+		if ((state & DISPOSE_SENT) != 0) return LRESULT.ZERO;
+
+		var result = externalCanvasHandler.paint(e -> sendEvent(SWT.Paint,e),wParam, lParam);
+		if(result instanceof Integer i)
+			return new LRESULT(i);
+
+		if(result instanceof LRESULT r) {
+			return r;
+		}
+		return null;
+
+	}
+
+	return super.WM_PAINT(wParam, lParam);
+
 }
 
 /**
@@ -103,7 +149,7 @@ public Canvas (Composite parent, int style) {
  * @since 3.2
  */
 public void drawBackground (GC gc, int x, int y, int width, int height) {
-	int zoom = getZoom();
+	int zoom = getAutoscalingZoom();
 	Rectangle rectangle = Win32DPIUtils.pointToPixel(new Rectangle(x, y, width, height), zoom);
 	drawBackgroundInPixels(gc, rectangle.x, rectangle.y, rectangle.width, rectangle.height, 0, 0);
 }
@@ -197,7 +243,7 @@ void reskinChildren (int flags) {
  */
 public void scroll (int destX, int destY, int x, int y, int width, int height, boolean all) {
 	checkWidget ();
-	int zoom = getZoom();
+	int zoom = getAutoscalingZoom();
 	destX = DPIUtil.pointToPixel(destX, zoom);
 	destY = DPIUtil.pointToPixel(destY, zoom);
 	Rectangle rectangle = Win32DPIUtils.pointToPixel(new Rectangle(x, y, width, height), zoom);

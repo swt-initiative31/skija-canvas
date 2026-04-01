@@ -153,8 +153,8 @@ void destroyWidget () {
 }
 
 long fontHandle (int index) {
-	if (cellFont != null && cellFont [index] != null) return SWTFontProvider.getFontHandle(cellFont[index], getNativeZoom());
-	if (font != null) return SWTFontProvider.getFontHandle(font, getNativeZoom());
+	if (cellFont != null && cellFont [index] != null) return SWTFontProvider.getFontHandle(cellFont[index], nativeZoom);
+	if (font != null) return SWTFontProvider.getFontHandle(font, nativeZoom);
 	return -1;
 }
 
@@ -214,7 +214,7 @@ public Color getBackground (int index) {
  */
 public Rectangle getBounds () {
 	checkWidget();
-	return Win32DPIUtils.pixelToPoint(getBoundsInPixels(), getZoom());
+	return Win32DPIUtils.pixelToPoint(getBoundsInPixels(), getAutoscalingZoom());
 }
 
 Rectangle getBoundsInPixels () {
@@ -240,7 +240,7 @@ Rectangle getBoundsInPixels () {
  */
 public Rectangle getBounds (int index) {
 	checkWidget();
-	return Win32DPIUtils.pixelToPoint(getBoundsInPixels(index), getZoom());
+	return Win32DPIUtils.pixelToPoint(getBoundsInPixels(index), getAutoscalingZoom());
 }
 
 Rectangle getBoundsInPixels (int index) {
@@ -586,7 +586,7 @@ public Image getImage (int index) {
  */
 public Rectangle getImageBounds (int index) {
 	checkWidget();
-	return Win32DPIUtils.pixelToPoint(getImageBoundsInPixels(index), getZoom());
+	return Win32DPIUtils.pixelToPoint(getImageBoundsInPixels(index), getAutoscalingZoom());
 }
 
 Rectangle getImageBoundsInPixels (int index) {
@@ -687,7 +687,7 @@ public String getText (int index) {
  */
 public Rectangle getTextBounds (int index) {
 	checkWidget();
-	return Win32DPIUtils.pixelToPoint(getTextBoundsInPixels(index), getZoom());
+	return Win32DPIUtils.pixelToPoint(getTextBoundsInPixels(index), getAutoscalingZoom());
 }
 
 Rectangle getTextBoundsInPixels (int index) {
@@ -866,7 +866,7 @@ public void setFont (Font font){
 		error (SWT.ERROR_INVALID_ARGUMENT);
 	}
 	Font oldFont = this.font;
-	Font newFont = (font == null ? font : Font.win32_new(font, getNativeZoom()));
+	Font newFont = (font == null ? font : Font.win32_new(font, nativeZoom));
 	if (oldFont == newFont) return;
 	this.font = newFont;
 	if (oldFont != null && oldFont.equals (newFont)) return;
@@ -931,7 +931,7 @@ public void setFont (int index, Font font) {
 	}
 	Font oldFont = cellFont [index];
 	if (oldFont == font) return;
-	cellFont [index] = font == null ? font : Font.win32_new(font, getNativeZoom());
+	cellFont [index] = font == null ? font : Font.win32_new(font, nativeZoom);
 	if (oldFont != null && oldFont.equals (font)) return;
 	if (font != null) parent.setCustomDraw (true);
 	if ((parent.style & SWT.VIRTUAL) != 0) cached = true;
@@ -1277,7 +1277,7 @@ void handleDPIChange(Event event, float scalingFactor) {
 	if (cellFonts != null) {
 		for (int index = 0; index < cellFonts.length; index++) {
 			Font cellFont = cellFonts[index];
-			cellFonts[index] = cellFont == null ? null : Font.win32_new(cellFont, getNativeZoom());
+			cellFonts[index] = cellFont == null ? null : Font.win32_new(cellFont, nativeZoom);
 		}
 	}
 }

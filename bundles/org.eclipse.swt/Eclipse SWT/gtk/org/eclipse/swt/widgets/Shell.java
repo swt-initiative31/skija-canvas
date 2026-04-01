@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2025 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -655,7 +655,7 @@ void bringToTop (boolean force) {
 void center () {
 	if (parent == null) return;
 	Rectangle rect = getBoundsInPixels ();
-	Rectangle parentRect = display.mapInPixels (parent, null, parent.getClientAreaInPixels());
+	Rectangle parentRect = display.map(parent, null, parent.getClientAreaInPixels());
 	int x = Math.max (parentRect.x, parentRect.x + (parentRect.width - rect.width) / 2);
 	int y = Math.max (parentRect.y, parentRect.y + (parentRect.height - rect.height) / 2);
 	Rectangle monitorRect = parent.getMonitor ().getClientArea();
@@ -669,7 +669,7 @@ void center () {
 	} else {
 		y = Math.max (y, monitorRect.y);
 	}
-	setLocationInPixels (x, y);
+	setLocation (x, y);
 }
 
 @Override
@@ -728,6 +728,14 @@ Rectangle computeTrimInPixels (int x, int y, int width, int height) {
 		trim.y -= menuBarHeight;
 		trim.height += menuBarHeight;
 	}
+	if (GTK.GTK4 && OS.isWayland()) {
+		long titlebar = GTK4.gtk_window_get_titlebar(shellHandle);
+		if (titlebar != 0) {
+			int titleBarHeight = GTK4.gtk_widget_get_height (titlebar);
+			trim.y -= titleBarHeight;
+			trim.height += titleBarHeight;
+		}
+	}
 	return trim;
 }
 
@@ -743,6 +751,15 @@ void createHandle (int index) {
 			if (GTK.GTK4) {
 				// TODO: GTK4 need to handle for GTK_WINDOW_POPUP type
 				shellHandle = GTK4.gtk_window_new();
+				if (OS.isWayland()) {
+					long headerbar = GTK4.gtk_window_get_titlebar(shellHandle);
+					if (headerbar == 0) {
+					    // Force-install a headerbar if none exists in order to be able to qurey its size later
+						// If none set by the app gtk_window_get_titlebar returns 0 but Gtk still draws one internally
+					    long hb = GTK4.gtk_header_bar_new();
+					    GTK4.gtk_window_set_titlebar(shellHandle, hb);
+					}
+				}
 			} else {
 				shellHandle = GTK3.gtk_window_new(type);
 			}
@@ -1253,12 +1270,12 @@ public boolean getFullScreen () {
 }
 
 @Override
-Point getLocationInPixels () {
+public Point getLocation() {
 	checkWidget ();
 	// Bug in GTK: when shell is moved and then hidden, its location does not get updated.
 	// Move it before getting its location.
 	if (!getVisible() && moved) {
-		setLocationInPixels(oldX, oldY);
+		setLocation(oldX, oldY);
 	}
 	int [] x = new int [1], y = new int [1];
 	if (GTK.GTK4) {
@@ -1861,7 +1878,7 @@ long gtk_size_allocate (long widget, long allocation) {
 			long header = GTK4.gtk_window_get_titlebar(shellHandle);
 			int[] headerNaturalHeight = new int[1];
 			if (header != 0) {
-				GTK4.gtk_widget_measure(header, GTK.GTK_ORIENTATION_VERTICAL, 0, null, headerNaturalHeight, null, null);
+				GTK4.gtk_widget_measure(header, GTK.GTK_ORIENTATION_VERTICAL, -1, null, headerNaturalHeight, null, null);
 			}
 			widthA[0] = monitorSize.width;
 			heightA[0] = monitorSize.height - headerNaturalHeight[0];
@@ -2378,7 +2395,7 @@ int setBounds (int x, int y, int width, int height, boolean move, boolean resize
 				long header = GTK4.gtk_window_get_titlebar(shellHandle);
 				int[] headerNaturalHeight = new int[1];
 				if (header != 0) {
-					GTK4.gtk_widget_measure(header, GTK.GTK_ORIENTATION_VERTICAL, 0, null, headerNaturalHeight, null, null);
+					GTK4.gtk_widget_measure(header, GTK.GTK_ORIENTATION_VERTICAL, -1, null, headerNaturalHeight, null, null);
 				}
 				GTK.gtk_window_set_default_size(shellHandle, width, height + headerNaturalHeight[0]);
 			} else {
@@ -2787,6 +2804,21 @@ public void setModified (boolean modified) {
 }
 
 /**
+ * Returns the zoom of the shell.
+ * <p>
+ * Hint: The returned value is the zoom of the shell as originally considered by
+ * the OS and not an adjusted zoom value as considered by SWT autoscaling capabilities.
+ * </p>
+ *
+ * @return the zoom for this shell
+ *
+ * @since 3.133
+ */
+public int getZoom() {
+	return DPIUtil.getNativeDeviceZoom();
+}
+
+/**
  * Sets the shape of the shell to the region specified
  * by the argument.  When the argument is null, the
  * default shape of the shell is restored.  The shell
@@ -2892,7 +2924,7 @@ public void setVisible (boolean visible) {
 	checkWidget();
 
 	if (moved) { //fix shell location if it was moved.
-		setLocationInPixels(oldX, oldY);
+		setLocation(oldX, oldY);
 	}
 	int mask = SWT.PRIMARY_MODAL | SWT.APPLICATION_MODAL | SWT.SYSTEM_MODAL;
 	if ((style & mask) != 0) {
@@ -2909,7 +2941,14 @@ public void setVisible (boolean visible) {
 		 * up in front of the full-screen window.
 		 */
 		if (parent!=null && parent.getShell().getFullScreen()) {
-			GTK3.gtk_window_set_type_hint(shellHandle, GDK.GDK_WINDOW_TYPE_HINT_DIALOG);
+			if (GTK.GTK4) {
+				GTK.gtk_window_set_modal(shellHandle, true);
+				GTK.gtk_window_set_transient_for(shellHandle, parent.getShell().shellHandle);
+				GTK.gtk_window_set_destroy_with_parent(shellHandle, true);
+			} else {
+				GTK3.gtk_window_set_type_hint(shellHandle, GDK.GDK_WINDOW_TYPE_HINT_DIALOG);
+
+			}
 		}
 	} else {
 		updateModal ();
@@ -3005,7 +3044,7 @@ public void setVisible (boolean visible) {
 		opened = true;
 		if (!moved) {
 			moved = true;
-			Point location = getLocationInPixels();
+			Point location = getLocation();
 			oldX = location.x;
 			oldY = location.y;
 			sendEvent (SWT.Move);
@@ -3456,7 +3495,7 @@ Point getWindowOrigin () {
 		 * window trims etc. from the window manager. That's why getLocation ()
 		 * is not safe to use for coordinate mappings after the shell has been made visible.
 		 */
-		return getLocationInPixels ();
+		return getLocation ();
 	}
 	return super.getWindowOrigin( );
 }
@@ -3464,7 +3503,7 @@ Point getWindowOrigin () {
 @Override
 Point getSurfaceOrigin () {
 	if (!mapped) {
-		return getLocationInPixels ();
+		return getLocation ();
 	}
 	return super.getSurfaceOrigin( );
 }

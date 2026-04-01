@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2025 IBM Corporation and others.
+ * Copyright (c) 2000, 2026 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -217,7 +217,7 @@ void drawBackground (Control control, long gdkResource, long cr, int x, int y, i
 		Cairo.cairo_clip(cairo);
 	}
 	if (control.backgroundImage != null) {
-		Point pt = display.mapInPixels (this, control, 0, 0);
+		Point pt = display.map (this, control, 0, 0);
 		Cairo.cairo_translate (cairo, -pt.x, -pt.y);
 		x += pt.x;
 		y += pt.y;
@@ -626,18 +626,54 @@ public boolean print (GC gc) {
 	if (gc.isDisposed ()) error (SWT.ERROR_INVALID_ARGUMENT);
 	long topHandle = topHandle ();
 	GTK.gtk_widget_realize (topHandle);
-	/*
-	 * Feature in GTK: gtk_widget_draw() will only draw if the
-	 * widget's priv->alloc_needed field is set to TRUE. Since
-	 * this field is private and inaccessible, get and set the
-	 * allocation to trigger it to be TRUE. See bug 530969.
-	 */
-	GtkAllocation allocation = new GtkAllocation ();
-	GTK.gtk_widget_get_allocation(topHandle, allocation);
-	// Prevent allocation warnings
-	GTK.gtk_widget_get_preferred_size(topHandle, null, null);
-	GTK3.gtk_widget_size_allocate(topHandle, allocation);
-	GTK3.gtk_widget_draw(topHandle, gc.handle);
+
+	if (GTK.GTK4) {
+        /*
+         * In GTK4 gtk_widget_draw() has been removed. Rendering is now
+         * done via GtkSnapshot and the GskRenderNode pipeline. Snapshot the widget,
+         * extract the render node, then draw it onto the GC's Cairo context using
+         * gsk_render_node_draw().
+         */
+
+        long widgetPaintable = GTK4.gtk_widget_paintable_new(topHandle);
+        if (widgetPaintable == 0) return false;
+        try {
+            int width  = GTK4.gtk_widget_get_width(topHandle);
+            int height = GTK4.gtk_widget_get_height(topHandle);
+
+            long snapshot = GTK4.gtk_snapshot_new();
+            if (snapshot == 0) return false;
+
+            try {
+                GTK4.gdk_paintable_snapshot(widgetPaintable, snapshot, width, height);
+
+                long renderNode = GTK4.gtk_snapshot_free_to_node(snapshot);
+                snapshot = 0; // freed by gtk_snapshot_free_to_node
+
+                if (renderNode == 0) return false;
+
+                GTK4.gsk_render_node_draw(renderNode, gc.handle);
+                GTK4.gsk_render_node_unref(renderNode);
+            } finally {
+                if (snapshot != 0) OS.g_object_unref(snapshot);
+            }
+        } finally {
+            OS.g_object_unref(widgetPaintable);
+        }
+    } else {
+		/*
+		 * In GTK 3 gtk_widget_draw() will only draw if the
+		 * widget's priv->alloc_needed field is set to TRUE. Since
+		 * this field is private and inaccessible, get and set the
+		 * allocation to trigger it to be TRUE. See bug 530969.
+		 */
+		GtkAllocation allocation = new GtkAllocation ();
+		GTK.gtk_widget_get_allocation(topHandle, allocation);
+		// Prevent allocation warnings
+		GTK.gtk_widget_get_preferred_size(topHandle, null, null);
+		GTK3.gtk_widget_size_allocate(topHandle, allocation);
+		GTK3.gtk_widget_draw(topHandle, gc.handle);
+    }
 	return true;
 }
 
@@ -1227,11 +1263,6 @@ int setBounds (int x, int y, int width, int height, boolean move, boolean resize
  */
 public Point getLocation () {
 	checkWidget();
-	return getLocationInPixels();
-}
-
-Point getLocationInPixels () {
-	checkWidget();
 	long topHandle = topHandle ();
 	GtkAllocation allocation = new GtkAllocation ();
 	GTK.gtk_widget_get_allocation (topHandle, allocation);
@@ -1267,12 +1298,6 @@ public void setLocation (Point location) {
 	setBounds (location.x, location.y, 0, 0, true, false);
 }
 
-void setLocationInPixels (Point location) {
-	checkWidget ();
-	if (location == null) error (SWT.ERROR_NULL_ARGUMENT);
-	setBounds (location.x, location.y, 0, 0, true, false);
-}
-
 /**
  * Sets the receiver's location to the point specified by the arguments which
  * are relative to the receiver's parent (or its display if its parent is null),
@@ -1292,12 +1317,6 @@ void setLocationInPixels (Point location) {
  * </ul>
  */
 public void setLocation(int x, int y) {
-	checkWidget();
-	Point loc = new Point (x, y);
-	setBounds (loc.x, loc.y, 0, 0, true, false);
-}
-
-void setLocationInPixels(int x, int y) {
 	checkWidget();
 	setBounds (x, y, 0, 0, true, false);
 }
@@ -1735,26 +1754,6 @@ public Point toDisplay(int x, int y) {
 	return new Point(x, y);
 }
 
-Point toDisplayInPixels(int x, int y) {
-	checkWidget();
-
-	int[] origin_x = new int[1], origin_y = new int[1];
-	if (GTK.GTK4) {
-		Point origin = getControlOrigin();
-		origin_x[0] = origin.x;
-		origin_y[0] = origin.y;
-	} else {
-		long window = eventWindow();
-		GDK.gdk_window_get_origin(window, origin_x, origin_y);
-	}
-
-	if ((style & SWT.MIRRORED) != 0) x = getClientWidth() - x;
-	x += origin_x[0];
-	y += origin_y[0];
-
-	return new Point(x, y);
-}
-
 /**
  * Returns a point which is the result of converting the
  * argument, which is specified in coordinates relative to
@@ -1787,7 +1786,8 @@ public Point toDisplay (Point point) {
  */
 Point getControlOrigin() {
 	double[] originX = new double[1], originY = new double[1];
-	boolean success = GTK4.gtk_widget_translate_coordinates(fixedHandle, getShell().shellHandle, 0, 0, originX, originY);
+	long widgetHandle = fixedHandle != 0 ? fixedHandle: eventHandle();
+	boolean success = GTK4.gtk_widget_translate_coordinates(widgetHandle, getShell().shellHandle, 0, 0, originX, originY);
 
 	return success ? new Point((int)originX[0], (int)originY[0]) : new Point(0, 0);
 }
@@ -3527,7 +3527,7 @@ long gtk_button_press_event (long widget, long event, boolean sendMouseDown) {
 		display.clickCount = 1;
 		long nextEvent = GDK.gdk_event_peek();
 		if (nextEvent != 0) {
-			int peekedEventType = GDK.GDK_EVENT_TYPE (nextEvent);
+			int peekedEventType = GDK.gdk_event_get_event_type (nextEvent);
 			if (peekedEventType == GDK.GDK_2BUTTON_PRESS) display.clickCount = 2;
 			if (peekedEventType == GDK.GDK_3BUTTON_PRESS) display.clickCount = 3;
 			gdk_event_free (nextEvent);
@@ -4130,7 +4130,7 @@ void gtk4_motion_event(long controller, double x, double y, long event) {
 		if (display.currentControl != null && !display.currentControl.isDisposed()) {
 			display.removeMouseHoverTimeout(display.currentControl.handle);
 			/*
-			 *  Note: for GTK4, the call to display.mapInPixels function was removed due to the
+			 *  Note: for GTK4, the call to display.map function was removed due to the
 			 *  inability to get the origin of surfaces. Testing needs to be done to see if
 			 *  the x, y, coordinates suffice.
 			 */
@@ -4226,7 +4226,7 @@ long gtk_motion_notify_event (long widget, long event) {
 	if (this != display.currentControl) {
 		if (display.currentControl != null && !display.currentControl.isDisposed ()) {
 			display.removeMouseHoverTimeout(display.currentControl.handle);
-			Point pt = display.mapInPixels(this, display.currentControl, (int)x, (int)y);
+			Point pt = display.map(this, display.currentControl, (int)x, (int)y);
 			display.currentControl.sendMouseEvent(SWT.MouseExit,  0, time, pt.x, pt.y, isHint, state[0]);
 		}
 		if (!isDisposed ()) {
@@ -5091,6 +5091,7 @@ boolean sendMouseEvent (int type, int button, int count, int detail, boolean sen
 						flushQueueOnDnd();
 					} else {
 						dragDetectionQueue.add(event);
+						return true;
 					}
 					break;
 				case SWT.MouseUp:
@@ -5141,6 +5142,26 @@ void gtk_widget_set_align(long widget, int hAlign, int vAlign) {
 void gtk_label_set_align(long label, float xAlign, float yAlign) {
 	GTK.gtk_label_set_xalign(label, xAlign);
 	GTK.gtk_label_set_yalign(label, yAlign);
+}
+
+/**
+ * Sets the autoscaling mode for this widget. The capability is not supported on
+ * every platform, such that calling this method may not have an effect on
+ * unsupported platforms. The return value indicates if the autoscale mode was
+ * set properly. With {@link #isAutoScalable()}, the autoscale enablement can
+ * also be evaluated at any later point in time.
+ * <p>
+ * Currently, this is only supported on Windows.
+ * </p>
+ *
+ * @param autoscalingMode the autoscaling mode to set
+ *
+ * @return {@code false} if the operation was called on an unsupported platform
+ *
+ * @since 3.133
+ */
+public boolean setAutoscalingMode(AutoscalingMode autoscalingMode) {
+	return false;
 }
 
 void setBackground () {
@@ -6872,7 +6893,8 @@ Point getWindowOrigin () {
  */
 Point getSurfaceOrigin () {
 	double[] originX = new double[1], originY = new double[1];
-	boolean success = GTK4.gtk_widget_translate_coordinates(fixedHandle, getShell().shellHandle, 0, 0, originX, originY);
+	long widgetHandle = fixedHandle != 0 ? fixedHandle: eventHandle();
+	boolean success = GTK4.gtk_widget_translate_coordinates(widgetHandle, getShell().shellHandle, 0, 0, originX, originY);
 
 	return success ? new Point((int)originX[0], (int)originY[0]) : new Point(0, 0);
 }

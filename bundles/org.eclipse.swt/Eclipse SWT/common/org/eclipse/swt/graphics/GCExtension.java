@@ -23,13 +23,6 @@ public final class GCExtension extends GC {
 	private final IExternalGC e;
 
 	/**
-	 * @noreference Blocks access to the public GC method 'handle()'.
-	 */
-	public long handle() {
-		throw new IllegalStateException("GCExtension does not support handle access");
-	}
-
-	/**
 	 * Blocks access to the static factory methods from GC.
 	 *
 	 * @noreference This class is not intended to be referenced by clients.
@@ -49,10 +42,8 @@ public final class GCExtension extends GC {
 
 	/**
 	 * Blocks access to the GC constructor.
-	 *
-	 * @noreference This class is not intended to be referenced by clients.
 	 */
-	protected GCExtension() {
+	GCExtension() {
 		throw new IllegalStateException("GCExtension does not supported protected constructor");
 	}
 
@@ -173,6 +164,10 @@ public final class GCExtension extends GC {
 		return e.getForegroundPattern();
 	}
 
+
+	/**
+	 * @noreference This method is not intended to be referenced by clients.
+	 */
 	@Override
 	public GCData getGCData() {
 		return e.getGCData();

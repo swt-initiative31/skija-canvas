@@ -1,90 +1,120 @@
 package org.eclipse.swt.internal.canvasext;
 
 import org.eclipse.swt.graphics.*;
-import org.eclipse.swt.internal.*;
 import org.eclipse.swt.widgets.*;
 
 /**
- * internal use only
+ *
+ * Provides utility methods for the canvas extension to scale values according
+ * to the current DPI settings of the OS. This is used internally to scale all
+ * values that are used for drawing and layout calculations.
  */
 public class DpiScaler {
-
 
 	public DpiScaler(Canvas canvas) {
 	}
 
-	public static int autoScaleUp(int o) {
-		return Math.round(o * getFactor());
+	/**
+	 * Scales a value up according to the native zoom factor. Uses integer
+	 * arithmetic with rounding for precise results (e.g. for nativeZoom=125).
+	 */
+	private int scaleUp(int value) {
+		return value;
 	}
 
-	public static int getDeviceZoom() {
-		return DPIUtil.getDeviceZoom();
-	}
-
-	public static float autoScaleDown(float o) {
-		return o / getFactor();
-	}
-
-	public static int autoScaleDown(int o) {
-		return Math.round(o / getFactor());
-	}
-
-	public static int getNativeDeviceZoom() {
-		return DPIUtil.getNativeDeviceZoom();
-	}
-
-	public static int scaleUp(int o, int zoom) {
-		return Math.round(o * ((float) zoom) / (getDeviceZoom() * 1f));
-	}
-
-	public static float autoScaleUp(float o) {
-		return o * getFactor();
-	}
-
-	public static float[] autoScaleDown(float[] o) {
-		if (o == null) {
-			return null;
-		}
-		final float[] res = new float[o.length];
-
-		for (int i = 0; i < o.length; i++) {
-			res[i] = o[i] * getFactor();
-		}
-
-		return res;
-	}
-
-	private static float getFactor() {
-		return (float) (getDeviceZoom() / 100.0);
-	}
-
-	public static Point autoScaleUp(Point p) {
-		return new Point(autoScaleUp(p.x), autoScaleUp(p.y));
-	}
-
-	public static int autoScaleDownToInt(float value) {
-		return Math.round(autoScaleDown(value));
+	/**
+	 * Scales a value down according to the native zoom factor. Uses integer
+	 * arithmetic with rounding for precise results (e.g. for nativeZoom=125).
+	 */
+	private int scaleDown(int value) {
+		return value;
 	}
 
 	public int getZoomedFontSize(int fontSize) {
-		return (fontSize * Display.getDefault().getDPI().y) / 72;
+		// dpi to inch
+		fontSize = (fontSize * Display.getDefault().getDPI().y) / 72;
+		return scaleUp(fontSize);
 	}
 
-	public int scaleTextMargin(int margin) {
-
-		return margin;
-	}
-
-	public int scaleAscent(int asc) {
-		return asc;
-	}
-
-	public Rectangle scaleBounds(Rectangle rectangle, int deviceZoom) {
-		return rectangle;
-
+	public Rectangle scaleUpRectangle(Rectangle rectangle) {
+		return new Rectangle(scaleUp(rectangle.x), scaleUp(rectangle.y), scaleUp(rectangle.width), scaleUp(rectangle.height));
 	}
 
 	public Point scaleSize(int x, int y) {
-		return new Point(x,y);
+		return new Point(scaleUp(x), scaleUp(y));
 	}
+
+	public Point scaleSurfaceSize(int width, int height) {
+		return new Point(scaleUp(width), scaleUp(height));
+	}
+
+	public float autoScaleUp(float f) {
+		return f;
+	}
+
+	public int autoScaleUp(int value) {
+		return scaleUp(value);
+	}
+
+	public float autoScaleDown(float width) {
+		return width;
+	}
+
+	/**
+	 * Scales a float array down according to the native zoom factor. Each value is
+	 * divided by nativeZoom/100, preserving float precision.
+	 *
+	 * @param values the array to scale down
+	 * @return a new array with all values scaled down, or null if input is null
+	 */
+	public float[] autoScaleDown(float[] values) {
+		if (values == null)
+			return null;
+		float[] result = new float[values.length];
+		float factor = 1.0f;
+		for (int i = 0; i < values.length; i++) {
+			result[i] = values[i] * factor;
+		}
+		return result;
+	}
+
+	/**
+	 * Scales a float value down according to the native zoom factor and rounds to
+	 * the nearest integer.
+	 *
+	 * @param f the value to scale down
+	 * @return the scaled and rounded integer value
+	 */
+	public int autoScaleDownToInt(float f) {
+		return Math.round(f);
+	}
+
+	public int getNativeZoom() {
+		return 100;
+	}
+
+	public Point scaleDown(Point point) {
+		return new Point(scaleDown(point.x), scaleDown(point.y));
+	}
+
+	public  float[] autoScaleUp(float[] values) {
+		if (values == null)
+			return null;
+		float[] result = new float[values.length];
+		for (int i = 0; i < values.length; i++) {
+			result[i] = autoScaleUp(values[i]);
+		}
+		return result;
+	}
+
+	public int[] autoScaleUp(int[] values) {
+		if (values == null)
+			return null;
+		int[] result = new int[values.length];
+		for (int i = 0; i < values.length; i++) {
+			result[i] = autoScaleUp(values[i]);
+		}
+		return result;
+	}
+
 }

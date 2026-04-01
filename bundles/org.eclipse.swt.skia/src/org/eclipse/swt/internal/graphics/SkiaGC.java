@@ -81,7 +81,7 @@ public class SkiaGC implements IExternalGC {
 
 	public final static boolean USE_TEXT_CACHE = true;
 
-	public static boolean logImageNullError = true;
+	private static boolean logImageNullError = true;
 	private final Surface surface;
 	private int lineWidth = 1;
 	private int lineStyle;
@@ -239,9 +239,7 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	private static void logImageNull(int[] positionData) {
-
 		if (logImageNullError) {
-
 			Logger.logException(new IllegalArgumentException(
 					"Image argument is null. Position and size data: " + java.util.Arrays.toString(positionData))); //$NON-NLS-1$
 			logImageNullError = false;
@@ -293,7 +291,6 @@ public class SkiaGC implements IExternalGC {
 		performDraw(paint -> {
 			paint.setAlpha(alpha);
 			paint.setAntiAlias(true);
-			// TODO create an image cache, instead of recreating the skija image every time
 			canvas.drawImageRect(convertSWTImageToSkijaImage(image, getScaler().autoScaleUp(100 * fac)),
 					createScaledRectangle(srcX * fac, srcY * fac, srcWidth * fac, srcHeight * fac),
 					createScaledRectangle(destX, destY, destWidth, destHeight), this.interpolationMode, paint, false);
@@ -524,7 +521,6 @@ public class SkiaGC implements IExternalGC {
 		final float scaledOffsetValue = getScaledOffsetValue();
 
 		final var scaler = resources.getScaler();
-
 		performDraw(paint -> surface.getCanvas().drawLine(scaler.autoScaleUp(x1) + scaledOffsetValue,
 				scaler.autoScaleUp(y1) + scaledOffsetValue, scaler.autoScaleUp(x2) + scaledOffsetValue,
 				scaler.autoScaleUp(y2) + scaledOffsetValue, paint));
@@ -773,7 +769,8 @@ public class SkiaGC implements IExternalGC {
 		performDraw(paint -> {
 			final var scaledLineWidth = getScaler().autoScaleUp(lineWidth * 1F);
 
-			paint.setPathEffect(PathEffect.makeDash(new float[] { 1.5f * scaledLineWidth, 1.5f * scaledLineWidth }, 0.0f));
+			paint.setPathEffect(
+					PathEffect.makeDash(new float[] { 1.5f * scaledLineWidth, 1.5f * scaledLineWidth }, 0.0f));
 			surface.getCanvas().drawRect(offsetRectangle(createScaledRectangle(x, y, width, height)), paint);
 		});
 	}
@@ -786,11 +783,11 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void drawPath(Path path) {
-		try (io.github.humbleui.skija.Path skijaPath = convertSWTPathToSkijaPath(path)) {
-			if (skijaPath == null) {
-				return;
-			}
-			performDraw(paint -> {
+		performDraw(paint -> {
+			try (io.github.humbleui.skija.Path skijaPath = convertSWTPathToSkijaPath(path)) {
+				if (skijaPath == null) {
+					return;
+				}
 
 				paint.setStrokeJoin(PaintStrokeJoin.MITER);
 				paint.setStrokeMiter(100000);
@@ -798,9 +795,8 @@ public class SkiaGC implements IExternalGC {
 				paint.setStrokeCap(PaintStrokeCap.BUTT);
 
 				surface.getCanvas().drawPath(skijaPath, paint);
-			});
-
-		}
+			}
+		});
 	}
 
 	@Override
@@ -830,18 +826,26 @@ public class SkiaGC implements IExternalGC {
 			}
 		}
 
-		// Create Skija path for the polygon
-		try (io.github.humbleui.skija.PathBuilder path = new io.github.humbleui.skija.PathBuilder()) {
-			// Move to first point
-			path.moveTo(getScaler().autoScaleUp(pointArray[0]), getScaler().autoScaleUp(pointArray[1]));
-			// Add lines to subsequent points
-			for (int i = 2; i < pointArray.length; i += 2) {
-				path.lineTo(getScaler().autoScaleUp(pointArray[i]), getScaler().autoScaleUp(pointArray[i + 1]));
+		performDraw(paint -> {
+			// Create Skija path for the polygon
+			try (io.github.humbleui.skija.PathBuilder pathBuilder = new io.github.humbleui.skija.PathBuilder()) {
+				// Move to first point
+				pathBuilder.moveTo(getScaler().autoScaleUp(pointArray[0]), getScaler().autoScaleUp(pointArray[1]));
+				// Add lines to subsequent points
+				for (int i = 2; i < pointArray.length; i += 2) {
+					pathBuilder.lineTo(getScaler().autoScaleUp(pointArray[i]), getScaler().autoScaleUp(pointArray[i + 1]));
+				}
+				pathBuilder.closePath();
+				// Draw the polygon outline
+
+				try (var path = pathBuilder.build()) {
+					if (path.isEmpty()) {
+						return;
+					}
+					surface.getCanvas().drawPath(path, paint);
+				}
 			}
-			path.closePath();
-			// Draw the polygon outline
-			performDraw(paint -> surface.getCanvas().drawPath(path.build(), paint));
-		}
+		});
 		// Restore x-coordinates if mirrored
 		if (adjustX) {
 			for (int i = 0; i < pointArray.length; i += 2) {
@@ -856,7 +860,7 @@ public class SkiaGC implements IExternalGC {
 		}
 		final PathData data = swtPath.getPathData();
 
-		try (final io.github.humbleui.skija.PathBuilder skijaPath = new io.github.humbleui.skija.PathBuilder()) {
+		try (final io.github.humbleui.skija.PathBuilder skijaPathBuilder = new io.github.humbleui.skija.PathBuilder()) {
 
 			final float[] pts = data.points;
 			final byte[] types = data.types;
@@ -864,27 +868,27 @@ public class SkiaGC implements IExternalGC {
 			for (final byte type : types) {
 				switch (type) {
 				case SWT.PATH_MOVE_TO:
-					skijaPath.moveTo(getScaler().autoScaleUp(pts[pi++]), getScaler().autoScaleUp(pts[pi++]));
+					skijaPathBuilder.moveTo(getScaler().autoScaleUp(pts[pi++]), getScaler().autoScaleUp(pts[pi++]));
 					break;
 				case SWT.PATH_LINE_TO:
-					skijaPath.lineTo(getScaler().autoScaleUp(pts[pi++]), getScaler().autoScaleUp(pts[pi++]));
+					skijaPathBuilder.lineTo(getScaler().autoScaleUp(pts[pi++]), getScaler().autoScaleUp(pts[pi++]));
 					break;
 				case SWT.PATH_CUBIC_TO:
-					skijaPath.cubicTo(getScaler().autoScaleUp(pts[pi++]), getScaler().autoScaleUp(pts[pi++]),
+					skijaPathBuilder.cubicTo(getScaler().autoScaleUp(pts[pi++]), getScaler().autoScaleUp(pts[pi++]),
 							getScaler().autoScaleUp(pts[pi++]), getScaler().autoScaleUp(pts[pi++]),
 							getScaler().autoScaleUp(pts[pi++]), getScaler().autoScaleUp(pts[pi++]));
 					break;
 				case SWT.PATH_QUAD_TO:
-					skijaPath.quadTo(getScaler().autoScaleUp(pts[pi++]), getScaler().autoScaleUp(pts[pi++]),
+					skijaPathBuilder.quadTo(getScaler().autoScaleUp(pts[pi++]), getScaler().autoScaleUp(pts[pi++]),
 							getScaler().autoScaleUp(pts[pi++]), getScaler().autoScaleUp(pts[pi++]));
 					break;
 				case SWT.PATH_CLOSE:
-					skijaPath.closePath();
+					skijaPathBuilder.closePath();
 					break;
 				default:
 				}
 			}
-			final var p = skijaPath.build();
+			final var p = skijaPathBuilder.build();
 			return p;
 		}
 	}
@@ -1013,16 +1017,16 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void fillPath(Path path) {
-		try (io.github.humbleui.skija.Path skijaPath = convertSWTPathToSkijaPath(path)) {
-			if (skijaPath == null) {
-				return;
-			}
-			skijaPath.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
-			performDrawFilled(paint -> {
+		performDrawFilled(paint -> {
+			try (io.github.humbleui.skija.Path skijaPath = convertSWTPathToSkijaPath(path)) {
+				if (skijaPath == null) {
+					return;
+				}
+				skijaPath.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
 				paint.setAntiAlias(this.antialias == SWT.ON);
 				surface.getCanvas().drawPath(skijaPath, paint);
-			});
-		}
+			}
+		});
 	}
 
 	@Override
@@ -1037,20 +1041,28 @@ public class SkiaGC implements IExternalGC {
 			return;
 		}
 
-		// Create Skija path for the polygon
-		try (io.github.humbleui.skija.PathBuilder path = new io.github.humbleui.skija.PathBuilder()) { // Move to first
-			// point
-			path.moveTo(getScaler().autoScaleUp(pointArray[0]), getScaler().autoScaleUp(pointArray[1]));
-			// Add lines to subsequent points
-			for (int i = 2; i < pointArray.length; i += 2) {
-				path.lineTo(getScaler().autoScaleUp(pointArray[i]), getScaler().autoScaleUp(pointArray[i + 1]));
+		performDrawFilled(paint -> {
+			// Create Skija path for the polygon
+			try (io.github.humbleui.skija.PathBuilder pathBuilder = new io.github.humbleui.skija.PathBuilder()) { // Move to
+				// first
+				// point
+				pathBuilder.moveTo(getScaler().autoScaleUp(pointArray[0]), getScaler().autoScaleUp(pointArray[1]));
+				// Add lines to subsequent points
+				for (int i = 2; i < pointArray.length; i += 2) {
+					pathBuilder.lineTo(getScaler().autoScaleUp(pointArray[i]), getScaler().autoScaleUp(pointArray[i + 1]));
+				}
+				// Close the path to form a polygon
+				pathBuilder.closePath();
+				pathBuilder.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
+				// Fill the polygon
+				try (var path = pathBuilder.build()) {
+					if (path.isEmpty()) {
+						return;
+					}
+					surface.getCanvas().drawPath(path, paint);
+				}
 			}
-			// Close the path to form a polygon
-			path.closePath();
-			path.setFillMode(fillRule == SWT.FILL_EVEN_ODD ? PathFillMode.EVEN_ODD : PathFillMode.WINDING);
-			// Fill the polygon
-			performDrawFilled(paint -> surface.getCanvas().drawPath(path.build(), paint));
-		}
+		});
 	}
 
 	@Override
@@ -1067,10 +1079,6 @@ public class SkiaGC implements IExternalGC {
 	@Override
 	public Point textExtent(String text, int flags) {
 		return getScaler().scaleDown(resources.textExtent(text, flags));
-	}
-
-	private static String replaceMnemonics(String text) {
-		return SkiaResources.replaceMnemonics(text);
 	}
 
 	@Override
@@ -1160,8 +1168,9 @@ public class SkiaGC implements IExternalGC {
 		final float scaledOffsetValue = getScaledOffsetValue();
 		final float widthHightAutoScaleOffset = getScaler().autoScaleUp(1) - 1.0f;
 		if (scaledOffsetValue > 0f) {
-			return new Rect(rect.getLeft() + 1, rect.getTop() + 1, rect.getRight() + 1 + widthHightAutoScaleOffset,
-					rect.getBottom() + 1 + widthHightAutoScaleOffset);
+			return new Rect(rect.getLeft() + 0.5f, rect.getTop() + 0.5f,
+					rect.getRight() + 0.5f + widthHightAutoScaleOffset,
+					rect.getBottom() + 0.5f + widthHightAutoScaleOffset);
 		}
 		return rect;
 	}
@@ -1303,31 +1312,32 @@ public class SkiaGC implements IExternalGC {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
 
-		final io.github.humbleui.skija.Image skijaImage = convertSWTImageToSkijaImage(image,
-				getScaler().getNativeZoom());
-		try (final io.github.humbleui.skija.Image copiedArea = surface.makeImageSnapshot(
-				createScaledRectangle(x, y, skijaImage.getWidth(), skijaImage.getHeight()).toIRect())) {
+		try (final io.github.humbleui.skija.Image skijaImage = convertSWTImageToSkijaImage(image,
+				getScaler().getNativeZoom())) {
+			try (final io.github.humbleui.skija.Image copiedArea = surface.makeImageSnapshot(
+					createScaledRectangle(x, y, skijaImage.getWidth(), skijaImage.getHeight()).toIRect())) {
 
-			if (copiedArea == null) {
-				SWT.error(SWT.ERROR_INVALID_ARGUMENT);
-			}
+				if (copiedArea == null) {
+					SWT.error(SWT.ERROR_INVALID_ARGUMENT);
+				}
 
-			try (final Surface imageSurface = surface.makeSurface(skijaImage.getWidth(), skijaImage.getHeight())) {
-				imageSurface.getCanvas().drawImage(copiedArea, 0, 0);
-				try (final io.github.humbleui.skija.Image snapshot = imageSurface.makeImageSnapshot()) {
-					final ImageData imgData = convertSkijaImageToImageData(snapshot);
-					Image i = null;
-					GC gc = null;
-					try {
-						i = new Image(device, imgData);
-						gc = new GC(image);
-						gc.drawImage(i, 0, 0);
-					} finally {
-						if (gc != null) {
-							gc.dispose();
-						}
-						if (i != null) {
-							i.dispose();
+				try (final Surface imageSurface = surface.makeSurface(skijaImage.getWidth(), skijaImage.getHeight())) {
+					imageSurface.getCanvas().drawImage(copiedArea, 0, 0);
+					try (final io.github.humbleui.skija.Image snapshot = imageSurface.makeImageSnapshot()) {
+						final ImageData imgData = convertSkijaImageToImageData(snapshot);
+						Image i = null;
+						GC gc = null;
+						try {
+							i = new Image(device, imgData);
+							gc = new GC(image);
+							gc.drawImage(i, 0, 0);
+						} finally {
+							if (gc != null) {
+								gc.dispose();
+							}
+							if (i != null) {
+								i.dispose();
+							}
 						}
 					}
 				}
@@ -1784,9 +1794,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setXORMode(boolean xor) {
-
 		this.xorModeActive = xor;
-
 	}
 
 	@Override
@@ -1797,7 +1805,6 @@ public class SkiaGC implements IExternalGC {
 	static PaletteData getPaletteData(ColorType colorType) {
 		// Note: RGB values here should be representative of a palette.
 
-		// TODO test all mappings here
 		return switch (colorType) {
 		case ALPHA_8 -> new PaletteData(new RGB[] { new RGB(255, 255, 255), new RGB(0, 0, 0) });
 		case RGB_565 -> new PaletteData(0xF800, 0x07E0, 0x001F); // Mask for RGB565
@@ -1818,7 +1825,6 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	static int getImageDepth(ColorType colorType) {
-		// TODO test all mappings
 		return switch (colorType) {
 		case ALPHA_8 -> 8;
 		case RGB_565 -> 16;
@@ -1830,24 +1836,11 @@ public class SkiaGC implements IExternalGC {
 		 */ /* depths. */ 64; // This is theoretical; SWT will usually not handle more than 32
 		case RGBA_F32 -> /* Same as RGBA_F16 with regards to SWT support */ 128; // Theoretical; actual handling
 		// requires custom treatment
-		default -> throw new IllegalArgumentException("Unknown Skija ColorType: " + colorType);
+		default -> {
+			Logger.logException(new IllegalArgumentException("Unknown Skija ColorType: " + colorType)); //$NON-NLS-1$
+			yield 32;
+		}
 		};
-	}
-
-	static ColorAlphaType determineAlphaType(ImageData imageData) {
-		// TODO test all mappings
-		if (imageData.alphaData == null && imageData.alpha == -1) {
-			// no alpha
-			return ColorAlphaType.OPAQUE;
-		}
-
-		if (imageData.alphaData != null || imageData.alpha < 255) {
-			// alpha data available
-			return ColorAlphaType.UNPREMUL;
-		}
-
-		// usually without additional information
-		return ColorAlphaType.UNPREMUL;
 	}
 
 	private static Map<ColorType, int[]> createColorTypeMap() {

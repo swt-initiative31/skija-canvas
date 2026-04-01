@@ -91,7 +91,7 @@ public class FontProperties {
 	}
 
 	private static FontName analyzeManual(String fullDescription) {
-		// Bekannte Stretch-Keywords definieren
+		// known stretch keywords
 		String[] stretchKeywords = { "UltraCondensed", "ExtraCondensed", "Condensed", "SemiCondensed", "SemiExpanded",
 				"Expanded" };
 

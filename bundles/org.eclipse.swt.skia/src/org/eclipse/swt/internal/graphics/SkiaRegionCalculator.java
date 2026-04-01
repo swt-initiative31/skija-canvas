@@ -25,7 +25,7 @@ import io.github.humbleui.types.IRect;
 
 public class SkiaRegionCalculator implements AutoCloseable {
 
-	final static HashMap<OpType, RegionOp> operationMapping = new HashMap<OpType, RegionOp>();
+	private final static HashMap<OpType, RegionOp> operationMapping = new HashMap<OpType, RegionOp>();
 
 	static {
 		operationMapping.put(OpType.ADD, RegionOp.UNION);
@@ -84,12 +84,11 @@ public class SkiaRegionCalculator implements AutoCloseable {
 			}
 		}
 
-		throw new IllegalStateException("Unknown type and object: " + o);
+		throw new IllegalStateException("Unknown type and object: " + o); //$NON-NLS-1$
 
 	}
 
 	private void executeOperation(RegionOp skiaOperation, Object ob, io.github.humbleui.skija.Region reg) {
-
 		if (ob instanceof final int[] polygon) {
 			final var tempReg = createPolygonSkiaRegion(polygon);
 			reg.op(tempReg, skiaOperation);
@@ -101,7 +100,6 @@ public class SkiaRegionCalculator implements AutoCloseable {
 				reg.op(src.getSkiaRegion(), skiaOperation);
 			}
 		}
-
 	}
 
 	/**
@@ -119,10 +117,10 @@ public class SkiaRegionCalculator implements AutoCloseable {
 
 		final io.github.humbleui.skija.Region r = new io.github.humbleui.skija.Region();
 
-		final var scaler =  skiaExtension.getScaler();
+		final var scaler = skiaExtension.getScaler();
 
-		try (final var p = new io.github.humbleui.skija.PathBuilder()) {
-			p.addPolygon(scaler.autoScaleUp(toFloat(polygon)), true);
+		try (final var pathBuilder = new io.github.humbleui.skija.PathBuilder()) {
+			pathBuilder.addPolygon(scaler.autoScaleUp(toFloat(polygon)), true);
 
 			final Point maxV = getMax(scaler.autoScaleUp(polygon));
 
@@ -131,8 +129,9 @@ public class SkiaRegionCalculator implements AutoCloseable {
 			// a path has to be set for a clipping region.
 			// so first we have to create a region big enough for the path and then set the
 			// path.
-			r.setPath(p.build(), r);
-			p.close();
+			try (var path = pathBuilder.build()) {
+				r.setPath(path, r);
+			}
 
 			return r;
 		}

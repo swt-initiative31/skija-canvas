@@ -48,10 +48,6 @@ public class ImageKey {
 
 	@Override
 	public String toString() {
-		return "ImageCache{" +
-				"version=" + version +
-				", image=" + image +
-				", zoom=" + zoom +
-				'}';
+		return String.format("ImageCache{version=%d, image=%s, zoom=%d}", version, image, zoom);
 	}
 }

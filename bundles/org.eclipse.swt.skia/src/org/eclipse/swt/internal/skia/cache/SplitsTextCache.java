@@ -24,7 +24,7 @@ public class SplitsTextCache {
 
 	public String[] getSplits() {
 		if (splits == null) {
-			splits = text.split("\n", -1);
+			splits = text.split("\n", -1); //$NON-NLS-1$
 		}
 		return splits;
 	}

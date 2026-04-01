@@ -10,13 +10,14 @@ import org.eclipse.swt.widgets.Event;
 import org.eclipse.swt.widgets.Shell;
 
 public class SnippetCanvasTextOCX26 {
-	final static boolean useSkia = false;
+	final static boolean useSkia = true;
 
 	final static int style = SWT.DOUBLE_BUFFERED | (useSkia ? SWT.SKIA : SWT.NONE);
 	final static int LETTERS_PER_LINE = 2000;
 	final static int LINES = 60;
 	final static int SHIFT_LEFT = 2000;
 
+	final static int LEFT_START = 50;
 	static String[] text = new String[LINES];
 
 	public static void main(String[] args) {
@@ -70,7 +71,10 @@ public class SnippetCanvasTextOCX26 {
 		var newFont = new Font(e.display, fd);
 		e.gc.setFont(newFont);
 		e.gc.setForeground(e.display.getSystemColor(SWT.COLOR_GREEN));
-		e.gc.drawText("OCX 2026" ,100,50,true  );
+		e.gc.drawText("OCX 2026" ,LEFT_START,50,true  );
+
+		var ocxSize = e.gc.textExtent("OCX 2026");
+
 		newFont.dispose();
 
 		fd.setHeight(50);
@@ -78,9 +82,9 @@ public class SnippetCanvasTextOCX26 {
 		e.gc.setFont(newFont);
 
 		if(useSkia) {
-			e.gc.drawText("GPU Accelerated Drawing With Skia SWT" ,100,450,true  );
+			e.gc.drawText("GPU Accelerated Drawing With Skia SWT" ,LEFT_START,50 + ocxSize.y + 5,true  );
 		} else {
-			e.gc.drawText("CPU Drawing With Classical SWT" ,100,450,true  );
+			e.gc.drawText("CPU Drawing With Classical SWT" ,LEFT_START,50 + ocxSize.y + 5,true  );
 		}
 		newFont.dispose();
 

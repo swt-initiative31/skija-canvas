@@ -23,27 +23,62 @@ import org.eclipse.swt.widgets.*;
 public class ExternalCanvasHandler {
 
 	private static boolean FAILED_WITH_ERRORS = false;
+	private static boolean ExternalCanvasWasLogged = false;
 
-	// TODO Maybe the external canvas loading should be disabled by default and only activated,
-	// if the vm argument explicitly enables it.
+	// DISABLE the external canvas extension. This is necessary in case the
+	// extension causes problems on a platform. In this case, the user can set this
+	// property to disable the extension and use the default canvas implementation.
 	private final static String DISABLE_EXTERNAL_CANVAS = "org.eclipse.swt.external.canvas:disabled";
 
-	// this is only for test cases in order to check whether the software works with
+	// This is only for test cases in order to check whether the software works with
 	// the canvas extension.
 	// NEVER USE THIS IN PRODUCTIVE CODE!!
 	private final static String FORCE_ENABLE_EXTERNAL_CANVAS = "org.eclipse.swt.external.canvas:forceEnabled";
 
+	// In order to know whether an external canvas was activated.
+	private final static String LOG_EXTERNAL_CANVAS_ACTIVATION = "org.eclipse.swt.external.canvas:logActivation";
+
 	private static IExternalCanvasFactory externalFactory = ServiceLoader.load(IExternalCanvasFactory.class).findFirst()
 			.orElse(null);
 
+	private static boolean isDisabled() {
+		var disable = System.getProperty(DISABLE_EXTERNAL_CANVAS);
+		if (disable != null) {
+			return true;
+		}
+		return false;
+	}
+
+	private static boolean isForcedEnabled() {
+		var forceEnable = System.getProperty(FORCE_ENABLE_EXTERNAL_CANVAS);
+		if (forceEnable != null) {
+			return true;
+		}
+		return false;
+	}
+
+	private static boolean isLogActive() {
+		var log = System.getProperty(LOG_EXTERNAL_CANVAS_ACTIVATION);
+		if (log != null) {
+			return true;
+		}
+		return false;
+	}
+
 	public static boolean isActive(Canvas canvas, int style) {
 
-		if(FAILED_WITH_ERRORS)
+		if (FAILED_WITH_ERRORS)
 			return false;
 
-		var disable = System.getProperty(DISABLE_EXTERNAL_CANVAS);
-		if (disable != null)
+		if (isDisabled()) {
+
+			if (!ExternalCanvasWasLogged && isLogActive()) {
+				System.out.println("External canvas disabled.");
+				ExternalCanvasWasLogged = true;
+			}
+
 			return false;
+		}
 
 		if (canvas instanceof StyledText || canvas instanceof Decorations)
 			return false;
@@ -51,22 +86,46 @@ public class ExternalCanvasHandler {
 		if ((style & SWT.SKIA) != 0 && externalFactory != null)
 			return true;
 
-		var forceEnable = System.getProperty(FORCE_ENABLE_EXTERNAL_CANVAS);
-		if (forceEnable != null)
+		if (externalFactory == null) {
+			if (!ExternalCanvasWasLogged && isLogActive()) {
+				System.out.println("No external canvas factory found. External canvas disabled.");
+				ExternalCanvasWasLogged = true;
+			}
+			return false;
+		}
+
+		if (isForcedEnabled()) {
+
+			if (!ExternalCanvasWasLogged && isLogActive()) {
+				System.out.println("Force enabled, external canvas factory found. External canvas will be activated.");
+				ExternalCanvasWasLogged = true;
+			}
+
 			return true;
+		}
 
 		return false;
 	}
 
 	public static IExternalCanvasHandler createHandler(Canvas c) {
 
-		if(FAILED_WITH_ERRORS)
+		if (FAILED_WITH_ERRORS)
+			return null;
+
+		if (isDisabled())
 			return null;
 
 		try {
 			// it is possible that the loading of external libraries can fail.
-			return externalFactory.createCanvasExtension(c);
-		}catch(Throwable t) {
+			var externalCanvas = externalFactory.createCanvasExtension(c);
+
+			if (!ExternalCanvasWasLogged && isLogActive()) {
+				System.out.println("External canvas activated.");
+				ExternalCanvasWasLogged = true;
+			}
+
+			return externalCanvas;
+		} catch (Throwable t) {
 			FAILED_WITH_ERRORS = true;
 			t.printStackTrace(System.err);
 			return null;

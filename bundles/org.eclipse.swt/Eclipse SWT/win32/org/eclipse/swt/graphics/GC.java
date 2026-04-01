@@ -63,7 +63,7 @@ import org.eclipse.swt.internal.win32.*;
  * @see <a href="http://www.eclipse.org/swt/examples.php">SWT Examples: GraphicsExample, PaintExample</a>
  * @see <a href="http://www.eclipse.org/swt/">Sample code and further information</a>
  */
-public sealed class GC extends Resource permits GCExtension {
+public class GC extends Resource {
 
 	/**
 	 * the handle to the OS device context

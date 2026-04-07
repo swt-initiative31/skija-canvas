@@ -1,0 +1,16 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-SymbolicName: org.eclipse.swt.skia
+Bundle-Version: 3.133.100.qualifier
+Automatic-Module-Name: org.eclipse.swt.skia
+Bundle-ClassPath: lib/skija-linux-x64-0.143.11.jar,
+ lib/skija-shared-0.143.11.jar,
+ lib/skija-windows-x64-0.143.11.jar,
+ lib/types-0.1.1.jar,
+ lib/,
+ ./
+Bundle-Name: %fragmentName
+Bundle-Vendor: %providerName
+Bundle-Localization: fragment
+Bundle-RequiredExecutionEnvironment: JavaSE-21
+Fragment-Host: org.eclipse.swt;bundle-version="[3.133.100.qualifier,4.0.0)"

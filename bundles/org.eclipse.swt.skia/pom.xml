@@ -12,28 +12,6 @@
 	<version>3.134.0-SNAPSHOT</version>
 	<packaging>eclipse-plugin</packaging>
 
-	<profiles>
-		<profile>
-			<id>win32-x86_64</id>
-			<activation>
-				<os>
-					<family>windows</family>
-					<arch>x86_64</arch>
-				</os>
-			</activation>
-		</profile>
-		<profile>
-			<id>linux-x86_64</id>
-			<activation>
-				<os>
-					<family>unix</family>
-					<name>Linux</name>
-					<arch>x86_64</arch>
-				</os>
-			</activation>
-		</profile>
-	</profiles>
-
 	<properties>
 		<failOnJavadocErrors>false</failOnJavadocErrors>
 	</properties>
@@ -168,28 +146,75 @@
 				</executions>
 			</plugin>
 			
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<dependencies>
-					<dependency>
-						<groupId>org.apache.maven.surefire</groupId>
-						<artifactId>surefire-junit-platform</artifactId>
-						<version>${surefire.version}</version>
-					</dependency>
-				</dependencies>
-				<executions>
-					<execution>
-						<id>execute-tests</id>
-						<goals>
-							<goal>test</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>	
-			
 		
 		</plugins>
 	</build>
 
+	<profiles>
+		<profile>
+			<id>test-on-win32-x86_64</id>
+			<activation>
+				<os>
+					<family>windows</family>
+					<arch>x86_64</arch>
+				</os>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<dependencies>
+							<dependency>
+								<groupId>org.apache.maven.surefire</groupId>
+								<artifactId>surefire-junit-platform</artifactId>
+								<version>${surefire.version}</version>
+							</dependency>
+						</dependencies>
+						<executions>
+							<execution>
+								<id>execute-tests</id>
+								<goals>
+									<goal>test</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+		<profile>
+			<id>test-on-linux-x86_64</id>
+			<activation>
+				<os>
+					<family>unix</family>
+					<name>Linux</name>
+					<arch>x86_64</arch>
+				</os>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-surefire-plugin</artifactId>
+						<dependencies>
+							<dependency>
+								<groupId>org.apache.maven.surefire</groupId>
+								<artifactId>surefire-junit-platform</artifactId>
+								<version>${surefire.version}</version>
+							</dependency>
+						</dependencies>
+						<executions>
+							<execution>
+								<id>execute-tests</id>
+								<goals>
+									<goal>test</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 </project>

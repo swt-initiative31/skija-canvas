@@ -12,6 +12,10 @@ public class DpiScalerUtil implements IDpiScaler {
 		this.scaler = scaler;
 	}
 
+	public DpiScalerUtil(int nativeZoom) {
+		this.scaler = () -> nativeZoom;
+	}
+
 	public DpiScalerUtil(SkiaResources resources) {
 		this.scaler = resources.getScaler();
 	}

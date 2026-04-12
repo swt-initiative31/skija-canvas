@@ -31,6 +31,7 @@ import org.eclipse.swt.widgets.Shell;
 public class CanvasCompareTool {
 
 	final static int MAX_DIFF = 0;
+	public static final int SKIA = 1 << 23;
 
 	public static boolean SHOW_COMPARE_VIEW = false;
 
@@ -55,25 +56,23 @@ public class CanvasCompareTool {
 		shell.setSize(1000, 1000);
 
 		if (twoSkiaCanvas) {
-			SkiaConfiguration.activateSkiaGl();
-			classicalCanvas = new Canvas(shell, SkiaConfiguration.SKIA);
+			classicalCanvas = new Canvas(shell, SKIA);
 		} else {
 			classicalCanvas = new Canvas(shell, SWT.NONE);
 		}
-		SkiaConfiguration.activateSkiaGl();
-		skiaCanvas = new Canvas(shell, SkiaConfiguration.SKIA);
+		skiaCanvas = new Canvas(shell, SKIA);
 
-		shell.addListener(SWT.Resize, (e) -> {
+		shell.addListener(SWT.Resize, e -> {
 
 			if (!shell.isDisposed()) {
 
-				var ca = shell.getClientArea();
+				final var ca = shell.getClientArea();
 
-				var h = ca.height;
-				var w = ca.width;
+				final var h = ca.height;
+				final var w = ca.width;
 
-				var canvasHeight = h - 10;
-				var canvasWidth = h / 2 - 10;
+				final var canvasHeight = h - 10;
+				final var canvasWidth = h / 2 - 10;
 
 				classicalCanvas.setBounds(3, 3, canvasWidth, canvasHeight);
 				skiaCanvas.setBounds(w / 2 + 3, 3, canvasWidth, canvasHeight);
@@ -101,24 +100,28 @@ public class CanvasCompareTool {
 
 	public void dispose() {
 
-		if (classicalCanvas != null)
+		if (classicalCanvas != null) {
 			classicalCanvas.dispose();
-		if (skiaCanvas != null)
+		}
+		if (skiaCanvas != null) {
 			skiaCanvas.dispose();
-		if (shell != null)
+		}
+		if (shell != null) {
 			shell.dispose();
-		if (display != null)
+		}
+		if (display != null) {
 			display.dispose();
+		}
 
 	}
 
 	void addPaintListener(PaintListener pe) {
 
-		PaintListener classicPaintListener = e -> {
+		final PaintListener classicPaintListener = e -> {
 			pe.paintControl(e);
 			classicExecuted.set(true);
 		};
-		PaintListener skiaPaintListener = e -> {
+		final PaintListener skiaPaintListener = e -> {
 			pe.paintControl(e);
 			skiaExecuted.set(true);
 		};
@@ -133,7 +136,7 @@ public class CanvasCompareTool {
 
 	void removePaintListeners() {
 
-		for (var l : this.listeners) {
+		for (final var l : this.listeners) {
 			classicalCanvas.removePaintListener(l);
 			skiaCanvas.removePaintListener(l);
 		}
@@ -151,7 +154,7 @@ public class CanvasCompareTool {
 		classicExecuted.set(false);
 		skiaExecuted.set(false);
 
-		long start = System.currentTimeMillis();
+		final long start = System.currentTimeMillis();
 		if (r == null) {
 			classicalCanvas.redraw();
 			skiaCanvas.redraw();
@@ -162,23 +165,26 @@ public class CanvasCompareTool {
 
 		while (!shell.isDisposed() // is the shell is disposed, the test is definetly over
 				&& (Display.getDefault().readAndDispatch() // if there are no more redraw events, we can continue
-						|| (expectingRedraw && (!classicExecuted.get() && !skiaExecuted.get()))) // if we expect the redraw and the canvas was
-																									// drawn, we can
-																									// check the image
+						|| (expectingRedraw && (!classicExecuted.get() && !skiaExecuted.get()))) // if we expect the
+				// redraw and the
+				// canvas was
+				// drawn, we can
+				// check the image
 				|| System.currentTimeMillis() - start < WAIT_IN_SECONDS * 1000 // if the extended waiting time is set,
-																				// we have to wait longer
-		) {
+				// we have to wait longer
+				) {
 			try {
 				Thread.sleep(1);
-			} catch (InterruptedException e) {
+			} catch (final InterruptedException e) {
 				e.printStackTrace();
 			}
 		}
 
-		if (expectingRedraw)
+		if (expectingRedraw) {
 			if (!classicExecuted.get() || !skiaExecuted.get()) {
 				throw new IllegalStateException("No redraw on both canvases..");
 			}
+		}
 
 	}
 
@@ -188,9 +194,9 @@ public class CanvasCompareTool {
 
 	private Image extractImage(Canvas canvas) {
 
-		Rectangle bounds = canvas.getBounds();
-		Image image = new Image(Display.getDefault(), bounds.width, bounds.height);
-		GC gc = new GC(canvas);
+		final Rectangle bounds = canvas.getBounds();
+		final Image image = new Image(Display.getDefault(), bounds.width, bounds.height);
+		final GC gc = new GC(canvas);
 		gc.copyArea(image, 0, 0);
 		gc.dispose();
 
@@ -212,11 +218,11 @@ public class CanvasCompareTool {
 
 	private void approximatelyEquals(Rectangle fa1, Rectangle fa2) {
 
-		int diffX = fa1.x - fa2.x;
-		int diffY = fa1.y - fa2.y;
+		final int diffX = fa1.x - fa2.x;
+		final int diffY = fa1.y - fa2.y;
 
-		int diffWidth = fa1.width - fa2.width;
-		int diffHeight = fa1.height - fa2.height;
+		final int diffWidth = fa1.width - fa2.width;
+		final int diffHeight = fa1.height - fa2.height;
 
 		if (Math.abs(diffWidth) > MAX_DIFF || Math.abs(diffHeight) > MAX_DIFF || Math.abs(diffX) > MAX_DIFF
 				|| Math.abs(diffY) > MAX_DIFF) {
@@ -227,14 +233,14 @@ public class CanvasCompareTool {
 
 	public void assertImagesEqual(int zoom, Image i1, Image i2) {
 
-		var data1 = i1.getImageData(100);
-		var data2 = i2.getImageData(100);
+		final var data1 = i1.getImageData(100);
+		final var data2 = i2.getImageData(100);
 
-		assertEquals(data1.width, data2.width, "Widths not equal for zoom: " + zoom);
-		assertEquals(data1.height, data2.height, "Heights not equal for zoom: " + zoom);
+		assertEquals(data1.width, data2.width, 0.1, "Widths not equal for zoom: " + zoom);
+		assertEquals(data1.height, data2.height, 0.1, "Heights not equal for zoom: " + zoom);
 
-		TextAreaPosition ta1 = new TextAreaPosition(data1);
-		TextAreaPosition ta2 = new TextAreaPosition(data1);
+		final TextAreaPosition ta1 = new TextAreaPosition(data1);
+		final TextAreaPosition ta2 = new TextAreaPosition(data1);
 
 		assertTextAreaEquals(ta1, ta2);
 

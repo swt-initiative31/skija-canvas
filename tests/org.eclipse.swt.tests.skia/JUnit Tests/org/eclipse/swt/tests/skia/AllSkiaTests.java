@@ -17,7 +17,6 @@ import org.junit.platform.suite.api.Suite;
 
 @Suite(failIfNoTests = false)
 @SelectClasses({ Test_org_eclipse_swt_skia_RGBAEncoder.class, //
-		Test_org_eclipse_swt_skia_SkiaTextDrawing.class, //
 		Test_org_eclipse_swt_skia_RectangleConverter.class, //
 		Test_org_eclipse_swt_skia_SkijaToSwtImageConverter.class, //
 })

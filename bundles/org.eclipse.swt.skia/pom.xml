@@ -16,6 +16,22 @@
 		<failOnJavadocErrors>false</failOnJavadocErrors>
 	</properties>
 
+  <!-- The skia canvas on mac is not supported. the tests fail with a class not found exception,
+  	   so they will be skipped  -->
+  <profiles>
+    <profile>
+      <id>macos-skip-tests</id>
+      <activation>
+        <os>
+          <family>mac</family>
+        </os>
+      </activation>
+      <properties>
+        <doSkipTests>true</doSkipTests>
+      </properties>
+    </profile>
+  </profiles>
+
 	<dependencies>
 		<dependency>
 			<groupId>io.github.humbleui</groupId>
@@ -145,10 +161,13 @@
 					</execution>
 				</executions>
 			</plugin>
-			
+
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<skipTests>${doSkipTests}</skipTests>
+				</configuration>
 				<dependencies>
 					<dependency>
 						<groupId>org.apache.maven.surefire</groupId>
@@ -164,8 +183,8 @@
 						</goals>
 					</execution>
 				</executions>
-			</plugin>	
-		
+			</plugin>
+
 		</plugins>
 	</build>
 

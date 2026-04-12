@@ -7,10 +7,12 @@ import org.eclipse.swt.graphics.Rectangle;
 import org.eclipse.swt.internal.graphics.RectangleConverter;
 import org.eclipse.swt.internal.skia.DpiScalerUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.github.humbleui.types.RRect;
 import io.github.humbleui.types.Rect;
 
+@ExtendWith(PlatformSpecificExecutionExtension.class)
 public class Test_org_eclipse_swt_skia_RectangleConverter {
 	private final DpiScalerUtil scaler100 = new DpiScalerUtil(100);
 	private final DpiScalerUtil scaler150 = new DpiScalerUtil(150);

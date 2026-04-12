@@ -12,28 +12,6 @@
 	<version>3.134.0-SNAPSHOT</version>
 	<packaging>eclipse-plugin</packaging>
 
-	<profiles>
-		<profile>
-			<id>win32-x86_64</id>
-			<activation>
-				<os>
-					<family>windows</family>
-					<arch>x86_64</arch>
-				</os>
-			</activation>
-		</profile>
-		<profile>
-			<id>linux-x86_64</id>
-			<activation>
-				<os>
-					<family>unix</family>
-					<name>Linux</name>
-					<arch>x86_64</arch>
-				</os>
-			</activation>
-		</profile>
-	</profiles>
-
 	<properties>
 		<failOnJavadocErrors>false</failOnJavadocErrors>
 	</properties>
@@ -187,7 +165,6 @@
 					</execution>
 				</executions>
 			</plugin>	
-			
 		
 		</plugins>
 	</build>

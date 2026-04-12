@@ -15,9 +15,7 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/org.eclipse.swt"/>
 	<classpathentry kind="lib" path="/org.eclipse.swt.skia/lib/skija-linux-x64-0.143.11.jar"/>
 	<classpathentry kind="lib" path="/org.eclipse.swt.skia/lib/skija-shared-0.143.11.jar"/>
-	<classpathentry kind="lib" path="/org.eclipse.swt.skia/lib/skija-shared-0.143.11-sources.jar"/>
 	<classpathentry kind="lib" path="/org.eclipse.swt.skia/lib/skija-windows-x64-0.143.11.jar"/>
 	<classpathentry kind="lib" path="/org.eclipse.swt.skia/lib/types-0.1.1.jar"/>
-	<classpathentry kind="lib" path="/org.eclipse.swt.skia/lib/types-0.1.1-sources.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -2,6 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-SymbolicName: org.eclipse.swt.skia
 Bundle-Version: 3.134.0.qualifier
+Eclipse-PlatformFilter: (| (& (osgi.ws=win32) (osgi.os=win32) (osgi.arch=x86_64)) (& (osgi.ws=gtk) (osgi.os=linux) (osgi.arch=x86_64)))
 Automatic-Module-Name: org.eclipse.swt.skia
 Bundle-ClassPath: lib/skija-linux-x64-0.143.11.jar,
  lib/skija-shared-0.143.11.jar,

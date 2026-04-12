@@ -34,7 +34,7 @@
             <dependency>
               <type>eclipse-plugin</type>
               <artifactId>org.eclipse.swt.skia</artifactId>
-              <version>0.0.0</version>
+              <version>[0.0.0,)</version>
             </dependency>
           </dependencies>
         </configuration>

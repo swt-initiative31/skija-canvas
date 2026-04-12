@@ -2,6 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-SymbolicName: org.eclipse.swt.skia
 Bundle-Version: 3.134.0.qualifier
+Eclipse-PlatformFilter: (| (& (osgi.ws=win32) (osgi.os=win32) (osgi.arch=x86_64)) (& (osgi.ws=gtk) (osgi.os=linux) (osgi.arch=x86_64)))
 Automatic-Module-Name: org.eclipse.swt.skia
 Bundle-ClassPath: lib/skija-linux-x64-0.143.11.jar,
  lib/skija-shared-0.143.11.jar,
@@ -13,6 +14,7 @@ Bundle-Name: %fragmentName
 Bundle-Vendor: %providerName
 Bundle-Localization: fragment
 Bundle-RequiredExecutionEnvironment: JavaSE-21
+Eclipse-ExtensibleAPI: true
 Fragment-Host: org.eclipse.swt;bundle-version="[3.134.0.qualifier,4.0.0)"
 Export-Package: io.github.humbleui.skija;x-friends:="org.eclipse.swt.tests.skia",
  io.github.humbleui.skija.impl;x-friends:="org.eclipse.swt.tests.skia",
@@ -23,7 +25,7 @@ Export-Package: io.github.humbleui.skija;x-friends:="org.eclipse.swt.tests.skia"
  io.github.humbleui.skija.sksg;x-friends:="org.eclipse.swt.tests.skia",
  io.github.humbleui.skija.svg;x-friends:="org.eclipse.swt.tests.skia",
  io.github.humbleui.types;x-friends:="org.eclipse.swt.tests.skia",
- org.eclipse.swt.internal.canvasext;x-friends:="org.eclipse.swt.tests.skia",
- org.eclipse.swt.internal.graphics;x-friends:="org.eclipse.swt.tests.skia",
- org.eclipse.swt.internal.skia;x-friends:="org.eclipse.swt.tests.skia",
- org.eclipse.swt.internal.skia.cache;x-friends:="org.eclipse.swt.tests.skia"
+ org.eclipse.swt.internal.canvasext;version="0.0.1";x-friends:="org.eclipse.swt.tests.skia",
+ org.eclipse.swt.internal.graphics;version="0.0.1";x-friends:="org.eclipse.swt.tests.skia",
+ org.eclipse.swt.internal.skia;version="0.0.1";x-friends:="org.eclipse.swt.tests.skia",
+ org.eclipse.swt.internal.skia.cache;version="0.0.1";x-friends:="org.eclipse.swt.tests.skia"

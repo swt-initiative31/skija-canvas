@@ -7,12 +7,12 @@ Bundle-Vendor: Eclipse.org
 Require-Bundle: junit-jupiter-api;bundle-version="[5.14.1,6.0.0)",
  junit-jupiter-engine;bundle-version="[5.14.1,6.0.0)",
  junit-jupiter-params;bundle-version="[5.14.1,6.0.0)",
- org.eclipse.swt;bundle-version="[3.134.0,4.0.0)",
- org.eclipse.swt.skia;bundle-version="[3.134.0,4.0.0)"
+ org.eclipse.swt;bundle-version="[3.134.0,4.0.0)"
 Eclipse-BundleShape: dir
 Bundle-RequiredExecutionEnvironment: JavaSE-21
 Automatic-Module-Name: org.eclipse.swt.tests.skia
-Import-Package: org.eclipse.swt.internal.skia;version="[0.0.0,5.0.0)",
+Import-Package: org.eclipse.swt.internal.skia;version="[0.0.1,1.0.0)",
+ org.eclipse.swt.internal.skia.cache;version="[0.0.1,1.0.0)",
  org.junit.jupiter.api;version="[5.13.0,6.0.0)",
  org.junit.jupiter.params;version="[5.13.0,6.0.0)",
  org.junit.jupiter.params.provider;version="[5.13.0,6.0.0)",

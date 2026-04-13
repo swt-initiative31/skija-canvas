@@ -8,7 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.internal.graphics.SkijaToSwtImageConverter;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 import io.github.humbleui.skija.ColorAlphaType;
 import io.github.humbleui.skija.ColorType;
@@ -16,7 +15,6 @@ import io.github.humbleui.skija.Image;
 import io.github.humbleui.skija.ImageInfo;
 import io.github.humbleui.skija.Surface;
 
-@ExtendWith(PlatformSpecificExecutionExtension.class)
 public class Test_org_eclipse_swt_skia_SkijaToSwtImageConverter {
 
 	@Test

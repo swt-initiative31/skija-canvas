@@ -8,9 +8,7 @@ import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.RGB;
 import org.eclipse.swt.internal.graphics.RGBAEncoder;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
-@ExtendWith(PlatformSpecificExecutionExtension.class)
 public class Test_org_eclipse_swt_skia_RGBAEncoder {
 
 	@Test

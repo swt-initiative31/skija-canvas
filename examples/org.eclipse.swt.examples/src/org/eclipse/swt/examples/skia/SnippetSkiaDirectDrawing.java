@@ -20,7 +20,7 @@ public class SnippetSkiaDirectDrawing {
 		final Canvas c = new Canvas(s, SWT.DOUBLE_BUFFERED | SWT.FILL | SWT.SKIA );
 
 		c.setBackground(d.getSystemColor(SWT.COLOR_RED));
-		
+
 		s.addControlListener(new ControlListener() {
 
 			@Override
@@ -31,7 +31,6 @@ public class SnippetSkiaDirectDrawing {
 
 			@Override
 			public void controlMoved(ControlEvent e) {
-				// TODO Auto-generated method stub
 
 			}
 		});

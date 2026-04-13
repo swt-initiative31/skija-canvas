@@ -21,6 +21,7 @@ import org.eclipse.swt.internal.skia.DpiScalerUtil;
 import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.PaintMode;
 import io.github.humbleui.skija.PaintStrokeCap;
+import io.github.humbleui.skija.PaintStrokeJoin;
 import io.github.humbleui.skija.PathEffect;
 import io.github.humbleui.skija.Shader;
 
@@ -52,6 +53,7 @@ public class SkiaPaintManager {
 			paint.setMode(PaintMode.STROKE);
 			paint.setStrokeWidth(scaledLineWidth);
 			paint.setStrokeCap(getSkijaLineCap(gc.getLineCap()));
+			paint.setStrokeJoin(getSkijaLineJoin(gc.getLineJoin()));
 
 			try (var pathEffect = createPathEffect(scaledLineWidth, gc.getScaler())) {
 
@@ -143,6 +145,16 @@ public class SkiaPaintManager {
 			return PaintStrokeCap.ROUND;
 		}
 		return PaintStrokeCap.BUTT;
+	}
+
+	public static PaintStrokeJoin getSkijaLineJoin(int lineJoin) {
+		if (lineJoin == SWT.JOIN_ROUND) {
+			return PaintStrokeJoin.ROUND;
+		}
+		if (lineJoin == SWT.JOIN_BEVEL) {
+			return PaintStrokeJoin.BEVEL;
+		}
+		return PaintStrokeJoin.MITER;
 	}
 
 	/**

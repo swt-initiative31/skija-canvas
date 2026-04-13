@@ -12,10 +12,10 @@ The plugin org.eclipse.swt.skia is structured into four Java packages:
 
 | Package | Purpose |
 |---|---|
-| `org.eclipse.swt.internal.skia` | Core extension classes: rendering pipeline, resource management, caret handling |
+| `org.eclipse.swt.internal.skia` | Core extension classes: rendering pipeline, resource management, DPI scaling utility (`DpiScalerUtil`) |
 | `org.eclipse.swt.internal.skia.cache` | Cache key records for image, text-image, and text-split caches (`ImageKey`, `ImageTextKey`, `SplitsTextCache`) |
-| `org.eclipse.swt.internal.graphics` | GC implementation (`SkiaGC`), paint management (`SkiaPaintManager`), text drawing (`SkiaTextDrawing`), image conversion (`SwtToSkiaImageConverter`, `SkijaToSwtImageConverter`, `RGBAEncoder`), color conversion (`SkiaColorConverter`), path conversion (`SkiaPathConverter`), transform conversion (`SkiaTransformConverter`), region calculation (`SkiaRegionCalculator`), font metrics (`SkiaFontMetrics`) |
-| `org.eclipse.swt.internal.canvasext` | Factory class (`SkiaCanvasFactory`) that plugs the Skia backend into the SWT canvas extension framework |
+| `org.eclipse.swt.internal.graphics` | GC implementation (`SkiaGC`), paint management (`SkiaPaintManager`), text drawing (`SkiaTextDrawing`), image conversion (`SwtToSkiaImageConverter`, `SkijaToSwtImageConverter`, `RGBAEncoder`), color conversion (`SkiaColorConverter`), path conversion (`SkiaPathConverter`), transform conversion (`SkiaTransformConverter`), region calculation (`SkiaRegionCalculator`), rectangle/coordinate conversion (`RectangleConverter`), font metrics (`SkiaFontMetrics`) |
+| `org.eclipse.swt.internal.canvasext` | Factory class (`SkiaCanvasFactory`) and logging utility (`Logger`) that plug the Skia backend into the SWT canvas extension framework |
 
 ---
 
@@ -97,7 +97,7 @@ GLCanvasExtension
 - `lastImage` — snapshot of the last fully rendered frame, used to restore unchanged areas on partial redraws.
 - `redrawCommands` — list of pending redraw areas accumulated between paint cycles; `null` area means full repaint.
 - `resources` — shared `SkiaResources` instance for fonts, images, and colors.
-- `scaler` — `DpiScaler` for automatic HiDPI coordinate scaling.
+- `scaler` — `DpiScalerUtil` for automatic HiDPI coordinate scaling.
 
 ---
 
@@ -133,7 +133,7 @@ access to Skia-specific services without exposing the full extension class.
 - `getResources()` — returns the shared `SkiaResources` instance.
 - `createSupportSurface(int w, int h)` — creates a temporary off-screen GPU surface (used for
   cached text rendering).
-- `getScaler()` — returns the `DpiScaler` for logical-to-physical coordinate conversion.
+- `getScaler()` — returns the `DpiScalerUtil` for logical-to-physical coordinate conversion.
 
 ---
 
@@ -152,19 +152,21 @@ Skija's `Canvas` uses a state stack. Each `save()` pushes the current clip and t
 - On construction: `canvas.save()` captures the baseline state (`initialSaveCount`).
 - On `dispose()`: `canvas.restoreToCount(initialSaveCount)` undoes all state changes made during
   the lifetime of this GC, including all clipping and transform layers.
-- Each `setClipping(...)` call first calls `canvas.restore()` to remove any previous clip layer,
-  then calls `canvas.save()` followed by the new clip call to push a fresh clip layer.
+- Each `setClipping(...)` call checks the `isClipSet` flag; if a previous clip was set, it calls
+  `canvas.restore()` to remove that clip layer. Then it calls `canvas.save()` followed by the
+  new clip call to push a fresh clip layer and sets `isClipSet = true`.
 - `setTransform(...)` calls `canvas.save()` after applying the matrix so that subsequent clip
   operations are stacked on top of the transform independently.
 
 **SWT-to-Skija coordinate mapping:**
 - All SWT coordinates are in logical (device-independent) pixels.
-- `DpiScaler.autoScaleUp()` converts logical pixel values to physical pixels before every Skija
+- `DpiScalerUtil.autoScaleUp()` converts logical pixel values to physical pixels before every Skija
   draw call.
-- `createScaledRectangle(x, y, w, h)` scales a bounding rectangle and converts it to
-  `io.github.humbleui.types.Rect`.
-- `getScaledOffsetValue()` computes a 0.5-pixel sub-pixel offset applied to stroke operations
-  to prevent anti-aliasing blur when drawing on integer pixel boundaries with odd-width strokes.
+- `RectangleConverter.createScaledRectangle(scaler, x, y, w, h)` scales a bounding rectangle and
+  converts it to `io.github.humbleui.types.Rect`.
+- `RectangleConverter.getScaledOffsetValue(scaler, lineWidth)` computes a 0.5-pixel sub-pixel
+  offset applied to stroke operations to prevent anti-aliasing blur when drawing on integer pixel
+  boundaries with odd-width strokes.
 
 **Image handling:**
 - SWT `Image` objects are converted to Skija `Image` objects on demand via
@@ -254,11 +256,32 @@ Implements `AutoCloseable`. Calculates and manages Skia clip regions from SWT `R
 
 ---
 
+### `RectangleConverter`
+**Package:** `org.eclipse.swt.internal.graphics`
+
+Static utility class for converting and scaling SWT `Rectangle` coordinates to Skija `Rect`
+objects. Provides methods such as `createScaledRectangle()`, `createScaledRectangleWithOffset()`,
+`scaleUpRectangle()`, and `getScaledOffsetValue()` — all of which use `DpiScalerUtil` for
+physical-to-logical pixel conversion.
+
+---
+
 ### `RGBAEncoder`
 **Package:** `org.eclipse.swt.internal.graphics`
 
 Fallback pixel format converter. When the SWT image pixel format cannot be directly mapped to a
 Skija `ColorType`, this class performs a full RGBA conversion of the pixel data.
+
+---
+
+### `DpiScalerUtil`
+**Package:** `org.eclipse.swt.internal.skia`
+
+Implements `IDpiScaler`. Wraps a platform-specific `DpiScaler` (or any `IDpiScaler`) and provides
+all DPI-aware scaling methods used throughout the Skia plugin: `autoScaleUp(int)`,
+`autoScaleUp(float)`, `autoScaleDown(float)`, `autoScaleDown(float[])`, `getZoomedFontSize(int)`,
+`scaleSize(int, int)`, and `scaleSurfaceSize(int, int)`. The underlying zoom factor is obtained
+from the wrapped `IDpiScaler.getNativeZoom()`.
 
 ---
 
@@ -290,14 +313,12 @@ Centralizes all shared Skia resources for a single canvas widget. One instance i
 
 ---
 
-### `SkiaCaretHandler`
-**Package:** `org.eclipse.swt.internal.skia`
+### Caret Support (not yet implemented)
 
-Static utility class for drawing the text caret on top of the Skia-rendered content. Uses
-`BlendMode.DIFFERENCE` to ensure visibility against any background color.
-
-**Note:** Caret rendering is currently **disabled** in `SkiaGlCanvasExtension.doPaint()` (the
-call to `SkiaCaretHandler.handleCaret()` is commented out). Full caret support requires
+Caret rendering on the Skia surface is **not yet implemented**. The `SkiaGlCanvasExtension.doPaint()`
+method contains comments indicating where caret drawing would be integrated — after the image
+snapshot is taken, so that a blinking caret could be redrawn by restoring the last image and
+painting the caret on top without re-executing paint listeners. Full caret support requires
 additional modifications to `Canvas` and `Caret`.
 
 ---
@@ -321,7 +342,7 @@ that subsequent canvas creations do not repeatedly attempt and fail to initializ
 
 Wraps a Skija `FontMetrics` object and implements `IExternalFontMetrics`. Provides ascent, descent,
 height, leading, and average character width values to the SWT `FontMetrics` API via
-`FontMetricsExtension`. All values are scaled down from physical to logical pixels via `DpiScaler`.
+`FontMetricsExtension`. All values are scaled down from physical to logical pixels via `DpiScalerUtil`.
 
 ---
 
@@ -365,12 +386,13 @@ SkiaGlCanvasExtension.doPaint(paintEventSender)
 ## DPI and Coordinate Scaling
 
 Since Skia requires physical pixels, the conversion from SWT logical pixels is handled
-transparently by `DpiScaler` and helper methods in `SkiaGC`:
+transparently by `DpiScalerUtil` (which wraps a platform-specific `DpiScaler` / `IDpiScaler`)
+and helper methods in `RectangleConverter`:
 
-- `DpiScaler.autoScaleUp(int)` / `DpiScaler.autoScaleUp(float)` — converts a logical pixel value to physical pixels.
-- `DpiScaler.autoScaleDown(float)` / `DpiScaler.autoScaleDown(float[])` — converts physical pixel values back to logical pixels.
-- `DpiScaler.getZoomedFontSize(int)` — converts a font size from points to zoomed physical pixels.
-- `DpiScaler.scaleUpRectangle(Rectangle)` — scales a full rectangle to physical coordinates.
+- `DpiScalerUtil.autoScaleUp(int)` / `DpiScalerUtil.autoScaleUp(float)` — converts a logical pixel value to physical pixels.
+- `DpiScalerUtil.autoScaleDown(float)` / `DpiScalerUtil.autoScaleDown(float[])` — converts physical pixel values back to logical pixels.
+- `DpiScalerUtil.getZoomedFontSize(int)` — converts a font size from points to zoomed physical pixels.
+- `RectangleConverter.scaleUpRectangle(DpiScalerUtil, Rectangle)` — scales a full rectangle to physical coordinates.
 
 ---
 
@@ -413,11 +435,71 @@ usage, which bypasses the canvas extension mechanism. `ExternalCanvasHandler` ex
 
 ---
 
+## Code Review
+
+The following findings were identified by reviewing the source code referenced in this
+architecture document. They are grouped by severity.
+
+### Critical — Resource Leaks and Native Memory
+
+| # | File / Location | Finding |
+|---|---|---|
+| C1 | `SkiaGlCanvasExtension.onDispose()` (line 94) | **`skijaContext` is intentionally never closed** ("freezes the app"). This indicates a deeper lifecycle or threading issue with the OpenGL context. The `DirectContext` holds GPU resources; leaking it on every `Canvas` dispose accumulates native memory. The root cause of the freeze should be investigated and the context should be properly closed. |
+| C2 | `SkiaGlCanvasExtension.onResize()` (line 107) | **Redundant `DpiScalerUtil` allocation on every resize.** A new `DpiScalerUtil` is constructed from `resources.getScaler()` on every resize event, although the field `this.scaler` already exists and wraps the same `DpiScaler`. The local `util` variable should be replaced with `this.scaler`. The same issue occurs in `doPaint()` (line 198). |
+| C3 | `SkiaGC.drawPath()` (line 332–334) | **Hardcoded miter limit of 100 000 and anti-alias off.** The caller's `lineJoin`, `miterLimit`, and `antialias` settings are completely ignored; instead, fixed values are applied (`setStrokeMiter(100000)`, `setAntiAlias(false)`, `setStrokeCap(BUTT)`). This breaks the GC contract for any consumer who sets these attributes before calling `drawPath()`. |
+| C4 | `SkiaPaintManager.performDraw()` (line 51) | **`lineJoin` is never applied.** The `Paint` object is configured with stroke cap and width, but `paint.setStrokeJoin(...)` is never called. Consequently the Skia default join (MITER) is always used, regardless of what `gc.setLineJoin(SWT.JOIN_ROUND)` requests. Similarly, `dashOffset` and `miterLimit` stored in `SkiaGC` are never forwarded to `createPathEffect` or `paint.setStrokeMiter(...)`. |
+| C5 | `SkiaPaintManager.convertSWTPatternToSkijaShader()` (line 166–168) | **Image-pattern Shader created from a cached image that is immediately closed.** The `try-with-resources` block closes the Skija `Image` obtained from `SwtToSkiaImageConverter` right after `makeShader()`. If Skia's `Shader` retains only a reference to the underlying pixel data (and does not deep-copy it), this produces a use-after-free on the GPU. Whether this is safe depends on Skija internals and should be verified or the image should be kept alive as long as the Shader is in use. |
+| C6 | `SkiaTextDrawing.drawTextBlobWithCache()` (line 227) | **`makeImageSnapshot()` result is cached but never explicitly closed outside the cache.** The snapshot is stored in the `textImageCache` LRU cache and will be closed when evicted. However, if `cacheTextImage()` replaces an existing entry (same key), the old image is closed via `old.close()` — but `textImageCache.get(key)` is called first, which promotes the entry in the LRU and may interfere with the eviction check. Verify that the double-close guard (`if (!old.isClosed())`) is always reached. |
+
+### High — Correctness and Behavioral Bugs
+
+| # | File / Location | Finding |
+|---|---|---|
+| H1 | `SkiaGC.drawPolygon()` (line 370–373) | **Mutates the caller's `pointArray` in place** by decrementing x-coordinates for the `SWT.MIRRORED` style and then incrementing them back afterwards. If the paint listener is concurrent or the array is reused, this is a race condition. A defensive copy should be used instead of modifying the input array. |
+| H2 | `SkiaGC.setTransform()` (line 595–603) | **Cumulative canvas saves without matching restores.** Each call to `setTransform()` calls `canvas.save()` but never calls `canvas.restore()` for the previous transform layer. If `setTransform()` is called multiple times, the save stack grows unboundedly until `dispose()` restores to `initialSaveCount`. While not a memory leak (Skia's stack is lightweight), it is semantically incorrect — subsequent `setClipping()` operations interact with each stacked layer in unexpected ways. |
+| H3 | `SkiaGC.setClipping(Path)` (line 896–918) | **`currentClipBounds` and `currentClipRegion` are not cleared** when clipping is set via a `Path`. After calling `setClipping(Path)`, a subsequent call to `getClipping()` would return stale bounds from a previous `setClipping(Rectangle)` call. |
+| H4 | `SkiaGC.executeTextDraw()` (line 284) | **Early-return check uses physical surface size against logical coordinates.** `surface.getWidth()` returns physical pixels, but `x` and `y` are logical (unscaled) SWT coordinates. On a 150 % DPI display, text at logical x = 800 would be rejected even though the physical surface is 1200 px wide. The comparison should either scale the surface bounds down or the coordinates up. |
+| H5 | `SkiaResources.findBestFit()` (line 233–264) | **Font matching returns false positives.** The algorithm scores each system font family by counting how many whitespace-separated tokens of the requested font name appear in the family name. A request for `"Segoe"` would match `"Segoe UI"` (score 1) but also `"Segoe MDL2 Assets"` (score 1) with the same score. The first family that reaches the top score wins — order depends on `FontMgr` enumeration. A stricter scoring (e.g. exact-match bonus, prefix matching, length penalty) would be more robust. |
+| H6 | `SkiaResources.textExtent()` (line 463–467) | **`flags` parameter is ignored.** The `flags` argument (e.g. `SWT.DRAW_MNEMONIC`, `SWT.DRAW_DELIMITER`, `SWT.DRAW_TAB`) is accepted but never evaluated. The measurement always returns the raw single-line text extent, even when the caller expects multi-line measurement. |
+| H7 | `SkiaResources.expandTabs()` (line 455) | **Per-character measurement via `String.valueOf(ch)` creates a new `String` object for every character.** The comment above it even says "measureTextWidth avoids creating an intermediate String object per character" — but it does exactly that. For long strings this causes excessive allocation pressure. Consider measuring runs of non-tab characters as a single string. |
+| H8 | `ExternalCanvasHandler.createHandler()` (line 128) | **Catches `Throwable`** (including `Error`, `OutOfMemoryError`, `StackOverflowError`). This is extremely broad. A fatal JVM error should not be silently swallowed with `FAILED_WITH_ERRORS = true`. Consider catching `Exception` only, and rethrowing `Error` subclasses. The same issue exists in `SkiaCanvasFactory.createCanvasExtension()`. |
+
+### Medium — Design, Maintainability, and Performance
+
+| # | File / Location | Finding |
+|---|---|---|
+| M1 | `SkiaGC` (class level) | **1 258-line God class.** `SkiaGC` implements the entire `IExternalGC` interface in a single class with no delegation other than `SkiaPaintManager` for paint configuration. Methods like `copyArea`, `textLayoutDraw`, `fillGradientRectangle`, and `drawImage` with their complex logic should be extracted into focused helper classes (similar to how `SkiaTextDrawing` was extracted). |
+| M2 | `SkiaGC.writeFile()` (line 226–239) | **Debug/test method left in production code.** The static `writeFile()` method writes a PNG snapshot to an arbitrary file path. It has no access protection and is documented as "Test method for drawing an image." This should be removed or moved to a test utility class. |
+| M3 | `SkiaGC.getAdvanceWidth()` (line 787–803) | **Abuses `AtomicInteger` and `performDraw()` to measure text width.** `performDraw()` creates a full `Paint` object with stroke configuration just to measure a single character. The actual measurement only needs a `Paint` in FILL mode. A simpler approach would be to call `font.measureTextWidth()` directly. |
+| M4 | `SkiaGC.getGCData()` (line 827–829) | **Returns `null`.** Any caller that depends on non-null `GCData` (which is common in SWT internals) will get a `NullPointerException`. If `GCData` is not applicable for Skia, consider returning a dummy instance or throwing `UnsupportedOperationException`. |
+| M5 | `DpiScalerUtil` (constructors) | **Three constructors with overlapping concerns.** `DpiScalerUtil(IDpiScaler)`, `DpiScalerUtil(int)`, and `DpiScalerUtil(SkiaResources)` all set `this.scaler`. The `SkiaResources` constructor just delegates to `resources.getScaler()`, so the caller could pass the `IDpiScaler` directly. Multiple constructors increase the API surface without clear benefit. |
+| M6 | `DpiScalerUtil.getZoomedFontSize()` (line 43–46) | **Calls `Display.getDefault()` from a utility class.** This couples the utility to the SWT display singleton and makes it untestable. The DPI value should be injected or obtained from the canvas that is already available in the call chain. |
+| M7 | `SkiaResources` (field level) | **Caches (`fontCache`, `fontNameMapping`, `imageCache`, `textImageCache`, `cachedTextSplits`) grow without bounds (except the LRU caches).** `fontCache`, `fontNameMapping`, and `cachedTextSplits` are plain `HashMap` instances that never evict entries during the canvas lifetime. For long-running applications with many font or text variations this can become a memory issue. |
+| M8 | `SkiaResources.getSkijaFont()` (line 160–162) | **Redundant cache lookup.** After `fontCache.put(props, f)` on line 158, line 162 does `return fontCache.get(props)` instead of simply `return cachedFont` (which at this point holds the same reference as `f`). In fact, `cachedFont` is not `null` on line 162 — this code is unreachable because the `if (cachedFont == null)` branch already returned on line 159. The dead code should be simplified. |
+| M9 | `ExternalCanvasHandler` (line 25–26) | **Non-final static mutable fields (`FAILED_WITH_ERRORS`, `ExternalCanvasWasLogged`) with no synchronization.** These flags are written and read from the SWT UI thread, which is single-threaded in practice, but the class provides no documentation of this threading assumption. Also, `FAILED_WITH_ERRORS` does not follow Java naming conventions for non-constant fields. |
+| M10 | `RectangleConverter` (line 52–61) | **Direct access to internal Skija field `_radii`.** `rect._radii` accesses a package-private or internal field of `RRect`. This is fragile and may break with Skija library updates. Use a public accessor if available. |
+| M11 | `SkiaGC.copyArea(Image, int, int)` (line 689–724) | **Inefficient round-trip conversion.** The method creates a Skija snapshot, converts it to SWT `ImageData`, creates a new SWT `Image`, creates a native `GC`, draws the image, and disposes everything. This GC-on-GC approach is slow and allocates significant temporary resources. A direct Skija-to-Skija blit would be more efficient. |
+| M12 | `SkiaGC.textLayoutDraw()` (line 1214–1238) | **Falls back to native GC rendering.** The method creates a temporary SWT `Image`, draws the `TextLayout` with a native `GC`, then converts and blits the result into the Skia surface. This means text layout rendering is always rasterized at 100 % zoom and then scaled, losing quality on HiDPI displays. A comment explaining why this fallback is needed and a TODO for a native Skia `TextLayout` implementation would be helpful. |
+
+### Low — Style and Minor Issues
+
+| # | File / Location | Finding |
+|---|---|---|
+| L1 | `SkiaGC` (line 82–85) | **TODO comment for `dashOffset` and `miterLimit`** has been present since initial commit. These fields are stored but never applied to the Skia `Paint`. Either implement them or remove the fields and throw `UnsupportedOperationException` in the setters. |
+| L2 | `SkiaGlCanvasExtension` (line 181) | **Typo in comment:** `"if if we don't even have"` — double "if". |
+| L3 | `ExternalCanvasHandler` (lines 44–65) | **Verbose boolean-returning methods.** `isDisabled()`, `isForcedEnabled()`, and `isLogActive()` can be simplified from `if (x != null) { return true; } return false;` to `return x != null;`. |
+| L4 | `SkiaGC` (line 68) | **`logImageNullError` static flag** suppresses image-null errors after the first occurrence globally across all GC instances. This makes debugging difficult if the issue occurs in different contexts. Consider per-instance logging or a counter. |
+| L5 | `SkiaPaintManager` (line 107) | **Unused parameter.** `getScaledPathFloats()` accepts a `DpiScalerUtil scaler` parameter but never uses it. The parameter should be removed. |
+| L6 | `SkiaResources.replaceMnemonics()` (line 478–485) | **`lastIndexOf('&')` is computed but its result is only used to check `!= -1`.** The actual index is never used for underlining. This is currently just a check before calling `replaceAll("&", "")` — the `lastIndexOf` check is redundant since `replaceAll` on a string without `&` is a no-op. |
+| L7 | Multiple files | **Inconsistent field-access style.** Some methods use `this.surface`, others use `surface` directly. Some use `getScaler()`, others use `this.dpiScalerUtil` or create a new `DpiScalerUtil`. A consistent convention should be established. |
+
+---
+
 ## Known Limitations and Open TODOs
 
 - **Mnemonic underlining:** `replaceMnemonics()` strips `&` prefix characters from text but does
   not yet draw an underline beneath the mnemonic character.
-- **No Caret support currently** (SkiaCaretHandler exists but is not called)
+- **No Caret support currently** (caret rendering is not yet implemented; see comments in `SkiaGlCanvasExtension.doPaint()`)
 - **No Skia TextLayout**
 
 ---

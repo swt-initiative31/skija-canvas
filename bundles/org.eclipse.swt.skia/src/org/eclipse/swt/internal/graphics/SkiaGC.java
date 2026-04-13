@@ -15,6 +15,7 @@ package org.eclipse.swt.internal.graphics;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
@@ -54,8 +55,6 @@ import io.github.humbleui.skija.Matrix33;
 import io.github.humbleui.skija.MipmapMode;
 import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.PaintMode;
-import io.github.humbleui.skija.PaintStrokeCap;
-import io.github.humbleui.skija.PaintStrokeJoin;
 import io.github.humbleui.skija.PathEffect;
 import io.github.humbleui.skija.PathFillMode;
 import io.github.humbleui.skija.SamplingMode;
@@ -77,7 +76,7 @@ public class SkiaGC implements IExternalGC {
 	private Pattern backgroundPattern;
 
 	private int fillRule = SWT.FILL_EVEN_ODD;
-	private int lineJoin;
+	private int lineJoin = SWT.JOIN_MITER;
 	private float[] lineDashes;
 	// TODO: implement -----------------------------------
 	private float dashOffset;
@@ -329,10 +328,8 @@ public class SkiaGC implements IExternalGC {
 				if (skijaPath == null) {
 					return;
 				}
-				paint.setStrokeJoin(PaintStrokeJoin.MITER);
-				paint.setStrokeMiter(100000);
-				paint.setAntiAlias(false);
-				paint.setStrokeCap(PaintStrokeCap.BUTT);
+				// the stroke miter on GC is quite high.
+				paint.setStrokeMiter(1000);
 				surface.getCanvas().drawPath(skijaPath, paint);
 			}
 		});
@@ -351,7 +348,10 @@ public class SkiaGC implements IExternalGC {
 	}
 
 	@Override
-	public void drawPolygon(int[] pointArray) {
+	public void drawPolygon(int[] inputPointArray) {
+
+		final int[] pointArray = Arrays.copyOf(inputPointArray, inputPointArray.length);
+
 		if (pointArray == null) {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}

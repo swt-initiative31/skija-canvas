@@ -1,21 +1,30 @@
-org.eclipse.swt.skia
-===============
+# org.eclipse.swt.skia
 
-Skia plug-in for the SWT user interface library.
+Skia Plugin for the SWT User Interface Library
+============================================
 
+This plugin integrates the Skia graphics library into SWT, enabling modern and high-performance 2D graphics rendering.
 
-Building and Testing locally:
------------------------------
+## Building and Testing Locally
 
-From Eclipse:
+### Prerequisites
+- **Eclipse IDE**
+- **M2E - Maven Integration for Eclipse** ([m2e](https://eclipse.dev/m2e/))
 
-* If necessary, install the **M2E - Maven integration for Eclipse** (see [m2e](https://eclipse.dev/m2e/))
+### Steps
+1. Import the following projects into your Eclipse workspace:
+   - `org.eclipse.swt`
+   - `org.eclipse.swt.skia`
+   - The SWT fragment(s) for your platform (e.g., `org.eclipse.swt.gtk.linux.x86_64`)
 
-Import the plugins org.eclipse.swt and org.eclipse.swt.skia and the fragments for your platform (e.g. org.eclipse.swt.gtk.linux.x86_64) into your workspace.
+2. Build the projects using Maven:
+   - Right-click the `pom.xml` in `org.eclipse.swt` → `Run As` → `Maven install`
+   - Right-click the `pom.xml` in `org.eclipse.swt.skia` → `Run As` → `Maven install`
 
-Right-click on the pom.xml in org.eclipse.swt and select `Run As` -> `Maven install`.
-Right-click on the pom.xml in org.eclipse.swt.skia and select `Run As` -> `Maven install`.
+   **Note:** The second build may fail. If this happens, close the Skia project, reopen it, and run Maven install again on the Skia project. The build should then succeed.
 
-The second run might fail. If so, close the skia project and reopen it. Then run Maven install again on the skia project. Now it should work.
+3. The Skija dependencies will be automatically downloaded into the `lib` directory of the Skia plugin.
 
-The Maven run will load the skija dependencies in the lib folder of the skia plugin.
+---
+
+For more information, please refer to the project documentation or contact the maintainers.

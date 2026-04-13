@@ -77,7 +77,7 @@
 				<executions>
 					<execution>
 						<id>copy-skija-shared</id>
-						<phase>process-resources</phase>
+						<phase>generate-sources</phase>
 						<goals>
 							<goal>copy</goal>
 						</goals>
@@ -142,7 +142,7 @@
 				<executions>
 					<execution>
 						<id>copy-local-skija-sources</id>
-						<phase>process-resources</phase>
+						<phase>generate-sources</phase>
 						<configuration>
 							<target>
 								<copy

@@ -9,7 +9,7 @@ This plugin integrates the Skia graphics library into SWT, enabling modern and h
 
 ### Prerequisites
 - **Eclipse IDE**
-- **M2E - Maven Integration for Eclipse** ([m2e](https://eclipse.dev/m2e/))
+- **M2E – Maven Integration for Eclipse** ([m2e](https://eclipse.dev/m2e/))
 
 ### Steps
 1. Import the following projects into your Eclipse workspace:
@@ -19,11 +19,14 @@ This plugin integrates the Skia graphics library into SWT, enabling modern and h
 
 2. Build the projects using Maven:
    - Right-click the `pom.xml` in `org.eclipse.swt` → `Run As` → `Maven install`
-   - Right-click the `pom.xml` in `org.eclipse.swt.skia` → `Run As` → `Maven install`
+   - Right-click the `pom.xml` in `org.eclipse.swt.skia` → `Run As` → `Maven generate-sources`
 
    **Note:** The second build may fail. If this happens, close the Skia project, reopen it, and run Maven install again on the Skia project. The build should then succeed.
 
 3. The Skija dependencies will be automatically downloaded into the `lib` directory of the Skia plugin.
+
+4. If you receive error messages stating that the Skija jar files cannot be found, please check that the jar files are present in the `lib` directory and that the native libraries inside are not empty. You can verify this with a text editor.
+   If the jar files are empty, you can delete them and execute `Maven generate-sources` again. This is a workaround because Tycho might not be able to download the dependencies yet.
 
 ---
 

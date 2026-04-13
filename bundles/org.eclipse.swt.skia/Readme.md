@@ -28,6 +28,9 @@ This plugin integrates the Skia graphics library into SWT, enabling modern and h
 4. If you receive error messages stating that the Skija jar files cannot be found, please check that the jar files are present in the `lib` directory and that the native libraries inside are not empty. You can verify this with a text editor.
    If the jar files are empty, you can delete them and execute `Maven generate-sources` again. This is a workaround because Tycho might not be able to download the dependencies yet.
 
+### Notes
+- The Skia plugin is currently in an early development stage, and there may be issues with the build process.
+- The skija source jars of types and shared also will be downloaded to the `lib` directory. You can add them to your classpath, if you wish to check the source code of Skija.
 ---
 
 For more information, please refer to the project documentation or contact the maintainers.

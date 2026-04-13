@@ -38,7 +38,8 @@ import io.github.humbleui.skija.FontStyle;
 import io.github.humbleui.skija.Typeface;
 
 public class SkiaResources {
-	private final static boolean USE_IMAGE_CACHE = true;
+	private static final String NO_IMAGE_CACHE = "org.eclipse.swt.internal.skia.noImageCache";
+	private static boolean USE_NO_IMAGE_CACHE = true;
 
 	/** Maximum number of entries kept in the text-image LRU cache. */
 	private static final int TEXT_IMAGE_CACHE_MAX = 512;
@@ -92,6 +93,10 @@ public class SkiaResources {
 	private final ISkiaCanvasExtension skiaExtension;
 
 	public SkiaResources(Canvas canvas, ISkiaCanvasExtension skiaExtension) {
+
+		USE_NO_IMAGE_CACHE = System.getProperty(NO_IMAGE_CACHE) == null ? false
+				: Boolean.parseBoolean(System.getProperty(NO_IMAGE_CACHE));
+
 		this.canvas = canvas;
 		this.skiaExtension = skiaExtension;
 		this.canvas.addListener(SWT.Dispose, e -> resetResources());
@@ -337,7 +342,7 @@ public class SkiaResources {
 	}
 
 	public void cacheImage(Image swtImage, int zoom, io.github.humbleui.skija.Image skijaImage) {
-		if (USE_IMAGE_CACHE) {
+		if (!USE_NO_IMAGE_CACHE) {
 			final var key = new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom);
 			final var old = imageCache.get(key);
 			if (old != null && !old.isClosed()) {
@@ -353,7 +358,7 @@ public class SkiaResources {
 
 	public void cacheTextImage(String text, FontProperties fontProperties, boolean transparent, int background,
 			int foreground, boolean antiAlias, io.github.humbleui.skija.Image skijaImage) {
-		if (USE_IMAGE_CACHE) {
+		if (!USE_NO_IMAGE_CACHE) {
 			final var key = new ImageTextKey(text, fontProperties, transparent, background, foreground, antiAlias);
 			final var old = textImageCache.get(key);
 			if (old != null && !old.isClosed()) {

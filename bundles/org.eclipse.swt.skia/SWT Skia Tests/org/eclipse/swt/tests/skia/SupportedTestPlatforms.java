@@ -2,11 +2,10 @@ package org.eclipse.swt.tests.skia;
 
 import org.eclipse.swt.SWT;
 
-public class SupportedTestPlatform {
+public class SupportedTestPlatforms {
 
 	public static boolean isSupported() {
-		final String platform = org.eclipse.swt.SWT.getPlatform();
-		return platform.startsWith("gtk3") || platform.startsWith("win32");
+		return isFittingOS() && isFittingArchitecture();
 	}
 
 	public static boolean isFittingOS() {

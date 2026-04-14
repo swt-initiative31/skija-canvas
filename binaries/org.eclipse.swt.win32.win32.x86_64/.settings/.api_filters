@@ -148,6 +148,20 @@
             </message_arguments>
         </filter>
     </resource>
+    <resource path="Eclipse SWT/common/org/eclipse/swt/SWT.java" type="org.eclipse.swt.SWT">
+        <filter comment="skia implementation. Update version to fix." id="336658481">
+            <message_arguments>
+                <message_argument value="org.eclipse.swt.SWT"/>
+                <message_argument value="SKIA"/>
+            </message_arguments>
+        </filter>
+        <filter comment="https://github.com/eclipse-platform/eclipse.platform.swt/pull/3127" id="338755678">
+            <message_arguments>
+                <message_argument value="org.eclipse.swt.SWT"/>
+                <message_argument value="CHROMIUM"/>
+            </message_arguments>
+        </filter>
+    </resource>
     <resource path="Eclipse SWT/common/org/eclipse/swt/graphics/Point.java" type="org.eclipse.swt.graphics.Point$OfFloat">
         <filter id="338944126">
             <message_arguments>
@@ -353,11 +367,11 @@
             </message_arguments>
         </filter>
     </resource>
-    <resource path="Eclipse SWT/common/org/eclipse/swt/SWT.java" type="org.eclipse.swt.SWT">
-        <filter comment="https://github.com/eclipse-platform/eclipse.platform.swt/pull/3127" id="338755678">
+    <resource path="META-INF/MANIFEST.MF">
+        <filter comment="skia implementation. Update version to fix." id="924844039">
             <message_arguments>
-                <message_argument value="org.eclipse.swt.SWT"/>
-                <message_argument value="CHROMIUM"/>
+                <message_argument value="3.134.0"/>
+                <message_argument value="3.134.0"/>
             </message_arguments>
         </filter>
     </resource>

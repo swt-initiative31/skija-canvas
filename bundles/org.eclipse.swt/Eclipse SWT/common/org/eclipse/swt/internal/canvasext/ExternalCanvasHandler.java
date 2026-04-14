@@ -38,8 +38,24 @@ public class ExternalCanvasHandler {
 	// In order to know whether an external canvas was activated.
 	private final static String LOG_EXTERNAL_CANVAS_ACTIVATION = "org.eclipse.swt.external.canvas:logActivation";
 
-	private static IExternalCanvasFactory externalFactory = ServiceLoader.load(IExternalCanvasFactory.class).findFirst()
-			.orElse(null);
+	private static IExternalCanvasFactory externalFactory = null;
+	private static boolean factoryLoaded = false;
+
+	private static void loadFactory() {
+
+		if (factoryLoaded)
+			return;
+
+		factoryLoaded = true;
+		try {
+			// it is possible that the loading of external libraries fails.
+			externalFactory = ServiceLoader.load(IExternalCanvasFactory.class).findFirst().orElse(null);
+		} catch (Throwable t) {
+			FAILED_WITH_ERRORS = true;
+			t.printStackTrace(System.err);
+		}
+	}
+
 
 	private static boolean isDisabled() {
 		var disable = System.getProperty(DISABLE_EXTERNAL_CANVAS);
@@ -83,6 +99,8 @@ public class ExternalCanvasHandler {
 		if (canvas instanceof StyledText || canvas instanceof Decorations)
 			return false;
 
+		loadFactory();
+
 		if ((style & SWT.SKIA) != 0 && externalFactory != null)
 			return true;
 
@@ -115,8 +133,10 @@ public class ExternalCanvasHandler {
 		if (isDisabled())
 			return null;
 
+		loadFactory();
+
 		try {
-			// it is possible that the loading of external libraries can fail.
+			// it is possible that the loading of external libraries fails.
 			var externalCanvas = externalFactory.createCanvasExtension(c);
 
 			if (!ExternalCanvasWasLogged && isLogActive()) {

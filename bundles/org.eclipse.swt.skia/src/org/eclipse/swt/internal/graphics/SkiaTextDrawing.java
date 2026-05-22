@@ -17,6 +17,7 @@ import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.internal.canvasext.FontProperties;
 import org.eclipse.swt.internal.canvasext.Logger;
 import org.eclipse.swt.internal.skia.DpiScalerUtil;
+import org.eclipse.swt.internal.skia.ISkSurface;
 import org.eclipse.swt.internal.skia.SkiaResources;
 
 import io.github.humbleui.skija.BlendMode;
@@ -24,7 +25,6 @@ import io.github.humbleui.skija.FontEdging;
 import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.PaintMode;
 import io.github.humbleui.skija.PaintStrokeCap;
-import io.github.humbleui.skija.Surface;
 import io.github.humbleui.types.Rect;
 
 public class SkiaTextDrawing {
@@ -198,7 +198,7 @@ public class SkiaTextDrawing {
 					Logger.logException(new IllegalStateException(sb.toString()));
 					return;
 				}
-				try (Surface supportSurface = gc.getSkiaExtension().createSupportSurface(surfaceWidth, size.y)) {
+				try (ISkSurface supportSurface = gc.getSkiaExtension().createSupportSurface(surfaceWidth, size.y)) {
 
 					supportSurface.getCanvas().clear(0);
 					if (!transparent) {

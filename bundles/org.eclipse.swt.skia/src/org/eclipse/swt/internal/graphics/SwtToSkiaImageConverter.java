@@ -16,7 +16,7 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.PaletteData;
-import org.eclipse.swt.internal.skia.SkiaResources;
+import org.eclipse.swt.internal.skia.ISkiaResources;
 
 import io.github.humbleui.skija.ColorAlphaType;
 import io.github.humbleui.skija.ColorType;
@@ -24,7 +24,7 @@ import io.github.humbleui.skija.ImageInfo;
 
 public class SwtToSkiaImageConverter {
 	public static io.github.humbleui.skija.Image convertSWTImageToSkijaImage(Image swtImage, int zoom,
-			SkiaResources resources) {
+			ISkiaResources resources) {
 		io.github.humbleui.skija.Image img = null;
 		final var cached = resources.getCachedImage(swtImage, zoom);
 		if (cached != null && !cached.isClosed()) {

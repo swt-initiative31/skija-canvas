@@ -40,11 +40,11 @@ import org.eclipse.swt.graphics.Transform;
 import org.eclipse.swt.internal.canvasext.IExternalGC;
 import org.eclipse.swt.internal.canvasext.Logger;
 import org.eclipse.swt.internal.skia.DpiScalerUtil;
+import org.eclipse.swt.internal.skia.ISkCanvas;
+import org.eclipse.swt.internal.skia.ISkSurface;
 import org.eclipse.swt.internal.skia.ISkiaCanvasExtension;
-import org.eclipse.swt.internal.skia.SkiaResources;
-import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.internal.skia.ISkiaResources;
 
-import io.github.humbleui.skija.Canvas;
 import io.github.humbleui.skija.ClipMode;
 import io.github.humbleui.skija.EncoderPNG;
 import io.github.humbleui.skija.FilterMipmap;
@@ -59,13 +59,12 @@ import io.github.humbleui.skija.PathEffect;
 import io.github.humbleui.skija.PathFillMode;
 import io.github.humbleui.skija.SamplingMode;
 import io.github.humbleui.skija.Shader;
-import io.github.humbleui.skija.Surface;
 import io.github.humbleui.types.Rect;
 
 public class SkiaGC implements IExternalGC {
 
 	private static boolean logImageNullError = true;
-	private final Surface surface;
+	private final ISkSurface surface;
 	private int alpha = 255;
 	private int antialias;
 	private boolean xorModeActive;
@@ -83,8 +82,8 @@ public class SkiaGC implements IExternalGC {
 	private float miterLimit;
 	// -----------------------------------
 
-	private final org.eclipse.swt.widgets.Canvas canvas;
-	private final Display device;
+	private final Drawable drawable;
+	private final Device device;
 
 	private Matrix33 currentTransform = Matrix33.IDENTITY;
 
@@ -95,7 +94,7 @@ public class SkiaGC implements IExternalGC {
 	private Region currentClipRegion;
 
 	private final ISkiaCanvasExtension skiaExtension;
-	private final SkiaResources resources;
+	private final ISkiaResources resources;
 	private final int style;
 	private int textAntiAlias = SWT.ON;
 
@@ -103,20 +102,18 @@ public class SkiaGC implements IExternalGC {
 	private final SkiaPaintManager paintManager;
 	private final DpiScalerUtil dpiScalerUtil;
 
-	public SkiaGC(org.eclipse.swt.widgets.Canvas canvas, ISkiaCanvasExtension exst, int style) {
-		this.canvas = canvas;
-		device = canvas.getDisplay();
+	public SkiaGC(ISkiaCanvasExtension exst, int style) {
+		this.drawable = exst.getDrawable();
+		device = exst.getDevice();
 		this.surface = exst.getSurface();
 		this.skiaExtension = exst;
 		this.resources = skiaExtension.getResources();
 		this.style = style;
 		// Save the initial canvas state so it can be fully restored on dispose()
-		this.initialSaveCount = this.surface.getCanvas().save();
+		this.initialSaveCount = this.surface.getCanvas().getSaveCount();
 		this.paintManager = new SkiaPaintManager(this);
-
 		this.dpiScalerUtil = new DpiScalerUtil(this.resources.getScaler());
-
-		this.currentClipBounds = canvas.getClientArea();
+		this.currentClipBounds = exst.getClientArea();
 
 	}
 
@@ -196,7 +193,7 @@ public class SkiaGC implements IExternalGC {
 		if (sizeFactorInImage == 0) {
 			sizeFactorInImage = 1;
 		}
-		final Canvas canvas = surface.getCanvas();
+		final ISkCanvas canvas = surface.getCanvas();
 		final int fac = sizeFactorInImage;
 
 		paintManager.performDraw(paint -> {
@@ -692,7 +689,7 @@ public class SkiaGC implements IExternalGC {
 		if (currentClipRegion != null) {
 			return currentClipBounds;
 		}
-		return canvas.getBounds();
+		return skiaExtension.getBounds();
 	}
 
 	@Override
@@ -721,7 +718,7 @@ public class SkiaGC implements IExternalGC {
 				SWT.error(SWT.ERROR_INVALID_ARGUMENT);
 			}
 
-			try (final Surface imageSurface = surface.makeSurface(skijaImage.getWidth(), skijaImage.getHeight())) {
+			try (final ISkSurface imageSurface = surface.makeSurface(skijaImage.getWidth(), skijaImage.getHeight())) {
 				imageSurface.getCanvas().drawImage(copiedArea, 0, 0);
 				try (final io.github.humbleui.skija.Image snapshot = imageSurface.makeImageSnapshot()) {
 					final ImageData imgData = SkijaToSwtImageConverter.convertSkijaImageToImageData(snapshot);
@@ -767,7 +764,7 @@ public class SkiaGC implements IExternalGC {
 			// Restore the canvas state
 			surface.getCanvas().restore();
 			// Trigger redraw for the source area if using SWT Canvas
-			canvas.redraw(srcX, srcY, width, height, false);
+			skiaExtension.redraw(srcX, srcY, width, height, false);
 		}
 	}
 
@@ -915,7 +912,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void setClipping(Path path) {
-		final Canvas canvas = surface.getCanvas();
+		final ISkCanvas canvas = surface.getCanvas();
 		if (isClipSet) {
 			canvas.restore(); // pop the previously saved clip layer
 			isClipSet = false;
@@ -948,7 +945,7 @@ public class SkiaGC implements IExternalGC {
 		// here
 		// because the clip will be cleared when the next setClipping call is made or on
 		// dispose.
-		final Canvas canvas = surface.getCanvas();
+		final ISkCanvas canvas = surface.getCanvas();
 		if (isClipSet) {
 			canvas.restore(); // pop the previously saved clip layer
 			isClipSet = false;
@@ -970,7 +967,7 @@ public class SkiaGC implements IExternalGC {
 
 		// Skija uses a canvas state stack; each save() pushes a new layer,
 		// and restore() pops it, removing the clipping region set in that layer.
-		final Canvas canvas = surface.getCanvas();
+		final ISkCanvas canvas = surface.getCanvas();
 		if (isClipSet) {
 			canvas.restore(); // pop the previously saved clip layer
 			isClipSet = false;
@@ -1236,7 +1233,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public Drawable getDrawable() {
-		return canvas;
+		return drawable;
 	}
 
 	@Override
@@ -1271,11 +1268,11 @@ public class SkiaGC implements IExternalGC {
 
 	}
 
-	SkiaResources getSkiaResources() {
+	ISkiaResources getSkiaResources() {
 		return this.resources;
 	}
 
-	Surface getSkiaSurface() {
+	ISkSurface getSkiaSurface() {
 		return this.surface;
 	}
 

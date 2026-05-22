@@ -37,7 +37,7 @@ import io.github.humbleui.skija.FontSlant;
 import io.github.humbleui.skija.FontStyle;
 import io.github.humbleui.skija.Typeface;
 
-public class SkiaResources {
+public class SkiaResources implements ISkiaResources {
 	private static final String IMAGE_CACHE = "org.eclipse.swt.internal.skia.ImageCache";
 	public static boolean USE_IMAGE_CACHE = false;
 	public static boolean USE_TEXT_IMAGE_CACHE = true;
@@ -100,11 +100,15 @@ public class SkiaResources {
 
 		this.canvas = canvas;
 		this.skiaExtension = skiaExtension;
-		this.canvas.addListener(SWT.Dispose, e -> resetResources());
-		this.canvas.addListener(SWT.ZoomChanged, e -> resetResources());
-		this.canvas.addListener(SWT.Resize, e -> resetResources());
+
+		if (canvas != null) {
+			this.canvas.addListener(SWT.Dispose, e -> resetResources());
+			this.canvas.addListener(SWT.ZoomChanged, e -> resetResources());
+			this.canvas.addListener(SWT.Resize, e -> resetResources());
+		}
 	}
 
+	@Override
 	public void setBackground(Color color) {
 
 		if (color == null) {
@@ -113,6 +117,7 @@ public class SkiaResources {
 		this.background = color;
 	}
 
+	@Override
 	public void setForeground(Color color) {
 		if (color == null) {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
@@ -120,6 +125,7 @@ public class SkiaResources {
 		this.foreground = color;
 	}
 
+	@Override
 	public Color getForeground() {
 		if (foreground != null && !foreground.isDisposed()) {
 			return foreground;
@@ -128,6 +134,7 @@ public class SkiaResources {
 
 	}
 
+	@Override
 	public Color getBackground() {
 
 		if (background != null && !background.isDisposed()) {
@@ -137,6 +144,7 @@ public class SkiaResources {
 		return canvas.getBackground();
 	}
 
+	@Override
 	public void setFont(Font font) {
 		if (font != null) {
 			if (font.isDisposed()) {
@@ -292,6 +300,7 @@ public class SkiaResources {
 		return originalFont;
 	}
 
+	@Override
 	public io.github.humbleui.skija.Font getSkiaFont() {
 		if (skiaFont == null) {
 			setFont(null);
@@ -299,6 +308,7 @@ public class SkiaResources {
 		return skiaFont;
 	}
 
+	@Override
 	public IDpiScaler getScaler() {
 		return skiaExtension.getScaler();
 	}
@@ -339,6 +349,7 @@ public class SkiaResources {
 
 	}
 
+	@Override
 	public Font getFont() {
 
 		if (swtFont != null && !swtFont.isDisposed()) {
@@ -349,12 +360,14 @@ public class SkiaResources {
 		return swtFont;
 	}
 
+	@Override
 	public void resetBaseColors() {
 		foreground = null;
 		background = null;
 
 	}
 
+	@Override
 	public void cacheImage(Image swtImage, int zoom, io.github.humbleui.skija.Image skijaImage) {
 		if (USE_IMAGE_CACHE) {
 			final var key = new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom);
@@ -366,10 +379,12 @@ public class SkiaResources {
 		}
 	}
 
+	@Override
 	public io.github.humbleui.skija.Image getCachedImage(Image swtImage, int zoom) {
 		return this.imageCache.get(new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom));
 	}
 
+	@Override
 	public void cacheTextImage(String text, FontProperties fontProperties, boolean transparent, int background,
 			int foreground, boolean antiAlias, io.github.humbleui.skija.Image skijaImage) {
 		if (USE_TEXT_IMAGE_CACHE) {
@@ -382,6 +397,7 @@ public class SkiaResources {
 		}
 	}
 
+	@Override
 	public io.github.humbleui.skija.Image getTextImage(String text, FontProperties fontProperties, boolean transparent,
 			int background, int foreground, boolean antialias) {
 		return this.textImageCache
@@ -392,6 +408,7 @@ public class SkiaResources {
 		return text.split("\r\n|\n|\r"); //$NON-NLS-1$
 	}
 
+	@Override
 	public String[] getTextSplits(String inputText, int flags) {
 
 		final boolean replaceAmpersand = (flags & SWT.DRAW_MNEMONIC) != 0;
@@ -479,6 +496,7 @@ public class SkiaResources {
 		return result.toString();
 	}
 
+	@Override
 	public Point textExtent(String text, int flags) {
 
 		final float height = getSkiaFont().getMetrics().getHeight();
@@ -486,6 +504,7 @@ public class SkiaResources {
 		return new Point((int) width, (int) height);
 	}
 
+	@Override
 	public Point textExtent(String string) {
 		return textExtent(string, SWT.NONE);
 	}

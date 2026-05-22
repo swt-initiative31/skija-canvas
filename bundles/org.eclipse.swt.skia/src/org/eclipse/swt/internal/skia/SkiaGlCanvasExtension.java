@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.graphics.Device;
+import org.eclipse.swt.graphics.Drawable;
 import org.eclipse.swt.graphics.GCExtension;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.graphics.Rectangle;
@@ -50,7 +52,7 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 	private BackendRenderTarget renderTarget;
 	private Surface surface;
 	private final Canvas canvas;
-	private final SkiaResources resources;
+	private final ISkiaResources resources;
 	private final List<RedrawCommand> redrawCommands = new ArrayList<>();
 
 	private final DpiScalerUtil scaler;
@@ -123,8 +125,8 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 	}
 
 	@Override
-	public Surface getSurface() {
-		return surface;
+	public ISkSurface getSurface() {
+		return surface != null ? new SkijaSurfaceAdapter(surface) : null;
 	}
 
 	@Override
@@ -239,7 +241,7 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 		final Event event = new Event();
 		event.count = 1;
 		event.setBounds(bounds);
-		final SkiaGC gc = new SkiaGC(canvas, this, SWT.None);
+		final SkiaGC gc = new SkiaGC(this, SWT.None);
 		event.gc = new GCExtension(gc);
 		event.display = this.canvas.getDisplay();
 		try {
@@ -311,17 +313,16 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 	}
 
 	@Override
-	public SkiaResources getResources() {
+	public ISkiaResources getResources() {
 		return this.resources;
 	}
 
 	@Override
-	public Surface createSupportSurface(int width, int height) {
+	public ISkSurface createSupportSurface(int width, int height) {
 		final ImageInfo i = new ImageInfo(new ColorInfo(ColorType.RGBA_8888, ColorAlphaType.PREMUL, null), width,
 				height);
-		// These support surfaces can cause drastic crashes without any information what
-		// happened.
-		return Surface.makeRenderTarget(skijaContext, false, i);
+		final Surface s = Surface.makeRenderTarget(skijaContext, false, i);
+		return s != null ? new SkijaSurfaceAdapter(s) : null;
 	}
 
 	@Override
@@ -334,6 +335,31 @@ implements ISkiaCanvasExtension, IExternalCanvasHandler {
 		// TODO lastImage could be used for scrolling and then for the redraw would
 		// contain only the new area.
 		canvas.redraw();
+	}
+
+	@Override
+	public Drawable getDrawable() {
+		return canvas;
+	}
+
+	@Override
+	public Rectangle getClientArea() {
+		return canvas.getClientArea();
+	}
+
+	@Override
+	public Device getDevice() {
+		return canvas.getDisplay();
+	}
+
+	@Override
+	public Rectangle getBounds() {
+		return canvas.getBounds();
+	}
+
+	@Override
+	public void redraw(int srcX, int srcY, int width, int height, boolean b) {
+		canvas.redraw(srcX, srcY, width, height, b);
 	}
 
 }

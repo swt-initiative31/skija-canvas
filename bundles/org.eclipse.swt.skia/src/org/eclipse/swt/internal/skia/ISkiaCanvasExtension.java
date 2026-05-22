@@ -10,16 +10,28 @@
  *******************************************************************************/
 package org.eclipse.swt.internal.skia;
 
-import io.github.humbleui.skija.Surface;
+import org.eclipse.swt.graphics.Device;
+import org.eclipse.swt.graphics.Drawable;
+import org.eclipse.swt.graphics.Rectangle;
 
 public interface ISkiaCanvasExtension {
 
-	Surface getSurface();
+	ISkSurface getSurface();
 
-	SkiaResources getResources();
+	ISkiaResources getResources();
 
-	Surface createSupportSurface(int width, int height);
+	ISkSurface createSupportSurface(int width, int height);
 
 	DpiScalerUtil getScaler();
+
+	Drawable getDrawable();
+
+	Rectangle getClientArea();
+
+	Device getDevice();
+
+	Rectangle getBounds();
+
+	void redraw(int srcX, int srcY, int width, int height, boolean b);
 
 }

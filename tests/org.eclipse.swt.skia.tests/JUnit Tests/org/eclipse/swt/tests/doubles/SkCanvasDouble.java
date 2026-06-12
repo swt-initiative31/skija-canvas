@@ -4,10 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.eclipse.swt.internal.skia.ISkCanvas;
+import org.eclipse.swt.internal.skia.ISkImage;
 
 import io.github.humbleui.skija.ClipMode;
 import io.github.humbleui.skija.Font;
-import io.github.humbleui.skija.Image;
 import io.github.humbleui.skija.Matrix33;
 import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.Path;
@@ -70,12 +70,12 @@ public class SkCanvasDouble implements ISkCanvas {
 	}
 
 	@Override
-	public void drawImage(Image image, int x, int y) {
+	public void drawImage(ISkImage image, int x, int y) {
 		calls.add(logCall("drawImage", image, x, y));
 	}
 
 	@Override
-	public void drawImageRect(Image image, Rect src, Rect dst, SamplingMode sampling, Paint paint, boolean strict) {
+	public void drawImageRect(ISkImage image, Rect src, Rect dst, SamplingMode sampling, Paint paint, boolean strict) {
 		calls.add(logCall("drawImageRect", image, src, dst, sampling, paint, strict));
 	}
 

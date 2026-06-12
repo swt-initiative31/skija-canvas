@@ -1,6 +1,5 @@
 package org.eclipse.swt.internal.skia;
 
-import io.github.humbleui.skija.Image;
 import io.github.humbleui.types.IRect;
 
 /**
@@ -32,9 +31,9 @@ public interface ISkSurface extends AutoCloseable {
 	 * Creates an image snapshot of the current surface contents.
 	 * The return type should be an abstraction (e.g., ISkImage) but for now Object.
 	 */
-	Image makeImageSnapshot();
+	ISkImage makeImageSnapshot();
 
-	Image makeImageSnapshot(IRect rect);
+	ISkImage makeImageSnapshot(IRect rect);
 
 	/**
 	 * Creates a new surface with the given width and height.

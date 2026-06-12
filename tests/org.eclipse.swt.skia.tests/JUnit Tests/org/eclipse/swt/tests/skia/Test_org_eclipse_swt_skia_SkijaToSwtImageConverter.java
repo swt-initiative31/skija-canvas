@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.internal.graphics.SkijaToSwtImageConverter;
+import org.eclipse.swt.internal.skia.ISkImage;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -68,7 +69,7 @@ public class Test_org_eclipse_swt_skia_SkijaToSwtImageConverter {
 	public void testNullInput() {
 		// Should throw AssertionError or NullPointerException on null input
 		final Throwable thrown = assertThrows(Throwable.class, () -> {
-			SkijaToSwtImageConverter.convertSkijaImageToImageData(null);
+			SkijaToSwtImageConverter.convertSkijaImageToImageData((ISkImage)null);
 		});
 		assertTrue(thrown instanceof NullPointerException || thrown instanceof AssertionError,
 				"Expected NullPointerException or AssertionError, but got: " + thrown.getClass().getName());

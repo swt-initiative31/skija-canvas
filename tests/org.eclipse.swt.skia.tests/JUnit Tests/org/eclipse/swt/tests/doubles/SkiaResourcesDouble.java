@@ -2,10 +2,12 @@ package org.eclipse.swt.tests.doubles;
 
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.internal.canvasext.FontProperties;
 import org.eclipse.swt.internal.canvasext.IDpiScaler;
+import org.eclipse.swt.internal.skia.ISkImage;
 import org.eclipse.swt.internal.skia.ISkiaResources;
 
 public class SkiaResourcesDouble implements ISkiaResources {
@@ -16,10 +18,11 @@ public class SkiaResourcesDouble implements ISkiaResources {
 	public io.github.humbleui.skija.Font skiaFont;
 	public IDpiScaler scaler = () -> 100;
 	public Image cachedImage;
-	public io.github.humbleui.skija.Image cachedSkijaImage;
-	public io.github.humbleui.skija.Image cachedTextImage;
+	public ISkImage cachedSkijaImage;
+	public ISkImage cachedTextImage;
 	public String[] textSplits;
 	public Point textExtent;
+	public FontData fontData;
 
 	@Override
 	public void setBackground(Color color) {
@@ -68,32 +71,32 @@ public class SkiaResourcesDouble implements ISkiaResources {
 	}
 
 	@Override
-	public void cacheImage(Image swtImage, int zoom, io.github.humbleui.skija.Image skijaImage) {
+	public void cacheImage(Image swtImage, int zoom, ISkImage skijaImage) {
 		// TODO Auto-generated method stub
 
 	}
 
 	@Override
-	public io.github.humbleui.skija.Image getCachedImage(Image swtImage, int zoom) {
+	public ISkImage getCachedImage(Image swtImage, int zoom) {
 		return cachedSkijaImage;
 	}
 
 	@Override
 	public void cacheTextImage(String text, FontProperties fontProperties, boolean transparent, int background,
-			int foreground, boolean antiAlias, io.github.humbleui.skija.Image skijaImage) {
+			int foreground, boolean antiAlias, ISkImage skijaImage) {
 		// TODO Auto-generated method stub
 
 	}
 
 	@Override
-	public io.github.humbleui.skija.Image getTextImage(String text, FontProperties fontProperties, boolean transparent,
+	public ISkImage getTextImage(String text, FontProperties fontProperties, boolean transparent,
 			int background, int foreground, boolean antialias) {
 		return cachedTextImage;
 	}
 
 	@Override
 	public String[] getTextSplits(String inputText, int flags) {
-		return textSplits;
+		return TextSplitUtil.getTextSplits(inputText, flags, null, false);
 	}
 
 	@Override
@@ -104,6 +107,11 @@ public class SkiaResourcesDouble implements ISkiaResources {
 	@Override
 	public Point textExtent(String string) {
 		return textExtent;
+	}
+
+	@Override
+	public FontData getFontData() {
+		return this.fontData;
 	}
 
 }

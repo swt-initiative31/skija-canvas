@@ -16,16 +16,17 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.PaletteData;
+import org.eclipse.swt.internal.skia.ISkImage;
 import org.eclipse.swt.internal.skia.ISkiaResources;
+import org.eclipse.swt.internal.skia.SkijaImageAdapter;
 
 import io.github.humbleui.skija.ColorAlphaType;
 import io.github.humbleui.skija.ColorType;
 import io.github.humbleui.skija.ImageInfo;
 
 public class SwtToSkiaImageConverter {
-	public static io.github.humbleui.skija.Image convertSWTImageToSkijaImage(Image swtImage, int zoom,
-			ISkiaResources resources) {
-		io.github.humbleui.skija.Image img = null;
+	public static ISkImage convertSWTImageToSkijaImage(Image swtImage, int zoom, ISkiaResources resources) {
+		ISkImage img = null;
 		final var cached = resources.getCachedImage(swtImage, zoom);
 		if (cached != null && !cached.isClosed()) {
 			return cached;
@@ -36,7 +37,7 @@ public class SwtToSkiaImageConverter {
 		return img;
 	}
 
-	public static io.github.humbleui.skija.Image convertSWTImageToSkijaImage(ImageData imageData) {
+	public static ISkImage convertSWTImageToSkijaImage(ImageData imageData) {
 		final int width = imageData.width;
 		final int height = imageData.height;
 		ColorType colType = getColorType(imageData);
@@ -44,10 +45,12 @@ public class SwtToSkiaImageConverter {
 			final byte[] bytes = RGBAEncoder.encode(imageData);
 			colType = ColorType.RGBA_8888;
 			final ImageInfo imageInfo = new ImageInfo(width, height, colType, ColorAlphaType.UNPREMUL);
-			return io.github.humbleui.skija.Image.makeRasterFromBytes(imageInfo, bytes, imageData.width * 4);
+			return new SkijaImageAdapter(
+					io.github.humbleui.skija.Image.makeRasterFromBytes(imageInfo, bytes, imageData.width * 4));
 		}
 		final ImageInfo imageInfo = new ImageInfo(width, height, colType, ColorAlphaType.UNPREMUL);
-		return io.github.humbleui.skija.Image.makeRasterFromBytes(imageInfo, imageData.data, imageData.width * 4);
+		return new SkijaImageAdapter(
+				io.github.humbleui.skija.Image.makeRasterFromBytes(imageInfo, imageData.data, imageData.width * 4));
 	}
 
 	public static ColorType getColorType(ImageData imageData) {

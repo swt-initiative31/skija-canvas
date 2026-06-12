@@ -1,6 +1,5 @@
 package org.eclipse.swt.internal.skia;
 
-import io.github.humbleui.skija.Image;
 import io.github.humbleui.skija.Surface;
 import io.github.humbleui.types.IRect;
 
@@ -36,13 +35,13 @@ class SkijaSurfaceAdapter implements ISkSurface {
 	}
 
 	@Override
-	public Image makeImageSnapshot() {
-		return delegate.makeImageSnapshot();
+	public ISkImage makeImageSnapshot() {
+		return new SkijaImageAdapter(delegate.makeImageSnapshot());
 	}
 
 	@Override
-	public Image makeImageSnapshot(IRect rect) {
-		return delegate.makeImageSnapshot(rect);
+	public ISkImage makeImageSnapshot(IRect rect) {
+		return new SkijaImageAdapter(delegate.makeImageSnapshot(rect));
 	}
 
 	@Override

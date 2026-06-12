@@ -125,7 +125,7 @@ public class SkiaTextDrawing {
 		final int y = scaler.autoScaleUp(yIn);
 
 		final var f = resources.getSkiaFont();
-		final FontProperties props = FontProperties.getFontProperties(gc.getFont());
+		final FontProperties props = FontProperties.getFontProperties(resources.getFontData());
 		final int backgroundColor = gc.getAlpha() < 255
 				? SkiaColorConverter.convertSWTColorToSkijaColor(gc.getBackground(), gc.getAlpha())
 						: SkiaColorConverter.convertSWTColorToSkijaColor(gc.getBackground());

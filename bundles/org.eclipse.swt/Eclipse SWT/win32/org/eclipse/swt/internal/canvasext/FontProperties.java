@@ -64,7 +64,7 @@ public class FontProperties {
 
 	}
 
-	private static FontProperties getFontProperties(FontData fd) {
+	public static FontProperties getFontProperties(FontData fd) {
 		var fp = new FontProperties();
 		var d = fd.data;
 

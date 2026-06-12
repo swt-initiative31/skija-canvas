@@ -15,11 +15,20 @@ package org.eclipse.swt.internal.graphics;
 import org.eclipse.swt.graphics.ImageData;
 import org.eclipse.swt.graphics.PaletteData;
 import org.eclipse.swt.graphics.RGB;
+import org.eclipse.swt.internal.skia.ISkImage;
 
 import io.github.humbleui.skija.Bitmap;
 import io.github.humbleui.skija.ColorType;
 
 public class SkijaToSwtImageConverter {
+
+	public static ImageData convertSkijaImageToImageData(ISkImage image) {
+
+		final var innerImage = image.getSkijaImage();
+		return convertSkijaImageToImageData(innerImage);
+
+	}
+
 	public static ImageData convertSkijaImageToImageData(io.github.humbleui.skija.Image image) {
 		try (final Bitmap bm = Bitmap.makeFromImage(image)) {
 			final var colType = bm.getColorType();

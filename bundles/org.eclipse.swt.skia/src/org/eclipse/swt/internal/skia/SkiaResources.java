@@ -19,6 +19,7 @@ import java.util.Set;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
+import org.eclipse.swt.graphics.FontData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.graphics.ImageVersion;
 import org.eclipse.swt.graphics.Point;
@@ -52,7 +53,7 @@ public class SkiaResources implements ISkiaResources {
 	 * LRU cache that automatically closes the evicted Skija image when the cache
 	 * exceeds its capacity. Must only be accessed from the SWT UI thread.
 	 */
-	private static final class LruImageCache<K> extends LinkedHashMap<K, io.github.humbleui.skija.Image> {
+	private static final class LruImageCache<K> extends LinkedHashMap<K, ISkImage> {
 		private static final long serialVersionUID = -4958211475619287841L;
 		private final int maxSize;
 
@@ -62,13 +63,20 @@ public class SkiaResources implements ISkiaResources {
 		}
 
 		@Override
-		protected boolean removeEldestEntry(Map.Entry<K, io.github.humbleui.skija.Image> eldest) {
+		protected boolean removeEldestEntry(Map.Entry<K, ISkImage> eldest) {
 			if (size() > maxSize) {
 				// Close the native Skija image before evicting it from the cache.
-				final io.github.humbleui.skija.Image image = eldest.getValue();
+				final ISkImage image = eldest.getValue();
+				// Auto-close will call image.close() at the end of this block, ensuring
+				// resources are released.
 				if (image != null && !image.isClosed()) {
-					image.close();
+					try {
+						image.close();
+					} catch (final Exception e) {
+						e.printStackTrace();
+					}
 				}
+
 				return true;
 			}
 			return false;
@@ -368,7 +376,7 @@ public class SkiaResources implements ISkiaResources {
 	}
 
 	@Override
-	public void cacheImage(Image swtImage, int zoom, io.github.humbleui.skija.Image skijaImage) {
+	public void cacheImage(Image swtImage, int zoom, ISkImage skijaImage) {
 		if (USE_IMAGE_CACHE) {
 			final var key = new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom);
 			final var old = imageCache.get(key);
@@ -380,13 +388,13 @@ public class SkiaResources implements ISkiaResources {
 	}
 
 	@Override
-	public io.github.humbleui.skija.Image getCachedImage(Image swtImage, int zoom) {
+	public ISkImage getCachedImage(Image swtImage, int zoom) {
 		return this.imageCache.get(new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom));
 	}
 
 	@Override
 	public void cacheTextImage(String text, FontProperties fontProperties, boolean transparent, int background,
-			int foreground, boolean antiAlias, io.github.humbleui.skija.Image skijaImage) {
+			int foreground, boolean antiAlias, ISkImage skijaImage) {
 		if (USE_TEXT_IMAGE_CACHE) {
 			final var key = new ImageTextKey(text, fontProperties, transparent, background, foreground, antiAlias);
 			final var old = textImageCache.get(key);
@@ -398,8 +406,8 @@ public class SkiaResources implements ISkiaResources {
 	}
 
 	@Override
-	public io.github.humbleui.skija.Image getTextImage(String text, FontProperties fontProperties, boolean transparent,
-			int background, int foreground, boolean antialias) {
+	public ISkImage getTextImage(String text, FontProperties fontProperties, boolean transparent, int background,
+			int foreground, boolean antialias) {
 		return this.textImageCache
 				.get(new ImageTextKey(text, fontProperties, transparent, background, foreground, antialias));
 	}
@@ -521,5 +529,11 @@ public class SkiaResources implements ISkiaResources {
 			// it seems this also does not work in windows with a simple snippet.
 		}
 		return text;
+	}
+
+	@Override
+	public FontData getFontData() {
+		final var font = getFont();
+		return font.getFontData()[0];
 	}
 }

@@ -2,7 +2,6 @@ package org.eclipse.swt.internal.skia;
 
 import io.github.humbleui.skija.Canvas;
 import io.github.humbleui.skija.Font;
-import io.github.humbleui.skija.Image;
 import io.github.humbleui.skija.Matrix33;
 import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.Path;
@@ -69,13 +68,13 @@ class SkijaCanvasAdapter implements ISkCanvas {
 	}
 
 	@Override
-	public void drawImage(Image image, int x, int y) {
-		delegate.drawImage(image, x, y);
+	public void drawImage(ISkImage image, int x, int y) {
+		delegate.drawImage(((SkijaImageAdapter)image).getSkijaImage(), x, y);
 	}
 
 	@Override
-	public void drawImageRect(Image image, Rect src, Rect dst, SamplingMode sampling, Paint paint, boolean strict) {
-		delegate.drawImageRect(image, src, dst, sampling, paint, strict);
+	public void drawImageRect(ISkImage image, Rect src, Rect dst, SamplingMode sampling, Paint paint, boolean strict) {
+		delegate.drawImageRect(((SkijaImageAdapter)image).getSkijaImage(), src, dst, sampling, paint, strict);
 	}
 
 	@Override

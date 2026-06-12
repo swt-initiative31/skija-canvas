@@ -1,9 +1,9 @@
 package org.eclipse.swt.tests.doubles;
 
 import org.eclipse.swt.internal.skia.ISkCanvas;
+import org.eclipse.swt.internal.skia.ISkImage;
 import org.eclipse.swt.internal.skia.ISkSurface;
 
-import io.github.humbleui.skija.Image;
 import io.github.humbleui.types.IRect;
 
 public class SkSurfaceDouble implements ISkSurface {
@@ -39,13 +39,13 @@ public class SkSurfaceDouble implements ISkSurface {
 	}
 
 	@Override
-	public Image makeImageSnapshot() {
+	public ISkImage makeImageSnapshot() {
 		// Dummy implementation: return null or a mock if needed
 		return null;
 	}
 
 	@Override
-	public Image makeImageSnapshot(IRect rect) {
+	public ISkImage makeImageSnapshot(IRect rect) {
 		// Dummy implementation: return null or a mock if needed
 		return null;
 	}

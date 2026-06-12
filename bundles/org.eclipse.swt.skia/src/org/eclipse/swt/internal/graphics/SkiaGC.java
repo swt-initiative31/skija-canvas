@@ -41,6 +41,7 @@ import org.eclipse.swt.internal.canvasext.IExternalGC;
 import org.eclipse.swt.internal.canvasext.Logger;
 import org.eclipse.swt.internal.skia.DpiScalerUtil;
 import org.eclipse.swt.internal.skia.ISkCanvas;
+import org.eclipse.swt.internal.skia.ISkImage;
 import org.eclipse.swt.internal.skia.ISkSurface;
 import org.eclipse.swt.internal.skia.ISkiaCanvasExtension;
 import org.eclipse.swt.internal.skia.ISkiaResources;
@@ -709,9 +710,9 @@ public class SkiaGC implements IExternalGC {
 			SWT.error(SWT.ERROR_NULL_ARGUMENT);
 		}
 
-		final io.github.humbleui.skija.Image skijaImage = SwtToSkiaImageConverter.convertSWTImageToSkijaImage(image,
+		final ISkImage skijaImage = SwtToSkiaImageConverter.convertSWTImageToSkijaImage(image,
 				getScaler().getNativeZoom(), resources);
-		try (final io.github.humbleui.skija.Image copiedArea = surface.makeImageSnapshot(RectangleConverter
+		try (final ISkImage copiedArea = surface.makeImageSnapshot(RectangleConverter
 				.createScaledRectangle(getScaler(), x, y, skijaImage.getWidth(), skijaImage.getHeight()).toIRect())) {
 
 			if (copiedArea == null) {
@@ -720,7 +721,7 @@ public class SkiaGC implements IExternalGC {
 
 			try (final ISkSurface imageSurface = surface.makeSurface(skijaImage.getWidth(), skijaImage.getHeight())) {
 				imageSurface.getCanvas().drawImage(copiedArea, 0, 0);
-				try (final io.github.humbleui.skija.Image snapshot = imageSurface.makeImageSnapshot()) {
+				try (final ISkImage snapshot = imageSurface.makeImageSnapshot()) {
 					final ImageData imgData = SkijaToSwtImageConverter.convertSkijaImageToImageData(snapshot);
 					Image i = null;
 					GC gc = null;
@@ -743,7 +744,7 @@ public class SkiaGC implements IExternalGC {
 
 	@Override
 	public void copyArea(int srcX, int srcY, int width, int height, int destX, int destY) {
-		try (io.github.humbleui.skija.Image copiedArea = surface.makeImageSnapshot(
+		try (var copiedArea = surface.makeImageSnapshot(
 				RectangleConverter.createScaledRectangle(getScaler(), srcX, srcY, width, height).toIRect())) {
 			surface.getCanvas().drawImage(copiedArea, getScaler().autoScaleUp(destX), getScaler().autoScaleUp(destY));
 		}

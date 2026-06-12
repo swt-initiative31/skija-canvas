@@ -9,11 +9,12 @@ public interface ISkiaResources {
 	io.github.humbleui.skija.Font getSkiaFont();
 	org.eclipse.swt.internal.canvasext.IDpiScaler getScaler();
 	org.eclipse.swt.graphics.Font getFont();
+	org.eclipse.swt.graphics.FontData getFontData();
 	void resetBaseColors();
-	void cacheImage(org.eclipse.swt.graphics.Image swtImage, int zoom, io.github.humbleui.skija.Image skijaImage);
-	io.github.humbleui.skija.Image getCachedImage(org.eclipse.swt.graphics.Image swtImage, int zoom);
-	void cacheTextImage(String text, org.eclipse.swt.internal.canvasext.FontProperties fontProperties, boolean transparent, int background, int foreground, boolean antiAlias, io.github.humbleui.skija.Image skijaImage);
-	io.github.humbleui.skija.Image getTextImage(String text, org.eclipse.swt.internal.canvasext.FontProperties fontProperties, boolean transparent, int background, int foreground, boolean antialias);
+	void cacheImage(org.eclipse.swt.graphics.Image swtImage, int zoom, ISkImage skijaImage);
+	ISkImage getCachedImage(org.eclipse.swt.graphics.Image swtImage, int zoom);
+	void cacheTextImage(String text, org.eclipse.swt.internal.canvasext.FontProperties fontProperties, boolean transparent, int background, int foreground, boolean antiAlias, ISkImage image);
+	ISkImage getTextImage(String text, org.eclipse.swt.internal.canvasext.FontProperties fontProperties, boolean transparent, int background, int foreground, boolean antialias);
 	String[] getTextSplits(String inputText, int flags);
 	org.eclipse.swt.graphics.Point textExtent(String text, int flags);
 	org.eclipse.swt.graphics.Point textExtent(String string);

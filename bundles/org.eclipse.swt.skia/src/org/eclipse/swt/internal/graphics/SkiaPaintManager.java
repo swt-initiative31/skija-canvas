@@ -60,7 +60,7 @@ public class SkiaPaintManager {
 				paint.setPathEffect(pathEffect);
 
 				if (gc.getForegroundPattern() != null && !gc.getForegroundPattern().isDisposed()) {
-					try (Shader shader = convertSWTPatternToSkijaShader(gc.getForegroundPattern())) {
+					try (var shader = convertSWTPatternToSkijaShader(gc.getForegroundPattern())) {
 						if (shader != null) {
 							paint.setShader(shader);
 						}
@@ -102,7 +102,7 @@ public class SkiaPaintManager {
 		}
 
 		final var scaledFloats = getScaledPathFloats(scaledLineWidth, floats, scaler);
-		if(scaledFloats == null || scaledFloats.length == 0) {
+		if (scaledFloats == null || scaledFloats.length == 0) {
 			return null;
 		}
 

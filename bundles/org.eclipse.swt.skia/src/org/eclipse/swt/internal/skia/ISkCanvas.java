@@ -2,7 +2,6 @@ package org.eclipse.swt.internal.skia;
 
 import io.github.humbleui.skija.ClipMode;
 import io.github.humbleui.skija.Font;
-import io.github.humbleui.skija.Image;
 import io.github.humbleui.skija.Matrix33;
 import io.github.humbleui.skija.Paint;
 import io.github.humbleui.skija.Path;
@@ -23,8 +22,8 @@ public interface ISkCanvas {
 	void drawPath(Path path, Paint paint);
 	void drawPolygon(float[] points, Paint paint);
 	void drawRRect(RRect rrect, Paint paint);
-	void drawImage(Image image, int x, int y);
-	void drawImageRect(Image image, Rect src, Rect dst, io.github.humbleui.skija.SamplingMode sampling, Paint paint, boolean strict);
+	void drawImage(ISkImage image, int x, int y);
+	void drawImageRect(ISkImage image, Rect src, Rect dst, io.github.humbleui.skija.SamplingMode sampling, Paint paint, boolean strict);
 	void setMatrix(Matrix33 matrix);
 	void save();
 	void clipRect(Rect rect);

@@ -4556,10 +4556,6 @@ private void init(Drawable drawable, GCData data, long hDC, ImageHandle imageHan
 	this.data = data;
 	handle = hDC;
 
-	if(this.drawable instanceof Image i) {
-		// it is likely that the GC modifies the image, so we increase the verion
-		i.increaseVersion();
-	}
 }
 
 private static int extractZoom(long hDC) {

@@ -71,17 +71,6 @@ public class SkiaResourcesDouble implements ISkiaResources {
 	}
 
 	@Override
-	public void cacheImage(Image swtImage, int zoom, ISkImage skijaImage) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public ISkImage getCachedImage(Image swtImage, int zoom) {
-		return cachedSkijaImage;
-	}
-
-	@Override
 	public void cacheTextImage(String text, FontProperties fontProperties, boolean transparent, int background,
 			int foreground, boolean antiAlias, ISkImage skijaImage) {
 		// TODO Auto-generated method stub

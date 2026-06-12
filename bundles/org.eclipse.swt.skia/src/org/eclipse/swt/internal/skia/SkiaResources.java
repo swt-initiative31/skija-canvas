@@ -20,12 +20,9 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Font;
 import org.eclipse.swt.graphics.FontData;
-import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.graphics.ImageVersion;
 import org.eclipse.swt.graphics.Point;
 import org.eclipse.swt.internal.canvasext.FontProperties;
 import org.eclipse.swt.internal.canvasext.IDpiScaler;
-import org.eclipse.swt.internal.skia.cache.ImageKey;
 import org.eclipse.swt.internal.skia.cache.ImageTextKey;
 import org.eclipse.swt.internal.skia.cache.SplitsTextCache;
 import org.eclipse.swt.widgets.Canvas;
@@ -39,15 +36,10 @@ import io.github.humbleui.skija.FontStyle;
 import io.github.humbleui.skija.Typeface;
 
 public class SkiaResources implements ISkiaResources {
-	private static final String IMAGE_CACHE = "org.eclipse.swt.internal.skia.ImageCache";
-	public static boolean USE_IMAGE_CACHE = false;
 	public static boolean USE_TEXT_IMAGE_CACHE = true;
 
 	/** Maximum number of entries kept in the text-image LRU cache. */
 	private static final int TEXT_IMAGE_CACHE_MAX = 512;
-
-	/** Maximum number of entries kept in the SWT→Skija image LRU cache. */
-	private static final int IMAGE_CACHE_MAX = 256;
 
 	/**
 	 * LRU cache that automatically closes the evicted Skija image when the cache
@@ -93,7 +85,6 @@ public class SkiaResources implements ISkiaResources {
 	private final Map<String, String> fontNameMapping = new HashMap<>();
 	private final Set<String> unknownFonts = new HashSet<>();
 	private final Map<FontProperties, io.github.humbleui.skija.Font> fontCache = new HashMap<>();
-	private final LruImageCache<ImageKey> imageCache = new LruImageCache<>(IMAGE_CACHE_MAX);
 	private final LruImageCache<ImageTextKey> textImageCache = new LruImageCache<>(TEXT_IMAGE_CACHE_MAX);
 	private final Map<SplitsTextCache, String[]> cachedTextSplits = new HashMap<>();
 
@@ -102,9 +93,6 @@ public class SkiaResources implements ISkiaResources {
 	private final ISkiaCanvasExtension skiaExtension;
 
 	public SkiaResources(Canvas canvas, ISkiaCanvasExtension skiaExtension) {
-
-		USE_IMAGE_CACHE = System.getProperty(IMAGE_CACHE) == null ? false
-				: Boolean.parseBoolean(System.getProperty(IMAGE_CACHE));
 
 		this.canvas = canvas;
 		this.skiaExtension = skiaExtension;
@@ -335,14 +323,6 @@ public class SkiaResources implements ISkiaResources {
 		});
 		fontCache.clear();
 
-		imageCache.values().forEach(i -> {
-			if (!i.isClosed()) {
-				i.close();
-			}
-		});
-
-		imageCache.clear();
-
 		textImageCache.values().forEach(i -> {
 			if (!i.isClosed()) {
 				i.close();
@@ -373,23 +353,6 @@ public class SkiaResources implements ISkiaResources {
 		foreground = null;
 		background = null;
 
-	}
-
-	@Override
-	public void cacheImage(Image swtImage, int zoom, ISkImage skijaImage) {
-		if (USE_IMAGE_CACHE) {
-			final var key = new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom);
-			final var old = imageCache.get(key);
-			if (old != null && !old.isClosed()) {
-				old.close();
-			}
-			this.imageCache.put(key, skijaImage);
-		}
-	}
-
-	@Override
-	public ISkImage getCachedImage(Image swtImage, int zoom) {
-		return this.imageCache.get(new ImageKey(swtImage, ImageVersion.getVersion(swtImage), zoom));
 	}
 
 	@Override

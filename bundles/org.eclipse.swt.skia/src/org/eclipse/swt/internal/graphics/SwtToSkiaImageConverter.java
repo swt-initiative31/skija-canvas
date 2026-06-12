@@ -27,13 +27,8 @@ import io.github.humbleui.skija.ImageInfo;
 public class SwtToSkiaImageConverter {
 	public static ISkImage convertSWTImageToSkijaImage(Image swtImage, int zoom, ISkiaResources resources) {
 		ISkImage img = null;
-		final var cached = resources.getCachedImage(swtImage, zoom);
-		if (cached != null && !cached.isClosed()) {
-			return cached;
-		}
 		final ImageData imageData = swtImage.getImageData(zoom);
 		img = convertSWTImageToSkijaImage(imageData);
-		resources.cacheImage(swtImage, zoom, img);
 		return img;
 	}
 

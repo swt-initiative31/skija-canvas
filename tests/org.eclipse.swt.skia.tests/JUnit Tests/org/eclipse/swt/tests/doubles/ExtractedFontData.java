@@ -4,7 +4,7 @@ import java.util.Objects;
 
 import io.github.humbleui.skija.Font;
 
-public class FontData {
+public class ExtractedFontData {
 
 	String name;
 	int weight;
@@ -15,9 +15,9 @@ public class FontData {
 	float scaleX;
 	float skewX;
 
-	public static FontData getData(Font f) {
+	public static ExtractedFontData getData(Font f) {
 
-		FontData d = new FontData();
+		ExtractedFontData d = new ExtractedFontData();
 
 		var t = f.getTypeface();
 
@@ -55,7 +55,7 @@ public class FontData {
 			return false;
 		if (getClass() != obj.getClass())
 			return false;
-		FontData other = (FontData) obj;
+		ExtractedFontData other = (ExtractedFontData) obj;
 		return ediging == other.ediging && Objects.equals(name, other.name)
 				&& Float.floatToIntBits(scaleX) == Float.floatToIntBits(other.scaleX)
 				&& Float.floatToIntBits(size) == Float.floatToIntBits(other.size)

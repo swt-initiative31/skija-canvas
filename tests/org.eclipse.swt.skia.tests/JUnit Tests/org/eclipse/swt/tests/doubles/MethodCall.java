@@ -22,7 +22,7 @@ public class MethodCall {
 			}
 
 			if (p instanceof Font f) {
-				params[Arrays.asList(params).indexOf(p)] = FontData.getData(f);
+				params[Arrays.asList(params).indexOf(p)] = ExtractedFontData.getData(f);
 			}
 
 		}

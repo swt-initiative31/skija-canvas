@@ -110,4 +110,50 @@ public class Test_org_eclipse_swt_skia_drawArc {
 
 		surface.close();
 	}
+
+	@Test
+	public void testDrawArc_Zoom200() {
+		ISkiaResources resources = new SkiaResourcesDouble(200);
+		Color foregroundColor = new Color(null, 255, 255, 255);
+		resources.setForeground(foregroundColor);
+		Color backgroundColor = new Color(null, 0, 0, 0);
+		resources.setBackground(backgroundColor);
+
+		final SkSurfaceDouble surface = new SkSurfaceDouble(200, 200, "surface", null);
+		final CanvasExtensionDouble ext = new CanvasExtensionDouble();
+		ext.surface = surface;
+		ext.resources = resources;
+		final SkiaGC gc = new SkiaGC(ext, SWT.NONE);
+
+		gc.drawArc(10, 20, 30, 40, 45, 90);
+
+		var calls = surface.calls;
+		assertEquals(1, calls.size(), "Expected 1 method call");
+
+		System.out.println(calls);
+
+		PaintData epd = new PaintData();
+		epd.color = -1;
+		epd.strokeWidth = 2.0f; // 1.0 * 2.0
+		epd.strokeMiter = 4.0f;
+		epd.strokeCap = 0;
+		epd.strokeJoin = 0;
+		epd.style = 1;
+		epd.alpha = 255;
+		epd.antiAlias = false;
+		epd.dither = false;
+		epd.shader = null;
+		epd.blendMode = BlendMode.SRC_OVER;
+		epd.pathEffect = null;
+		epd.imageFilter = null;
+		epd.colorFilter = null;
+		epd.maskFilter = null;
+
+		// At 200% zoom: x=10*2.0=20, y=20*2.0=40, width=30*2.0=60, height=40*2.0=80
+		// x+width=20+60=80, y+height=40+80=120
+		assertEquals(MethodCall.get("surface-canvas", "drawArc", 20, 40, 80, 120, -45, -90, false, epd),
+				surface.calls.get(0));
+
+		surface.close();
+	}
 }

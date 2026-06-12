@@ -59,7 +59,7 @@ public class PaintData {
 				+ ", antiAlias=" + antiAlias + ", dither=" + dither + ", shader=" + shader + ", blendMode=" + blendMode
 				+ ", pathEffect=" + pathEffect + ", imageFilter=" + imageFilter + ", colorFilter=" + colorFilter
 				+ ", maskFilter=" + maskFilter + ", hashCode()=" + hashCode() + ", getClass()=" + getClass()
-				+ ", toString()=" + super.toString() + "]";
+				+ "]";
 	}
 
 
@@ -91,6 +91,7 @@ public class PaintData {
 				&& Float.floatToIntBits(strokeWidth) == Float.floatToIntBits(other.strokeWidth) && style == other.style;
 	}
 
+	
 
 
 

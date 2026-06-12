@@ -30,7 +30,7 @@ public class CanvasExtensionDouble implements ISkiaCanvasExtension {
 
 	@Override
 	public ISkSurface createSupportSurface(int width, int height) {
-		return surface;
+		return surface.makeSurface(width, height);
 	}
 
 	@Override

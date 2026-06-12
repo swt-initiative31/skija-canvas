@@ -16,13 +16,21 @@ public class SkiaResourcesDouble implements ISkiaResources {
 	public Color foreground;
 	public Font font;
 	public io.github.humbleui.skija.Font skiaFont;
-	public IDpiScaler scaler = () -> 100;
 	public Image cachedImage;
 	public ISkImage cachedSkijaImage;
 	public ISkImage cachedTextImage;
 	public String[] textSplits;
 	public Point textExtent;
 	public FontData fontData;
+	public IDpiScaler scaler;
+
+	public SkiaResourcesDouble(int zoom) {
+		this.scaler = () -> zoom;
+	}
+
+	public SkiaResourcesDouble() {
+		this(100);
+	}
 
 	@Override
 	public void setBackground(Color color) {
@@ -78,8 +86,8 @@ public class SkiaResourcesDouble implements ISkiaResources {
 	}
 
 	@Override
-	public ISkImage getTextImage(String text, FontProperties fontProperties, boolean transparent,
-			int background, int foreground, boolean antialias) {
+	public ISkImage getTextImage(String text, FontProperties fontProperties, boolean transparent, int background,
+			int foreground, boolean antialias) {
 		return cachedTextImage;
 	}
 

@@ -1,5 +1,8 @@
 package org.eclipse.swt.tests.skia;
 
+import org.eclipse.swt.tests.doubles.Test_org_eclipse_swt_skia_drawString;
+import org.eclipse.swt.tests.doubles.Test_org_eclipse_swt_skia_drawText;
+import org.eclipse.swt.tests.doubles.Test_org_eclipse_swt_skia_drawText_NoCache;
 import org.junit.platform.suite.api.SelectClasses;
 import org.junit.platform.suite.api.Suite;
 
@@ -16,7 +19,11 @@ import org.junit.platform.suite.api.Suite;
 		org.eclipse.swt.tests.doubles.Test_org_eclipse_swt_skia_drawPolygon.class, //
 		org.eclipse.swt.tests.doubles.Test_org_eclipse_swt_skia_drawPolyline.class, //
 		org.eclipse.swt.tests.doubles.Test_org_eclipse_swt_skia_drawRectangle.class, //
-		org.eclipse.swt.tests.doubles.Test_org_eclipse_swt_skia_drawRoundRectangle.class //
+		org.eclipse.swt.tests.doubles.Test_org_eclipse_swt_skia_drawRoundRectangle.class, //
+		Test_org_eclipse_swt_skia_drawString.class, //
+		Test_org_eclipse_swt_skia_drawText.class, //
+		Test_org_eclipse_swt_skia_drawText_NoCache.class, //
+
 })
 public class AllSkiaTests {
 

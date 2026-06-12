@@ -358,14 +358,12 @@ public class SkiaResources implements ISkiaResources {
 	@Override
 	public void cacheTextImage(String text, FontProperties fontProperties, boolean transparent, int background,
 			int foreground, boolean antiAlias, ISkImage skijaImage) {
-		if (USE_TEXT_IMAGE_CACHE) {
-			final var key = new ImageTextKey(text, fontProperties, transparent, background, foreground, antiAlias);
-			final var old = textImageCache.get(key);
-			if (old != null && !old.isClosed()) {
-				old.close();
-			}
-			this.textImageCache.put(key, skijaImage);
+		final var key = new ImageTextKey(text, fontProperties, transparent, background, foreground, antiAlias);
+		final var old = textImageCache.get(key);
+		if (old != null && !old.isClosed()) {
+			old.close();
 		}
+		this.textImageCache.put(key, skijaImage);
 	}
 
 	@Override

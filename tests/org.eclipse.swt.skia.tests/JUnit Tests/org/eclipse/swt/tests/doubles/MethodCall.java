@@ -3,6 +3,7 @@ package org.eclipse.swt.tests.doubles;
 import java.util.Arrays;
 import java.util.Objects;
 
+import io.github.humbleui.skija.Font;
 import io.github.humbleui.skija.Paint;
 
 public class MethodCall {
@@ -12,27 +13,28 @@ public class MethodCall {
 	public final Object[] params;
 
 	public MethodCall(String className, String methodName, Object... params) {
-		this.className = "SkCanvasDouble";
+		this.className = className;
 		this.methodName = methodName;
 
-		for(final Object p: params) {
-			if(p instanceof Paint) {
-				params[Arrays.asList(params).indexOf(p)] = PaintData.getData((Paint) p);
+		for (final Object p : params) {
+			if (p instanceof Paint pa) {
+				params[Arrays.asList(params).indexOf(p)] = PaintData.getData(pa);
 			}
+
+			if (p instanceof Font f) {
+				params[Arrays.asList(params).indexOf(p)] = FontData.getData(f);
+			}
+
 		}
 
 		this.params = params;
 	}
-
-
 
 	@Override
 	public String toString() {
 		return "MethodCall [className=" + className + ", methodName=" + methodName + ", params="
 				+ Arrays.toString(params) + "]";
 	}
-
-
 
 	@Override
 	public int hashCode() {

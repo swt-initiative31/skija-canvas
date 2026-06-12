@@ -18,7 +18,6 @@ import org.eclipse.swt.internal.canvasext.FontProperties;
 import org.eclipse.swt.internal.canvasext.Logger;
 import org.eclipse.swt.internal.skia.DpiScalerUtil;
 import org.eclipse.swt.internal.skia.ISkSurface;
-import org.eclipse.swt.internal.skia.SkiaResources;
 
 import io.github.humbleui.skija.BlendMode;
 import io.github.humbleui.skija.FontEdging;
@@ -30,13 +29,18 @@ import io.github.humbleui.types.Rect;
 public class SkiaTextDrawing {
 	// only for debug purpose use text drawing without cache.
 
+	public static final String NO_TEXT_CACHE = "org.eclipse.swt.internal.skia.SkiaResources.IGNORE_TEXT_IMAGE_CACHE";
+
 	public static void drawText(SkiaGC gc, String[] splits, int flags, int x, int y) {
 
-		if (SkiaResources.USE_TEXT_IMAGE_CACHE) {
-			drawTextBlobWithCache(gc, splits, flags, x, y);
+		final var NO_TEXT_IMAGE_CACHE = Boolean.parseBoolean(
+				System.getProperty(NO_TEXT_CACHE, "false"));
+
+		if (NO_TEXT_IMAGE_CACHE) {
+			drawTextBlobNoCache(gc, splits, flags, x, y);
 			return;
 		}
-		drawTextBlobNoCache(gc, splits, flags, x, y);
+		drawTextBlobWithCache(gc, splits, flags, x, y);
 
 	}
 

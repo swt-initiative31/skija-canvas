@@ -21,15 +21,8 @@ import org.eclipse.swt.internal.opengl.glx.*;
 import org.eclipse.swt.widgets.*;
 
 /**
- * GLCanvas is a widget capable of displaying OpenGL content.
- *
- * @see GLData
- * @see <a href="http://www.eclipse.org/swt/snippets/#opengl">OpenGL snippets</a>
- * @see <a href="http://www.eclipse.org/swt/">Sample code and further information</a>
- *
  * @noreference This class is not intended to be referenced by clients.
  */
-
 public abstract class GLCanvasExtension {
 	long context;
 	long xWindow;
@@ -43,6 +36,8 @@ public abstract class GLCanvasExtension {
  * object provided.
  *
  * @param data the requested attributes of the GLCanvas
+ *
+ * @noreference This method is not intended to be referenced by clients.
  *
  * @exception IllegalArgumentException
  * <ul><li>ERROR_NULL_ARGUMENT when the data is null</li>
@@ -191,6 +186,8 @@ public GLCanvasExtension (Canvas canvas, GLData data) {
 /**
  * Returns a GLData object describing the created context.
  *
+ * @noreference This method is not intended to be referenced by clients.
+ *
  * @return GLData description of the OpenGL context attributes
  * @exception SWTException <ul>
  *    <li>ERROR_WIDGET_DISPOSED - if the receiver has been disposed</li>
@@ -244,6 +241,7 @@ public GLData getGLData () {
  *    <li>ERROR_WIDGET_DISPOSED - if the receiver has been disposed</li>
  *    <li>ERROR_THREAD_INVALID_ACCESS - if not called from the thread that created the receiver</li>
  * </ul>
+ * @noreference This method is not intended to be referenced by clients.
  */
 public boolean isCurrent () {
 	checkWidget ();
@@ -258,6 +256,9 @@ public boolean isCurrent () {
  *    <li>ERROR_WIDGET_DISPOSED - if the receiver has been disposed</li>
  *    <li>ERROR_THREAD_INVALID_ACCESS - if not called from the thread that created the receiver</li>
  * </ul>
+ *
+ * @noreference This method is not intended to be referenced by clients.
+ *
  */
 public void setCurrent () {
 	checkWidget ();
@@ -274,6 +275,7 @@ public void setCurrent () {
  *    <li>ERROR_WIDGET_DISPOSED - if the receiver has been disposed</li>
  *    <li>ERROR_THREAD_INVALID_ACCESS - if not called from the thread that created the receiver</li>
  * </ul>
+ * @noreference This method is not intended to be referenced by clients.
  */
 public void swapBuffers () {
 	checkWidget ();

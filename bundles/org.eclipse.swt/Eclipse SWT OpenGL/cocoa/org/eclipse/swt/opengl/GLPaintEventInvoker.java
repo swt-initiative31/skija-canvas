@@ -17,25 +17,16 @@ import org.eclipse.swt.widgets.*;
 /**
  * @noreference This class is not intended to be referenced by clients.
  */
-public abstract class GLPaintEventInvoker {
+public abstract class GLPaintEventInvoker extends GLCanvasExtension {
 
 	public GLPaintEventInvoker(Canvas canvas, GLData data) {
 	}
 
-	/**
-	 * @noreference This method is not intended to be referenced by clients.
-	 */
 	public void redrawTriggered() {
 	}
 
-	/**
-	 * @noreference This method is not intended to be referenced by clients.
-	 */
 	public abstract void doPaint(Consumer<Event> paintEventSender);
 
-	/**
-	 * @noreference This method is not intended to be referenced by clients.
-	 */
 	public Object paint(Consumer<Event> consumer, long wParam, long lParam) {
 		return null;
 	}

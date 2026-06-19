@@ -21,9 +21,6 @@ public abstract class GLPaintEventInvoker extends GLCanvasExtension {
 		super(canvas, data);
 	}
 
-	/**
-	 * @noreference This method is not intended to be referenced by clients.
-	 */
 	public Object paint(Consumer<Event> paintEventSender,long arg1, long arg2) {
 
 		if (canvas.isDisposed())
@@ -39,14 +36,8 @@ public abstract class GLPaintEventInvoker extends GLCanvasExtension {
 		return null;
 	}
 
-	/**
-	 * @noreference This method is not intended to be referenced by clients.
-	 */
 	public abstract void doPaint(Consumer<Event> paintEventSender);
 
-	/**
-	 * @noreference This method is not intended to be referenced by clients.
-	 */
 	public void redrawTriggered() {
 	}
 

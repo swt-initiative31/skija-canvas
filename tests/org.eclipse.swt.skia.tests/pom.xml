@@ -29,6 +29,19 @@
 							<org.eclipse.swt.buildtime>true</org.eclipse.swt.buildtime>
 						</profileProperties>
 					</dependency-resolution>
+					<!-- Restrict to x86_64 as Skija is only available for x86_64 on Linux and Windows -->
+					<environments>
+						<environment>
+							<os>linux</os>
+							<ws>gtk</ws>
+							<arch>x86_64</arch>
+						</environment>
+						<environment>
+							<os>win32</os>
+							<ws>win32</ws>
+							<arch>x86_64</arch>
+						</environment>
+					</environments>
 				</configuration>
 			</plugin>
 

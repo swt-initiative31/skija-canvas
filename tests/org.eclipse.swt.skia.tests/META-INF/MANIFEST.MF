@@ -4,7 +4,7 @@ Bundle-Name: Eclipse SWT Tests Skia
 Bundle-SymbolicName: org.eclipse.swt.skia.tests
 Bundle-Version: 3.108.200.qualifier
 Bundle-Vendor: Eclipse.org
-Require-Bundle: org.eclipse.swt;bundle-version="[3.134.0,4.0.0)",
+Require-Bundle: org.eclipse.swt;bundle-version="[3.135.0,4.0.0)",
  org.eclipse.swt.skia;bundle-version="[3.134.0,4.0.0)",
  io.github.humbleui.skija-shared;bundle-version="[0.143.13,1.0.0)",
  io.github.humbleui.types;bundle-version="[0.2.0,1.0.0)",

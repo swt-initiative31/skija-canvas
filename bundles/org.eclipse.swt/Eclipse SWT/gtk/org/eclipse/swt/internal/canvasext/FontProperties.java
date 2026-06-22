@@ -69,6 +69,23 @@ public class FontProperties {
 
 	}
 
+	public static FontProperties getFontProperties(FontData fd) {
+
+		var weight = OS.PANGO_WEIGHT_NORMAL;
+		var stretch = OS.PANGO_STRETCH_NORMAL;
+
+		var fp = new FontProperties();
+
+		fp.name = fd.getName();
+		fp.lfHeight = fd.getHeight();
+		if((fd.getStyle() & SWT.ITALIC) != 0 )
+			fp.lfItalic = 1;
+		fp.lfWeight = weight;
+		fp.lfWidth = stretch + 1;
+
+		return fp;
+	}
+
 
 
 }

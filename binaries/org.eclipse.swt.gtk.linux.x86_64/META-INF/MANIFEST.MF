@@ -4,6 +4,7 @@ Bundle-Name: %fragmentName
 Bundle-Vendor: %providerName
 Bundle-SymbolicName: org.eclipse.swt.gtk.linux.x86_64; singleton:=true
 Bundle-Version: 3.135.100.qualifier
+Eclipse-PlatformFilter: (& (osgi.ws=gtk) (osgi.os=linux) (osgi.arch=x86_64))
 Bundle-RequiredExecutionEnvironment: JavaSE-21
 Bundle-ManifestVersion: 2
 Bundle-Localization: fragment
@@ -29,7 +30,6 @@ Export-Package:
  org.eclipse.swt.internal.gtk3; x-internal:=true,
  org.eclipse.swt.internal.gtk4; x-internal:=true,
  org.eclipse.swt.internal.opengl.glx; x-internal:=true
-Eclipse-PlatformFilter: (& (osgi.ws=gtk) (osgi.os=linux) (osgi.arch=x86_64))
 SWT-WS: gtk
 SWT-OS: linux
 SWT-Arch: x86_64

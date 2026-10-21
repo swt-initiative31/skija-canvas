@@ -95,6 +95,8 @@ public abstract class Control extends Widget implements Drawable {
 	Point lastInput = new Point(0, 0);
 
 	LinkedList <Event> dragDetectionQueue;
+	/* The first, delayed MouseDown of dragDetectionQueue was sent before a MouseDoubleClick */
+	private boolean dragDetectionMouseDownSent;
 
 	static Callback gestureZoom, gestureRotation, gestureSwipe, gestureBegin, gestureEnd;
 	static {
@@ -3458,16 +3460,11 @@ int gtk_gesture_press_event (long gesture, int n_press, double x, double y, long
 			}
 		}
 	} else if (n_press >= 2) {
-		boolean cancelled = sendMouseEvent(SWT.MouseDoubleClick, eventButton, n_press, 0, false, eventTime, x, y, false, eventState);
-
-		//Issue 344, DoubleClick event currently unsupported below sendMouseEvent(). Until DoubleClickSupport is
-		//added this will catch failed events and try MouseDown instead.
-		if (cancelled) {
-			cancelled = sendMouseEvent(SWT.MouseDown, eventButton, n_press, 0, false, eventTime, x, y, false, eventState);
-		}
-
-		if (!cancelled) {
-			result = GTK4.GTK_EVENT_SEQUENCE_CLAIMED;
+		// Like GTK3, send the MouseDown of the second press before the MouseDoubleClick
+		// and no MouseDoubleClick for the third press
+		sendMouseEvent(SWT.MouseDown, eventButton, n_press, 0, false, eventTime, x, y, false, eventState);
+		if (n_press == 2) {
+			sendMouseEvent(SWT.MouseDoubleClick, eventButton, n_press, 0, false, eventTime, x, y, false, eventState);
 		}
 	}
 	return result;
@@ -4862,8 +4859,9 @@ void flushQueueOnDnd() {
 	// to determine DnD threshold.
 	// This is to preserve backwards Cocoa/Win32 compatibility.
 	Event mouseDownEvent = dragDetectionQueue.getFirst();
-	mouseDownEvent.data = null;
 	dragDetectionQueue = null;
+	if (dragDetectionMouseDownSent) return;
+	mouseDownEvent.data = null;
 	sendEvent(SWT.MouseDown, mouseDownEvent);
 }
 
@@ -5027,7 +5025,7 @@ boolean sendMouseEvent (int type, int button, int count, int detail, boolean sen
 			if (type == SWT.MouseUp && dragDetectionQueue.size() == 1) {
 				Event mouseDownEvent = dragDetectionQueue.getFirst();
 				dragDetectionQueue = null;
-				sendOrPost(SWT.MouseDown, mouseDownEvent);
+				if (!dragDetectionMouseDownSent) sendOrPost(SWT.MouseDown, mouseDownEvent);
 			}
 		}
 		/*
@@ -5093,6 +5091,7 @@ boolean sendMouseEvent (int type, int button, int count, int detail, boolean sen
 				// Delay MouseDown
 				dragDetectionQueue = new LinkedList<>();
 				dragDetectionQueue.add(event);
+				dragDetectionMouseDownSent = false;
 				return true; // event never canceled as not yet sent.
 			}
 		} else {
@@ -5110,17 +5109,29 @@ boolean sendMouseEvent (int type, int button, int count, int detail, boolean sen
 						return true;
 					}
 					break;
+				case SWT.MouseDoubleClick:
+					// Send the delayed MouseDown of the same press before the MouseDoubleClick.
+					// The queue stays for the drag detection of this press.
+					if (!dragDetectionMouseDownSent) {
+						dragDetectionMouseDownSent = true;
+						sendOrPost(SWT.MouseDown, dragDetectionQueue.getFirst());
+					}
+					break;
 				case SWT.MouseUp:
 					// Case where mouse up was released before DnD threshold was hit.
 					mouseDown = false;
+					Event queuedMouseDown = dragDetectionQueue.removeFirst();
 					// Decide if we should send or post the queued up MouseDown and MouseMovement events.
 					// If mouseUp is send, then send all. If mouseUp is post, then decide based on previous
 					// send flag.
-					boolean sendOrPostAll = send ? true : (Boolean) dragDetectionQueue.getFirst().data;
+					boolean sendOrPostAll = send || (!dragDetectionMouseDownSent && (Boolean) queuedMouseDown.data);
 					dragDetectionQueue.forEach(queuedEvent -> queuedEvent.data = Boolean.valueOf(sendOrPostAll));
 
 					// Flush queued up MouseDown/MouseMotion events, so they are triggered before MouseUp
-					sendOrPost(SWT.MouseDown, dragDetectionQueue.removeFirst());
+					if (!dragDetectionMouseDownSent) {
+						queuedMouseDown.data = Boolean.valueOf(sendOrPostAll);
+						sendOrPost(SWT.MouseDown, queuedMouseDown);
+					}
 					dragDetectionQueue.forEach(queuedEvent -> sendOrPost(SWT.MouseMove, queuedEvent));
 					dragDetectionQueue = null;
 				}

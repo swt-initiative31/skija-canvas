@@ -2564,6 +2564,19 @@ public class SWT {
 	 */
 	public static final int WEBKIT = 1 << 16;
 
+	 /**
+	 * Experimental This API is experimental and may change or be removed in future releases.
+	 * Style constant specifying that a Canvas should use Skia. Only works for windows and linux.
+	 * for rendering its content (value is 1&lt;&lt;23).
+	 * <p><b>Used By:</b></p>
+	 * <ul>
+	 * <li><code>Canvas</code></li>
+	 * </ul>
+	 *
+	 * @noreference This API is experimental and may change or be removed in future releases.
+	 */
+	public static final int SKIA = 1 << 23;
+
 	/**
 	 * Style constant specifying that a Browser should use Edge (WebView2)
 	 * for rendering its content (value is 1&lt;&lt;18).
@@ -3312,6 +3325,33 @@ public class SWT {
 	 * @since 3.0
 	 */
 	public static final int PRINT_SCREEN = KEYCODE_BIT + 87;
+
+	/**
+	 * Keyboard event constant representing the copy
+	 * key (value is (1&lt;&lt;24)+88).
+	 * This event is currently only supported on GTK.
+	 *
+	 * @since 3.136
+	 */
+	public static final int COPY = KEYCODE_BIT + 88;
+
+	/**
+	 * Keyboard event constant representing the cut
+	 * key (value is (1&lt;&lt;24)+89).
+	 * This event is currently only supported on GTK.
+	 *
+	 * @since 3.136
+	 */
+	public static final int CUT = KEYCODE_BIT + 89;
+
+	/**
+	 * Keyboard event constant representing the paste
+	 * key (value is (1&lt;&lt;24)+90).
+	 * This event is currently only supported on GTK.
+	 *
+	 * @since 3.136
+	 */
+	public static final int PASTE = KEYCODE_BIT + 90;
 
 	/**
 	 * The <code>MessageBox</code> style constant for error icon
@@ -5000,3 +5040,4 @@ static {
 	}
 }
 }
+

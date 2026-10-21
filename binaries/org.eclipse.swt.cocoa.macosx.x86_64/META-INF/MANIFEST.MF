@@ -3,7 +3,7 @@ Fragment-Host: org.eclipse.swt;bundle-version="[3.128.0,4.0.0)"
 Bundle-Name: %fragmentName
 Bundle-Vendor: %providerName
 Bundle-SymbolicName: org.eclipse.swt.cocoa.macosx.x86_64; singleton:=true
-Bundle-Version: 3.135.100.qualifier
+Bundle-Version: 3.136.0.qualifier
 Bundle-RequiredExecutionEnvironment: JavaSE-21
 Bundle-ManifestVersion: 2
 Bundle-Localization: fragment
@@ -16,14 +16,15 @@ Export-Package:
  org.eclipse.swt.dnd,
  org.eclipse.swt.events,
  org.eclipse.swt.graphics,
+ org.eclipse.swt.internal;x-friends:="org.eclipse.ui",
+ org.eclipse.swt.internal.canvasext;x-friends:="org.eclipse.swt.skia,org.eclipse.swt.skia.tests",
+ org.eclipse.swt.internal.cocoa;x-friends:="org.eclipse.ui",
+ org.eclipse.swt.internal.image;x-internal:=true,
  org.eclipse.swt.layout,
  org.eclipse.swt.opengl,
  org.eclipse.swt.printing,
  org.eclipse.swt.program,
- org.eclipse.swt.widgets,
- org.eclipse.swt.internal; x-friends:="org.eclipse.ui",
- org.eclipse.swt.internal.image; x-internal:=true,
- org.eclipse.swt.internal.cocoa; x-friends:="org.eclipse.ui"
+ org.eclipse.swt.widgets
 Eclipse-PlatformFilter: (& (osgi.ws=cocoa) (osgi.os=macosx) (osgi.arch=x86_64) )
 SWT-WS: cocoa
 SWT-OS: macosx
